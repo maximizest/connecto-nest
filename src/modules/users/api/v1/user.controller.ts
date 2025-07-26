@@ -26,13 +26,6 @@ import { AuthGuard } from 'src/guards/auth.guard';
 export class UserController {
   constructor(public readonly crudService: UserService) { }
 
-  @Get()
-  async index() {
-    const users = await User.find();
-
-    return crudResponse(users);
-  }
-
   @Get('me')
   @UseGuards(AuthGuard)
   async me(@CurrentUser() currentUser: CurrentUserData) {
