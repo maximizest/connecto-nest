@@ -39,7 +39,7 @@ buildCommand = "npm ci --only=production && npm run build"
 buildEnvironment = "V2"
 
 [environments.production.deploy]
-startCommand = "npm run deploy:prod"
+startCommand = "npm run deploy:prod:safe"
 healthcheckPath = "/api/v1/users"
 healthcheckTimeout = 45      # 마이그레이션 시간 고려하여 증가
 numReplicas = 2              # 프로덕션에서는 2개 인스턴스
@@ -48,6 +48,8 @@ restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5
 overlapSeconds = 30          # 무중단 배포를 위한 겹침 시간
 drainingSeconds = 30         # Graceful shutdown 시간
+rollbackOnHealthcheckFailure = true  # 헬스체크 실패 시 자동 롤백
+maxHealthcheckFailures = 2   # 3회 연속 실패 시 롤백 트리거
 
 # 프로덕션 리소스 제한 (더 높게)
 [environments.production.deploy.limitOverride]
@@ -69,6 +71,8 @@ numReplicas = 1
 sleepApplication = true
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
+rollbackOnHealthcheckFailure = true  # 헬스체크 실패 시 자동 롤백
+maxHealthcheckFailures = 2   # develop 환경은 2회 실패 시 롤백 (더 빠른 감지)
 
 [environments.staging.deploy.limitOverride]
 [environments.staging.deploy.limitOverride.containers]

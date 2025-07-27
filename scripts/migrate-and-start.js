@@ -16,17 +16,26 @@ function runMigration() {
 
     exec(migrationCommand, (error, stdout, stderr) => {
       if (error) {
-        console.error('❌ Migration failed:', error.message);
-        reject(error);
+        console.error('❌ Migration failed with exit code:', error.code);
+        console.error('❌ Error message:', error.message);
+        console.error('❌ This will prevent deployment and keep existing service running');
+
+        // 더 명확한 에러 로깅
+        if (stderr) {
+          console.error('❌ Migration stderr:', stderr);
+        }
+
+        // 에러와 함께 종료 코드 1로 명시적 종료
+        reject(new Error(`Migration failed: ${error.message}`));
         return;
       }
 
       if (stderr) {
-        console.warn('⚠️ Migration warnings:', stderr);
+        console.warn('⚠️ Migration warnings (non-fatal):', stderr);
       }
 
       console.log('✅ Migration completed successfully');
-      console.log(stdout);
+      console.log('✅ Migration output:', stdout);
       resolve();
     });
   });
@@ -109,6 +118,10 @@ async function main() {
 
   } catch (error) {
     console.error('💥 Deployment failed:', error.message);
+    console.error('💥 Existing service will remain running (no downtime)');
+    console.error('💥 Fix the issue and redeploy to continue');
+
+    // Railway가 확실히 실패를 감지할 수 있도록 명시적 종료
     process.exit(1);
   }
 }

@@ -24,6 +24,7 @@
     "migration:run": "node scripts/migration.js run",
     "migration:revert": "node scripts/migration.js revert",
     "start:prod:migrate": "npm run migration:run && npm run start:prod",
+    "deploy:prod:safe": "node scripts/migrate-and-start.js",
     "deploy:prod": "node scripts/migrate-and-start.js"
   },
   "dependencies": {
