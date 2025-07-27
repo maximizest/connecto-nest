@@ -5,9 +5,11 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   BaseEntity,
+  OneToMany,
 } from 'typeorm';
 import { IsString, IsEmail, IsOptional, IsDateString, Allow } from 'class-validator';
 import { Exclude } from 'class-transformer';
+import { Post } from '../posts/post.entity';
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -76,4 +78,10 @@ export class User extends BaseEntity {
   @UpdateDateColumn()
   @IsDateString()
   updatedAt: Date;
+
+  // Post와 OneToMany 관계
+  @OneToMany(() => Post, (post) => post.user, {
+    cascade: true,
+  })
+  posts: Post[];
 }

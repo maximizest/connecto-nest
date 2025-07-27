@@ -1,9 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
-import { User } from './users/user.entity';
+import { DATABASE_CONFIG, validateDatabaseConfig } from '../config/database.config';
+import { JWT_CONFIG, validateJwtConfig } from '../config/jwt.config';
 import { UserModule } from './users/user.module';
+import { PostModule } from './posts/post.module';
 import { AuthModule } from './auth/auth.module';
 import { SchemaModule } from './schema/schema.module';
 
@@ -12,31 +14,20 @@ import { SchemaModule } from './schema/schema.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    JwtModule.register({
-      global: true,
-      secret: process.env.JWT_SECRET || 'your-secret-key',
-      signOptions: {
-        expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRES_IN || '15m',
-      },
-    }),
-    TypeOrmModule.forRoot({
-      type: process.env.DATABASE_TYPE as 'postgres' || 'postgres',
-      host: process.env.DATABASE_HOST || 'localhost',
-      port: parseInt(process.env.DATABASE_PORT || '5432'),
-      username: process.env.DATABASE_USERNAME || 'postgres',
-      password: process.env.DATABASE_PASSWORD || 'password',
-      database: process.env.DATABASE_NAME || 'database',
-      synchronize: process.env.DATABASE_SYNCHRONIZE === 'true' || false,
-      entities: [User],
-      logging: process.env.DATABASE_LOGGING === 'true' || false,
-      ssl: process.env.DATABASE_SSL === 'true' ? {
-        rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === 'true' || false,
-      } : false,
-    }),
+    JwtModule.register(JWT_CONFIG),
+    TypeOrmModule.forRoot(DATABASE_CONFIG),
     UserModule,
+    PostModule,
     AuthModule,
     // 개발 환경에서만 스키마 모듈 등록
     ...(process.env.NODE_ENV === 'development' || !process.env.NODE_ENV ? [SchemaModule] : []),
   ],
 })
-export class AppModule { }
+export class AppModule implements OnModuleInit {
+  onModuleInit() {
+    console.log('🚀 Application Configuration Validation:');
+    validateDatabaseConfig();
+    validateJwtConfig();
+    console.log('✅ All configurations validated successfully!\n');
+  }
+}
