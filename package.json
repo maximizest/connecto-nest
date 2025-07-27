@@ -22,7 +22,9 @@
     "migration:create": "node scripts/migration.js create",
     "migration:template": "node scripts/migration-template.js",
     "migration:run": "node scripts/migration.js run",
-    "migration:revert": "node scripts/migration.js revert"
+    "migration:revert": "node scripts/migration.js revert",
+    "start:prod:migrate": "npm run migration:run && npm run start:prod",
+    "deploy:prod": "node scripts/migrate-and-start.js"
   },
   "dependencies": {
     "@foryourdev/nestjs-crud": "^0.1.9",

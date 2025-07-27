@@ -28,8 +28,8 @@ cpu = 1.0                    # 1 vCPU
 memoryBytes = 1073741824     # 1GB RAM (1024 * 1024 * 1024)
 diskBytes = 2147483648       # 2GB 디스크 (2 * 1024 * 1024 * 1024)
 
-# Staging 환경 설정 (develop 브랜치용)
-# develop 브랜치를 Staging 환경으로 사용
+# develop 환경 설정 (develop 브랜치용)
+# develop 브랜치를 develop 환경으로 사용
 
 # 프로덕션 환경 설정
 [environments.production]
@@ -39,9 +39,9 @@ buildCommand = "npm ci --only=production && npm run build"
 buildEnvironment = "V2"
 
 [environments.production.deploy]
-startCommand = "npm run start:prod"
+startCommand = "npm run deploy:prod"
 healthcheckPath = "/api/v1/users"
-healthcheckTimeout = 30
+healthcheckTimeout = 45      # 마이그레이션 시간 고려하여 증가
 numReplicas = 2              # 프로덕션에서는 2개 인스턴스
 sleepApplication = false
 restartPolicyType = "ON_FAILURE"
@@ -56,7 +56,7 @@ cpu = 2.0                    # 2 vCPU
 memoryBytes = 2147483648     # 2GB RAM
 diskBytes = 5368709120       # 5GB 디스크
 
-# Staging 환경 설정 (develop 브랜치)
+# develop 환경 설정 (develop 브랜치)
 [environments.staging]
 [environments.staging.build]
 buildCommand = "npm ci && npm run build"
@@ -64,7 +64,7 @@ buildCommand = "npm ci && npm run build"
 [environments.staging.deploy]
 startCommand = "npm run start:prod"
 healthcheckPath = "/api/v1/users"
-healthcheckTimeout = 45
+healthcheckTimeout = 30
 numReplicas = 1
 sleepApplication = true
 restartPolicyType = "ON_FAILURE"
