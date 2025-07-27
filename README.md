@@ -21,7 +21,7 @@
   <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
   [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
-# ForYourBiz NestJS Template
+# NestJS Template
 
 이 프로젝트는 [NestJS](https://nestjs.com/)와 [@foryourdev/nestjs-crud](https://github.com/foryourdev/nestjs-crud)를 사용하여 구축된 RESTful API 템플릿입니다.
 
