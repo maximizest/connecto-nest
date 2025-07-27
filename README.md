@@ -73,26 +73,12 @@
 
 ### 데이터베이스 연결 정보
 
-연결 정보는 `src/app.module.ts`에서 설정되어 있습니다:
+데이터베이스 연결은 환경변수를 통해 설정됩니다. `src/config/database.config.ts`에서 환경변수를 읽어와 설정됩니다.
 
-```typescript
-TypeOrmModule.forRoot({
-  type: 'postgres',
-  host: 'ballast.proxy.rlwy.net',
-  port: 42554,
-  username: 'postgres',
-  password: 'kphuEHFQlgWjhpdgXBbcBqzEdVHkFJvn',
-  database: 'railway',
-  entities: [User],
-  synchronize: true, // 개발 환경에서만 사용하세요
-  logging: true,
-  ssl: {
-    rejectUnauthorized: false, // Railway에서 SSL 연결을 위해 필요
-  },
-})
-```
-
-⚠️ **주의**: 프로덕션 환경에서는 `synchronize: false`로 설정하고 마이그레이션을 사용하세요.
+⚠️ **보안 주의사항**: 
+- 실제 데이터베이스 자격증명은 절대 코드에 하드코딩하지 마세요
+- `.env` 파일을 사용하여 환경변수를 관리하고 `.gitignore`에 추가하세요
+- 프로덕션 환경에서는 `DATABASE_SYNCHRONIZE=false`로 설정하고 마이그레이션을 사용하세요
 
 ## 환경변수 설정
 
@@ -116,13 +102,13 @@ JWT_REFRESH_TOKEN_EXPIRES_IN=7d
 
 # 데이터베이스 설정 (필수)
 DATABASE_TYPE=postgres
-DATABASE_HOST=ballast.proxy.rlwy.net
-DATABASE_PORT=42554
-DATABASE_USERNAME=postgres
-DATABASE_PASSWORD=kphuEHFQlgWjhpdgXBbcBqzEdVHkFJvn
-DATABASE_NAME=railway
+DATABASE_HOST=your-database-host
+DATABASE_PORT=5432
+DATABASE_USERNAME=your-username
+DATABASE_PASSWORD=your-secure-password
+DATABASE_NAME=your-database-name
 DATABASE_SYNCHRONIZE=false
-DATABASE_LOGGING=true
+DATABASE_LOGGING=false
 
 # SSL 설정 (Railway용)
 DATABASE_SSL=true

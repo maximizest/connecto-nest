@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   BaseEntity,
   OneToMany,
+  Index,
 } from 'typeorm';
 import { IsString, IsEmail, IsOptional, IsDateString, Allow } from 'class-validator';
 import { Exclude } from 'class-transformer';
@@ -25,12 +26,18 @@ export enum SocialProvider {
 }
 
 @Entity('users')
+@Index('IDX_USER_EMAIL', ['email'])
+@Index('IDX_USER_PROVIDER', ['provider'])
+@Index('IDX_USER_EMAIL_PROVIDER', ['email', 'provider'])
+@Index('IDX_USER_CREATED_AT', ['createdAt'])
+@Index('IDX_USER_ROLE', ['role'])
 export class User extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column({ type: 'varchar', length: 100 })
   @IsString()
+  @Index('IDX_USER_NAME')
   name: string;
 
   @Column({ type: 'varchar', length: 200, unique: true })
@@ -63,6 +70,7 @@ export class User extends BaseEntity {
   @IsOptional()
   @IsString()
   @Exclude()
+  @Index('IDX_USER_PROVIDER_ID')
   providerId?: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })

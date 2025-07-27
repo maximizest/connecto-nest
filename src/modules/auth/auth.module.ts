@@ -28,5 +28,6 @@ import { AppleStrategy } from './strategies/apple.strategy';
       : []
     ),
   ],
+  exports: [AuthService],
 })
 export class AuthModule { }

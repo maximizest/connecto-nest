@@ -7,125 +7,180 @@ import {
   Req,
   Res,
   UseGuards,
+  Logger,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { User, UserRole, SocialProvider } from 'src/modules/users/user.entity';
 import { AuthSignupDto } from '../../dto/auth.signup.dto';
 import * as bcrypt from 'bcrypt';
 import { AuthSigninDto } from '../../dto/auth.signin.dto';
 import { Request, Response } from 'express';
-import { AuthService } from '../../auth.service';
+import { AuthService, JwtPayload } from '../../auth.service';
 import { CurrentUserData } from 'src/common/decorators/current-user.decorator';
 import { AuthGuard } from '@nestjs/passport';
+import {
+  SECURITY_CONSTANTS,
+  ERROR_MESSAGES,
+  SUCCESS_MESSAGES
+} from 'src/common/constants/app.constants';
 
 @Controller({
   path: 'auth',
   version: '1',
 })
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(private readonly authService: AuthService) { }
 
   @Post('sign/up')
   async signUp(@Body() data: AuthSignupDto) {
-    const isExist = await User.exists({ where: { email: data.email } });
+    try {
+      const isExist = await User.exists({ where: { email: data.email } });
 
-    if (isExist) {
-      throw new BadRequestException('이미 존재하는 이메일입니다.');
+      if (isExist) {
+        throw new BadRequestException(ERROR_MESSAGES.EMAIL_EXISTS);
+      }
+
+      const hashedPassword = await bcrypt.hash(data.password, SECURITY_CONSTANTS.BCRYPT_SALT_ROUNDS);
+
+      const user = User.create({
+        ...data,
+        password: hashedPassword,
+        role: data.role || UserRole.USER,
+        provider: SocialProvider.LOCAL,
+      });
+
+      const savedUser = await user.save();
+      this.logger.log(`User registered: ${savedUser.email}`);
+
+      return savedUser;
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      this.logger.error('Sign up failed', error);
+      throw new BadRequestException(ERROR_MESSAGES.DATABASE_ERROR);
     }
-
-    const hashedPassword = await bcrypt.hash(data.password, 10);
-
-    const user = User.create({
-      ...data,
-      password: hashedPassword,
-      role: data.role || UserRole.USER,
-      provider: SocialProvider.LOCAL,
-    });
-
-    return await user.save();
   }
 
   @Post('sign/in')
   async signIn(@Body() data: AuthSigninDto) {
-    const user = await User.findOne({
-      where: { email: data.email, provider: SocialProvider.LOCAL },
-      select: ['id', 'email', 'password', 'name', 'role'],
-    });
-
-    if (!user) {
-      throw new BadRequestException('존재하지 않는 이메일입니다.');
-    }
-
-    const isMatch = await bcrypt.compare(data.password, user.password!);
-
-    if (!isMatch) {
-      throw new BadRequestException('비밀번호가 일치하지 않습니다.');
-    }
-
-    const payload = {
-      id: user.id,
-      email: user.email,
-    };
-
-    const tokens = this.authService.generateTokenPair(payload);
-
-    await User.update(user.id, { refreshToken: tokens.refreshToken });
-
-    return tokens;
-  }
-
-  @Post('sign/refresh')
-  async refreshToken(@Req() req: Request) {
-    const authHeader = req.headers['authorization'];
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new BadRequestException('인증 헤더가 없습니다.');
-    }
-
-    const token = authHeader.split(' ')[1];
-
     try {
-      const decoded = this.authService.verifyToken(token) as CurrentUserData;
-
       const user = await User.findOne({
-        where: { id: decoded.id, refreshToken: token },
-        select: ['id', 'email', 'refreshToken'],
+        where: { email: data.email, provider: SocialProvider.LOCAL },
+        select: ['id', 'email', 'password', 'name', 'role'],
       });
 
       if (!user) {
-        throw new BadRequestException('유효하지 않은 refresh token입니다.');
+        throw new BadRequestException(ERROR_MESSAGES.EMAIL_NOT_FOUND);
       }
 
-      const payload = {
+      if (!user.password) {
+        throw new BadRequestException(ERROR_MESSAGES.SOCIAL_LOGIN_ACCOUNT);
+      }
+
+      const isMatch = await bcrypt.compare(data.password, user.password);
+
+      if (!isMatch) {
+        throw new BadRequestException(ERROR_MESSAGES.PASSWORD_MISMATCH);
+      }
+
+      const payload: JwtPayload = {
         id: user.id,
         email: user.email,
       };
 
-      const accessToken = this.authService.generateAccessToken(payload);
+      const tokens = this.authService.generateTokenPair(payload);
 
-      return { accessToken };
-    } catch {
-      throw new BadRequestException('유효하지 않은 토큰입니다.');
+      // 리프레시 토큰 저장
+      await User.update(user.id, { refreshToken: tokens.refreshToken });
+
+      this.logger.log(`User signed in: ${user.email}`);
+      return tokens;
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      this.logger.error('Sign in failed', error);
+      throw new BadRequestException(ERROR_MESSAGES.DATABASE_ERROR);
+    }
+  }
+
+  @Post('sign/refresh')
+  async refreshToken(@Req() req: Request) {
+    try {
+      const authHeader = req.headers['authorization'];
+
+      if (!authHeader) {
+        throw new UnauthorizedException(ERROR_MESSAGES.AUTH_HEADER_REQUIRED);
+      }
+
+      const refreshToken = this.authService.extractBearerToken(authHeader as string);
+
+      // 리프레시 토큰 검증
+      const decoded = this.authService.verifyToken(refreshToken);
+
+      // 데이터베이스에서 사용자 및 리프레시 토큰 확인
+      const user = await User.findOne({
+        where: {
+          id: decoded.id,
+          refreshToken: refreshToken
+        },
+        select: ['id', 'email', 'refreshToken'],
+      });
+
+      if (!user || user.refreshToken !== refreshToken) {
+        throw new UnauthorizedException(ERROR_MESSAGES.INVALID_REFRESH_TOKEN);
+      }
+
+      // 새로운 액세스 토큰 생성
+      const payload: JwtPayload = {
+        id: user.id,
+        email: user.email,
+      };
+
+      const newAccessToken = this.authService.generateAccessToken(payload);
+
+      this.logger.log(`Access token refreshed for user: ${user.email}`);
+      return { accessToken: newAccessToken };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
+      this.logger.error('Token refresh failed', error);
+      throw new UnauthorizedException(ERROR_MESSAGES.INVALID_REFRESH_TOKEN);
     }
   }
 
   @Post('sign/out')
   async signOut(@Req() req: Request) {
-    const authHeader = req.headers['authorization'];
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new BadRequestException('인증 헤더가 없습니다.');
-    }
-
-    const token = authHeader.split(' ')[1];
-
     try {
-      const decoded = this.authService.verifyToken(token) as CurrentUserData;
+      const authHeader = req.headers['authorization'];
 
+      if (!authHeader) {
+        throw new UnauthorizedException(ERROR_MESSAGES.AUTH_HEADER_REQUIRED);
+      }
+
+      const token = this.authService.extractBearerToken(authHeader as string);
+
+      const decoded = this.authService.verifyToken(token);
+
+      // 리프레시 토큰 제거
       await User.update(decoded.id, { refreshToken: null });
 
-      return { message: '로그아웃되었습니다.' };
-    } catch {
-      throw new BadRequestException('유효하지 않은 토큰입니다.');
+      this.logger.log(`User signed out: ${decoded.email}`);
+      return { message: SUCCESS_MESSAGES.LOGOUT_SUCCESS };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
+      this.logger.error('Sign out failed', error);
+      throw new BadRequestException(ERROR_MESSAGES.LOGOUT_ERROR);
     }
   }
 

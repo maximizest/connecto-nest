@@ -7,11 +7,17 @@ import {
   BaseEntity,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { IsString, IsOptional, IsDateString, IsNotEmpty } from 'class-validator';
 import { User } from '../users/user.entity';
 
 @Entity('posts')
+@Index('IDX_POST_USER_ID', ['userId'])
+@Index('IDX_POST_PUBLISHED', ['isPublished'])
+@Index('IDX_POST_USER_PUBLISHED', ['userId', 'isPublished'])
+@Index('IDX_POST_CREATED_AT', ['createdAt'])
+@Index('IDX_POST_VIEW_COUNT', ['viewCount'])
 export class Post extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
@@ -19,6 +25,7 @@ export class Post extends BaseEntity {
   @Column({ type: 'varchar', length: 200 })
   @IsString()
   @IsNotEmpty()
+  @Index('IDX_POST_TITLE')
   title: string;
 
   @Column({ type: 'text' })

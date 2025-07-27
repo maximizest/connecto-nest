@@ -14,7 +14,10 @@ import { SchemaModule } from './schema/schema.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    JwtModule.register(JWT_CONFIG),
+    JwtModule.register({
+      ...JWT_CONFIG,
+      global: true,
+    }),
     TypeOrmModule.forRoot(DATABASE_CONFIG),
     UserModule,
     PostModule,
