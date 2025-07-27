@@ -39,11 +39,17 @@ export class CrudMetadataService {
 
   /**
    * 엔티티 이름으로 CRUD 메타데이터를 추출합니다.
+   * admin 경로의 컨트롤러는 제외하고 일반 API 컨트롤러만 처리합니다.
    */
   private extractCrudMetadata(entityName: string): CrudMetadata | null {
     const controllers = this.getAllControllers();
 
     for (const controller of controllers) {
+      // admin 컨트롤러는 제외
+      if (this.isAdminController(controller)) {
+        continue;
+      }
+
       const crudMetadata = this.findCrudMetadata(controller);
 
       if (crudMetadata?.entity) {
@@ -182,6 +188,19 @@ export class CrudMetadataService {
    */
   private isValidController(controllerClass: any): boolean {
     return controllerClass.name !== 'SchemaController';
+  }
+
+  /**
+   * admin 경로의 컨트롤러인지 확인합니다.
+   */
+  private isAdminController(controller: ControllerWrapper): boolean {
+    const controllerPath = this.getControllerPath(controller.metatype);
+    const controllerName = controller.metatype.name;
+
+    // 컨트롤러 경로가 admin으로 시작하거나 컨트롤러 이름에 Admin이 포함된 경우
+    return controllerPath.startsWith('admin/') ||
+      controllerPath.startsWith('admin') ||
+      controllerName.includes('Admin');
   }
 
   /**

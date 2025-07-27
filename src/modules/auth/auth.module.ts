@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthController } from 'src/modules/auth/api/v1/auth.controller';
+import { AdminAuthController } from 'src/modules/auth/admin/v1/auth.controller';
 import { AuthService } from './auth.service';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { KakaoStrategy } from './strategies/kakao.strategy';
@@ -7,7 +8,7 @@ import { NaverStrategy } from './strategies/naver.strategy';
 import { AppleStrategy } from './strategies/apple.strategy';
 
 @Module({
-  controllers: [AuthController],
+  controllers: [AuthController, AdminAuthController],
   providers: [
     AuthService,
     // 환경변수가 설정된 소셜 로그인 전략만 조건부 등록
