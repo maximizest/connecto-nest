@@ -1,17 +1,11 @@
 import {
   Controller,
-  Get,
   Post,
-  Delete,
   Body,
-  Param,
   UseGuards,
   BadRequestException,
   Logger,
-  ParseIntPipe,
-  Query,
 } from '@nestjs/common';
-import { Not, IsNull } from 'typeorm';
 import { User, UserRole, SocialProvider } from 'src/modules/users/user.entity';
 import { AuthService, JwtPayload } from '../../auth.service';
 import { AuthSignupDto } from '../../dto/auth.signup.dto';
@@ -36,59 +30,14 @@ export class AdminAuthController {
 
   constructor(private readonly authService: AuthService) { }
 
-  @Get('stats')
+  @Post('sign/up')
   @UseGuards(AuthGuard)
-  async getAuthStats(@CurrentUser() currentUser: CurrentUserData) {
-    // 인증 관련 통계
-    const totalUsers = await User.count();
-    const socialUsers = await User.count({
-      where: { provider: SocialProvider.GOOGLE }
-    });
-    const localUsers = await User.count({
-      where: { provider: SocialProvider.LOCAL }
-    });
-    const activeUsers = await User.count({
-      where: { refreshToken: Not(IsNull()) } // refreshToken이 null이 아닌 = 로그인 상태
-    });
-
-    return {
-      total: totalUsers,
-      social: socialUsers,
-      local: localUsers,
-      active: activeUsers,
-      providers: {
-        google: await User.count({ where: { provider: SocialProvider.GOOGLE } }),
-        kakao: await User.count({ where: { provider: SocialProvider.KAKAO } }),
-        naver: await User.count({ where: { provider: SocialProvider.NAVER } }),
-        apple: await User.count({ where: { provider: SocialProvider.APPLE } }),
-      }
-    };
-  }
-
-  @Get('sessions')
-  @UseGuards(AuthGuard)
-  async getActiveSessions(@CurrentUser() currentUser: CurrentUserData) {
-    // 활성 세션 조회 (refreshToken이 있는 사용자들)
-    const activeSessions = await User.find({
-      where: { refreshToken: Not(IsNull()) },
-      select: ['id', 'email', 'name', 'provider', 'createdAt', 'updatedAt'],
-      order: { updatedAt: 'DESC' },
-    });
-
-    return {
-      count: activeSessions.length,
-      sessions: activeSessions,
-    };
-  }
-
-  @Post('users')
-  @UseGuards(AuthGuard)
-  async createUser(
+  async signUp(
     @Body() data: AuthSignupDto,
     @CurrentUser() currentUser: CurrentUserData
   ) {
     try {
-      // 관리자만 사용자 생성 가능 (추후 role 체크 로직 추가)
+      // 관리자만 사용자 생성 가능
       const isExist = await User.exists({ where: { email: data.email } });
 
       if (isExist) {
@@ -118,132 +67,111 @@ export class AdminAuthController {
     }
   }
 
-  @Delete('users/:id')
-  @UseGuards(AuthGuard)
-  async deleteUser(
-    @Param('id', ParseIntPipe) userId: number,
-    @CurrentUser() currentUser: CurrentUserData
-  ) {
+  @Post('sign/in')
+  async signIn(@Body() data: { email: string; password: string }) {
     try {
-      const user = await User.findOne({ where: { id: userId } });
-
-      if (!user) {
-        throw new BadRequestException(ERROR_MESSAGES.USER_NOT_FOUND);
-      }
-
-      // 자기 자신은 삭제할 수 없음
-      if (user.id === currentUser.id) {
-        throw new BadRequestException('자기 자신은 삭제할 수 없습니다.');
-      }
-
-      await User.delete(userId);
-      this.logger.log(`Admin ${currentUser.email} deleted user: ${user.email}`);
-
-      return { message: '사용자가 삭제되었습니다.' };
-    } catch (error) {
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-
-      this.logger.error('Admin user deletion failed', error);
-      throw new BadRequestException(ERROR_MESSAGES.DATABASE_ERROR);
-    }
-  }
-
-  @Post('logout/:id')
-  @UseGuards(AuthGuard)
-  async forceLogout(
-    @Param('id', ParseIntPipe) userId: number,
-    @CurrentUser() currentUser: CurrentUserData
-  ) {
-    try {
-      const user = await User.findOne({ where: { id: userId } });
-
-      if (!user) {
-        throw new BadRequestException(ERROR_MESSAGES.USER_NOT_FOUND);
-      }
-
-      // 강제 로그아웃 (refreshToken 제거)
-      await User.update(userId, { refreshToken: null });
-      this.logger.log(`Admin ${currentUser.email} forced logout user: ${user.email}`);
-
-      return { message: '사용자가 강제 로그아웃되었습니다.' };
-    } catch (error) {
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-
-      this.logger.error('Admin force logout failed', error);
-      throw new BadRequestException(ERROR_MESSAGES.DATABASE_ERROR);
-    }
-  }
-
-  @Get('users/search')
-  @UseGuards(AuthGuard)
-  async searchUsers(
-    @CurrentUser() currentUser: CurrentUserData,
-    @Query('email') email?: string,
-    @Query('provider') provider?: SocialProvider,
-    @Query('limit') limit: number = 20
-  ) {
-    try {
-      const whereCondition: any = {};
-
-      if (email) {
-        whereCondition.email = email;
-      }
-
-      if (provider) {
-        whereCondition.provider = provider;
-      }
-
-      const users = await User.find({
-        where: whereCondition,
-        select: ['id', 'email', 'name', 'provider', 'role', 'createdAt'],
-        take: Math.min(limit, 100), // 최대 100개로 제한
-        order: { createdAt: 'DESC' },
+      const user = await User.findOne({
+        where: { email: data.email, provider: SocialProvider.LOCAL },
+        select: ['id', 'email', 'password', 'name', 'role'],
       });
 
-      return {
-        count: users.length,
-        users,
-      };
-    } catch (error) {
-      this.logger.error('Admin user search failed', error);
-      throw new BadRequestException(ERROR_MESSAGES.DATABASE_ERROR);
-    }
-  }
-
-  @Post('users/:id/role')
-  @UseGuards(AuthGuard)
-  async changeUserRole(
-    @Param('id', ParseIntPipe) userId: number,
-    @Body('role') role: UserRole,
-    @CurrentUser() currentUser: CurrentUserData
-  ) {
-    try {
-      const user = await User.findOne({ where: { id: userId } });
-
       if (!user) {
-        throw new BadRequestException(ERROR_MESSAGES.USER_NOT_FOUND);
+        throw new BadRequestException(ERROR_MESSAGES.EMAIL_NOT_FOUND);
       }
 
-      // 자기 자신의 역할은 변경할 수 없음
-      if (user.id === currentUser.id) {
-        throw new BadRequestException('자기 자신의 역할은 변경할 수 없습니다.');
+      if (!user.password) {
+        throw new BadRequestException(ERROR_MESSAGES.SOCIAL_LOGIN_ACCOUNT);
       }
 
-      await User.update(userId, { role });
-      this.logger.log(`Admin ${currentUser.email} changed role of ${user.email} to ${role}`);
+      const isMatch = await bcrypt.compare(data.password, user.password);
 
-      return { message: '사용자 역할이 변경되었습니다.' };
+      if (!isMatch) {
+        throw new BadRequestException(ERROR_MESSAGES.PASSWORD_MISMATCH);
+      }
+
+      // 관리자 권한 체크
+      if (user.role !== UserRole.ADMIN) {
+        throw new BadRequestException('관리자 권한이 필요합니다.');
+      }
+
+      const payload: JwtPayload = {
+        id: user.id,
+        email: user.email,
+      };
+
+      const tokens = this.authService.generateTokenPair(payload);
+
+      // 리프레시 토큰 저장
+      await User.update(user.id, { refreshToken: tokens.refreshToken });
+
+      this.logger.log(`Admin signed in: ${user.email}`);
+      return tokens;
     } catch (error) {
       if (error instanceof BadRequestException) {
         throw error;
       }
 
-      this.logger.error('Admin role change failed', error);
+      this.logger.error('Admin sign in failed', error);
       throw new BadRequestException(ERROR_MESSAGES.DATABASE_ERROR);
+    }
+  }
+
+  @Post('sign/refresh')
+  async refreshToken(@Body() data: { refreshToken: string }) {
+    try {
+      // 리프레시 토큰 검증
+      const decoded = this.authService.verifyToken(data.refreshToken);
+
+      // 데이터베이스에서 사용자 및 리프레시 토큰 확인
+      const user = await User.findOne({
+        where: {
+          id: decoded.id,
+          refreshToken: data.refreshToken
+        },
+        select: ['id', 'email', 'refreshToken', 'role'],
+      });
+
+      if (!user || user.refreshToken !== data.refreshToken) {
+        throw new BadRequestException(ERROR_MESSAGES.INVALID_REFRESH_TOKEN);
+      }
+
+      // 관리자 권한 체크
+      if (user.role !== UserRole.ADMIN) {
+        throw new BadRequestException('관리자 권한이 필요합니다.');
+      }
+
+      // 새로운 액세스 토큰 생성
+      const payload: JwtPayload = {
+        id: user.id,
+        email: user.email,
+      };
+
+      const newAccessToken = this.authService.generateAccessToken(payload);
+
+      this.logger.log(`Admin access token refreshed: ${user.email}`);
+      return { accessToken: newAccessToken };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      this.logger.error('Admin token refresh failed', error);
+      throw new BadRequestException(ERROR_MESSAGES.INVALID_REFRESH_TOKEN);
+    }
+  }
+
+  @Post('sign/out')
+  @UseGuards(AuthGuard)
+  async signOut(@CurrentUser() currentUser: CurrentUserData) {
+    try {
+      // 리프레시 토큰 제거
+      await User.update(currentUser.id, { refreshToken: null });
+
+      this.logger.log(`Admin signed out: ${currentUser.email}`);
+      return { message: SUCCESS_MESSAGES.LOGOUT_SUCCESS };
+    } catch (error) {
+      this.logger.error('Admin sign out failed', error);
+      throw new BadRequestException(ERROR_MESSAGES.LOGOUT_ERROR);
     }
   }
 } 
