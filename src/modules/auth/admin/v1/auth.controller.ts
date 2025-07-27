@@ -13,7 +13,7 @@ import {
   CurrentUser,
   CurrentUserData,
 } from 'src/common/decorators/current-user.decorator';
-import { AuthGuard } from 'src/guards/auth.guard';
+import { AdminGuard } from 'src/guards/admin.guard';
 import * as bcrypt from 'bcrypt';
 import {
   SECURITY_CONSTANTS,
@@ -31,7 +31,7 @@ export class AdminAuthController {
   constructor(private readonly authService: AuthService) { }
 
   @Post('sign/up')
-  @UseGuards(AuthGuard)
+  @UseGuards(AdminGuard)
   async signUp(
     @Body() data: AuthSignupDto,
     @CurrentUser() currentUser: CurrentUserData
@@ -161,7 +161,7 @@ export class AdminAuthController {
   }
 
   @Post('sign/out')
-  @UseGuards(AuthGuard)
+  @UseGuards(AdminGuard)
   async signOut(@CurrentUser() currentUser: CurrentUserData) {
     try {
       // 리프레시 토큰 제거
