@@ -28,30 +28,8 @@ cpu = 1.0                    # 1 vCPU
 memoryBytes = 1073741824     # 1GB RAM (1024 * 1024 * 1024)
 diskBytes = 2147483648       # 2GB 디스크 (2 * 1024 * 1024 * 1024)
 
-# 개발 환경 설정
-[environments.development]
-[environments.development.build]
-buildCommand = "npm ci && npm run build"
-watchPatterns = [
-  "src/**/*.ts",
-  "package.json",
-  "tsconfig.json"
-]
-
-[environments.development.deploy]
-startCommand = "npm run start:dev"
-healthcheckPath = "/api/v1/users"
-healthcheckTimeout = 60
-numReplicas = 1
-sleepApplication = true      # 개발환경에서는 비활성시 sleep
-restartPolicyType = "ALWAYS"
-
-# 개발환경 리소스 제한 (더 낮게)
-[environments.development.deploy.limitOverride]
-[environments.development.deploy.limitOverride.containers]
-cpu = 0.5                    # 0.5 vCPU
-memoryBytes = 536870912      # 512MB RAM
-diskBytes = 1073741824       # 1GB 디스크
+# Staging 환경 설정 (develop 브랜치용)
+# develop 브랜치를 Staging 환경으로 사용
 
 # 프로덕션 환경 설정
 [environments.production]
@@ -78,7 +56,7 @@ cpu = 2.0                    # 2 vCPU
 memoryBytes = 2147483648     # 2GB RAM
 diskBytes = 5368709120       # 5GB 디스크
 
-# 스테이징 환경 설정 (선택사항)
+# Staging 환경 설정 (develop 브랜치)
 [environments.staging]
 [environments.staging.build]
 buildCommand = "npm ci && npm run build"

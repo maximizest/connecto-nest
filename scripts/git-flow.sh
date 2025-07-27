@@ -24,11 +24,11 @@ show_help() {
     echo -e "${YELLOW}Commands:${NC}"
     echo "  feature <name>     새 기능 브랜치 생성 및 작업"
     echo "  develop           develop 브랜치로 전환 및 업데이트"
-    echo "  staging           staging 브랜치로 전환 및 develop 머지"
-    echo "  production        main 브랜치로 전환 및 staging 머지"
+    echo "  staging           develop을 Staging 환경에 배포"
+    echo "  production        main 브랜치로 전환 및 develop 머지"
     echo "  hotfix <name>     핫픽스 브랜치 생성"
     echo "  status            모든 브랜치 상태 확인"
-    echo "  deploy            전체 배포 프로세스 (develop → staging → main)"
+    echo "  deploy            전체 배포 프로세스 (develop → main)"
     echo ""
     echo -e "${YELLOW}예시:${NC}"
     echo "  ./scripts/git-flow.sh feature user-authentication"
@@ -54,7 +54,7 @@ check_status() {
     
     # 각 주요 브랜치의 최신 커밋
     echo -e "\n${YELLOW}최신 커밋:${NC}"
-    for branch in main staging develop; do
+    for branch in main develop; do
         if git show-ref --verify --quiet refs/heads/$branch; then
             last_commit=$(git log --oneline -1 $branch)
             echo -e "$branch: ${GREEN}$last_commit${NC}"
@@ -90,9 +90,9 @@ create_feature() {
     echo -e "${BLUE}이제 개발을 시작할 수 있습니다!${NC}"
 }
 
-# 함수: develop 브랜치 작업
+# 함수: develop 브랜치 작업 (Staging 환경)
 work_develop() {
-    echo -e "${BLUE}🔧 Development 환경 배포${NC}"
+    echo -e "${BLUE}🔧 Staging 환경 배포${NC}"
     echo "======================================"
     
     git checkout develop
@@ -111,31 +111,31 @@ work_develop() {
     
     git push origin develop
     
-    echo -e "${GREEN}✅ Development 환경에 배포됨${NC}"
-    echo -e "${BLUE}🔗 https://yourapp-dev.railway.app${NC}"
+    echo -e "${GREEN}✅ Staging 환경에 배포됨${NC}"
+    echo -e "${BLUE}🔗 https://yourapp-staging.railway.app${NC}"
 }
 
-# 함수: staging 배포
+# 함수: staging 배포 (develop 브랜치 사용)
 deploy_staging() {
     echo -e "${BLUE}🧪 Staging 환경 배포${NC}"
     echo "======================================"
     
-    # develop의 최신 변경사항 확인
+    # develop 브랜치로 전환하고 최신 상태로 업데이트
     git checkout develop
     git pull origin develop
     
-    # staging으로 전환하고 develop 머지
-    git checkout staging
-    git pull origin staging
-    git merge develop
+    echo -e "${YELLOW}변경사항을 커밋하시겠습니까? (y/n)${NC}"
+    read -r commit_choice
     
-    # 충돌 확인
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}❌ 머지 충돌이 발생했습니다. 수동으로 해결 후 다시 실행해주세요.${NC}"
-        exit 1
+    if [ "$commit_choice" = "y" ] || [ "$commit_choice" = "Y" ]; then
+        echo -e "${YELLOW}커밋 메시지를 입력하세요:${NC}"
+        read -r commit_message
+        
+        git add .
+        git commit -m "$commit_message"
     fi
     
-    git push origin staging
+    git push origin develop
     
     echo -e "${GREEN}✅ Staging 환경에 배포됨${NC}"
     echo -e "${BLUE}🔗 https://yourapp-staging.railway.app${NC}"
@@ -154,14 +154,14 @@ deploy_production() {
         exit 0
     fi
     
-    # staging의 최신 변경사항 확인
-    git checkout staging
-    git pull origin staging
+    # develop의 최신 변경사항 확인
+    git checkout develop
+    git pull origin develop
     
-    # main으로 전환하고 staging 머지
+    # main으로 전환하고 develop 머지
     git checkout main
     git pull origin main
-    git merge staging
+    git merge develop
     
     # 충돌 확인
     if [ $? -ne 0 ]; then
@@ -191,13 +191,10 @@ full_deploy() {
     echo -e "${BLUE}🚀 전체 배포 프로세스 시작${NC}"
     echo "======================================"
     
-    echo -e "${YELLOW}1. Development 환경 확인...${NC}"
+    echo -e "${YELLOW}1. Staging 환경 확인...${NC}"
     work_develop
     
-    echo -e "\n${YELLOW}2. Staging 환경 배포...${NC}"
-    deploy_staging
-    
-    echo -e "\n${YELLOW}3. Production 환경 배포 준비...${NC}"
+    echo -e "\n${YELLOW}2. Production 환경 배포 준비...${NC}"
     deploy_production
     
     echo -e "\n${GREEN}🎉 전체 배포 프로세스 완료!${NC}"
