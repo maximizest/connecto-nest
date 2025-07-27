@@ -1,0 +1,99 @@
+# Railway.toml - NestJS 프로젝트 배포 설정
+# 참조: https://backboard.railway.app/railway.schema.json
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm ci && npm run build"
+watchPatterns = [
+  "src/**/*.ts",
+  "package.json",
+  "package-lock.json",
+  "tsconfig.json",
+  "nest-cli.json"
+]
+
+[deploy]
+startCommand = "npm run start:prod"
+healthcheckPath = "/api/v1/users"
+healthcheckTimeout = 30
+numReplicas = 1
+sleepApplication = false
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+# 리소스 제한 설정
+[deploy.limitOverride]
+[deploy.limitOverride.containers]
+cpu = 1.0                    # 1 vCPU
+memoryBytes = 1073741824     # 1GB RAM (1024 * 1024 * 1024)
+diskBytes = 2147483648       # 2GB 디스크 (2 * 1024 * 1024 * 1024)
+
+# 개발 환경 설정
+[environments.development]
+[environments.development.build]
+buildCommand = "npm ci && npm run build"
+watchPatterns = [
+  "src/**/*.ts",
+  "package.json",
+  "tsconfig.json"
+]
+
+[environments.development.deploy]
+startCommand = "npm run start:dev"
+healthcheckPath = "/api/v1/users"
+healthcheckTimeout = 60
+numReplicas = 1
+sleepApplication = true      # 개발환경에서는 비활성시 sleep
+restartPolicyType = "ALWAYS"
+
+# 개발환경 리소스 제한 (더 낮게)
+[environments.development.deploy.limitOverride]
+[environments.development.deploy.limitOverride.containers]
+cpu = 0.5                    # 0.5 vCPU
+memoryBytes = 536870912      # 512MB RAM
+diskBytes = 1073741824       # 1GB 디스크
+
+# 프로덕션 환경 설정
+[environments.production]
+[environments.production.build]
+builder = "NIXPACKS"
+buildCommand = "npm ci --only=production && npm run build"
+buildEnvironment = "V2"
+
+[environments.production.deploy]
+startCommand = "npm run start:prod"
+healthcheckPath = "/api/v1/users"
+healthcheckTimeout = 30
+numReplicas = 2              # 프로덕션에서는 2개 인스턴스
+sleepApplication = false
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
+overlapSeconds = 30          # 무중단 배포를 위한 겹침 시간
+drainingSeconds = 30         # Graceful shutdown 시간
+
+# 프로덕션 리소스 제한 (더 높게)
+[environments.production.deploy.limitOverride]
+[environments.production.deploy.limitOverride.containers]
+cpu = 2.0                    # 2 vCPU
+memoryBytes = 2147483648     # 2GB RAM
+diskBytes = 5368709120       # 5GB 디스크
+
+# 스테이징 환경 설정 (선택사항)
+[environments.staging]
+[environments.staging.build]
+buildCommand = "npm ci && npm run build"
+
+[environments.staging.deploy]
+startCommand = "npm run start:prod"
+healthcheckPath = "/api/v1/users"
+healthcheckTimeout = 45
+numReplicas = 1
+sleepApplication = false
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+[environments.staging.deploy.limitOverride]
+[environments.staging.deploy.limitOverride.containers]
+cpu = 1.0
+memoryBytes = 1073741824     # 1GB RAM
+diskBytes = 2147483648       # 2GB 디스크 
