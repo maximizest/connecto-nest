@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { User } from './users/user.entity';
 import { UserModule } from './users/user.module';
 import { AuthModule } from './auth/auth.module';
+import { SchemaModule } from './schema/schema.module';
 
 @Module({
   imports: [
@@ -34,6 +35,8 @@ import { AuthModule } from './auth/auth.module';
     }),
     UserModule,
     AuthModule,
+    // 개발 환경에서만 스키마 모듈 등록
+    ...(process.env.NODE_ENV === 'development' || !process.env.NODE_ENV ? [SchemaModule] : []),
   ],
 })
 export class AppModule { }

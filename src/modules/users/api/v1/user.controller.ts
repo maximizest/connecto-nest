@@ -17,7 +17,18 @@ import { AuthGuard } from 'src/guards/auth.guard';
   entity: User,
   logging: true,
   allowedFilters: ['email'],
+  allowedParams: ['phone'],
+  allowedIncludes: ['posts'],
   only: ['index', 'show'],
+  routes: {
+    index: {
+      allowedIncludes: ['posts'],
+      allowedFilters: ['email'],
+    },
+    create: {
+      allowedParams: ['password']
+    },
+  },
 })
 @Controller({
   path: 'users',
