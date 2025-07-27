@@ -1,9 +1,10 @@
 import { Controller, Get, Param, NotFoundException, UseGuards } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { crudResponse } from '@foryourdev/nestjs-crud';
-import { ModulesContainer, Reflector } from '@nestjs/core';
-import { Injectable } from '@nestjs/common';
 import { DevOnlyGuard } from '../../guards/dev-only.guard';
+import { CrudMetadataService } from './services/crud-metadata.service';
+import { SCHEMA_CONSTANTS } from './constants/schema.constants';
+import { ColumnMetadata, SchemaEntityInfo } from './types/schema.types';
 import 'reflect-metadata';
 
 @Controller({
@@ -14,8 +15,7 @@ import 'reflect-metadata';
 export class SchemaController {
   constructor(
     private readonly dataSource: DataSource,
-    private readonly modulesContainer: ModulesContainer,
-    private readonly reflector: Reflector,
+    private readonly crudMetadataService: CrudMetadataService,
   ) { }
 
   @Get()
@@ -203,182 +203,17 @@ export class SchemaController {
 
 
 
+  /**
+   * 데이터베이스 타입을 JavaScript 타입으로 변환합니다.
+   */
   private getJsType(column: any): string {
-    const typeMapping: { [key: string]: string } = {
-      'varchar': 'string',
-      'text': 'string',
-      'char': 'string',
-      'int': 'number',
-      'integer': 'number',
-      'bigint': 'number',
-      'decimal': 'number',
-      'float': 'number',
-      'double': 'number',
-      'boolean': 'boolean',
-      'date': 'Date',
-      'datetime': 'Date',
-      'timestamp': 'Date',
-      'json': 'object',
-      'enum': 'enum',
-    };
-
-    return typeMapping[column.type] || 'unknown';
+    return SCHEMA_CONSTANTS.JS_TYPE_MAPPING[column.type as keyof typeof SCHEMA_CONSTANTS.JS_TYPE_MAPPING] || 'unknown';
   }
 
-  private getCrudInfo(entityName: string): any {
-    const crudMetadata = this.extractCrudMetadata(entityName);
-
-    if (!crudMetadata) {
-      return {
-        note: `No CRUD controller found for entity: ${entityName}`,
-        availableEndpoints: [],
-        isConfigured: false,
-      };
-    }
-
-    return {
-      isConfigured: true,
-      controllerPath: crudMetadata.controllerPath,
-      entityName: crudMetadata.entityName,
-      allowedMethods: crudMetadata.allowedMethods,
-      allowedFilters: crudMetadata.allowedFilters,
-      allowedParams: crudMetadata.allowedParams,
-      allowedIncludes: crudMetadata.allowedIncludes,
-      routeSettings: crudMetadata.routeSettings,
-      availableEndpoints: this.generateEndpoints(crudMetadata),
-    };
-  }
-
-  private extractCrudMetadata(entityName: string): any {
-    const controllers = this.getAllControllers();
-
-    for (const controller of controllers) {
-      // 다양한 메타데이터 키 시도
-      let crudMetadata = this.reflector.get('__crud_options__', controller.metatype) ||
-        this.reflector.get('crud_options', controller.metatype) ||
-        this.reflector.get('__crud__', controller.metatype) ||
-        this.reflector.get('CRUD_OPTIONS', controller.metatype) ||
-        Reflect.getMetadata('__crud_options__', controller.metatype) ||
-        Reflect.getMetadata('crud_options', controller.metatype) ||
-        Reflect.getMetadata('__crud__', controller.metatype);
-
-      // 메타데이터가 없으면 모든 메타데이터 키 확인
-      if (!crudMetadata) {
-        const allKeys = Reflect.getMetadataKeys(controller.metatype);
-        console.log(`Controller ${controller.metatype.name} metadata keys:`, allKeys);
-
-        // CRUD 관련으로 보이는 키 찾기
-        const crudKey = allKeys.find(key =>
-          typeof key === 'string' &&
-          key.toLowerCase().includes('crud')
-        );
-
-        if (crudKey) {
-          crudMetadata = Reflect.getMetadata(crudKey, controller.metatype);
-          console.log(`Found CRUD metadata with key "${crudKey}":`, crudMetadata);
-        }
-      }
-
-      if (crudMetadata && crudMetadata.entity) {
-        const entityMetadata = crudMetadata.entity;
-        const controllerEntityName = typeof entityMetadata === 'function'
-          ? entityMetadata.name
-          : entityMetadata;
-
-        if (controllerEntityName.toLowerCase() === entityName.toLowerCase()) {
-          // 컨트롤러 경로 추출
-          const controllerPath = this.getControllerPath(controller.metatype);
-
-          return {
-            controllerName: controller.metatype.name,
-            controllerPath: controllerPath,
-            entityName: controllerEntityName,
-            allowedMethods: crudMetadata.only || ['index', 'show', 'create', 'update', 'destroy'],
-            allowedFilters: crudMetadata.allowedFilters || [],
-            allowedParams: crudMetadata.allowedParams || [],
-            allowedIncludes: crudMetadata.allowedIncludes || [],
-            routeSettings: crudMetadata.routes || {},
-            paginationType: crudMetadata.paginationType,
-            softDelete: crudMetadata.softDelete,
-            logging: crudMetadata.logging,
-          };
-        }
-      }
-    }
-
-    return null;
-  }
-
-  private getControllerPath(controllerClass: any): string {
-    // @Controller 데코레이터에서 path 추출
-    const controllerMetadata = this.reflector.get('path', controllerClass) ||
-      Reflect.getMetadata('path', controllerClass) ||
-      Reflect.getMetadata('__controller_path__', controllerClass);
-
-    if (controllerMetadata) {
-      return controllerMetadata;
-    }
-
-    // 메타데이터에서 컨트롤러 옵션 확인
-    const allKeys = Reflect.getMetadataKeys(controllerClass);
-    for (const key of allKeys) {
-      const metadata = Reflect.getMetadata(key, controllerClass);
-      if (metadata && typeof metadata === 'object' && metadata.path) {
-        return metadata.path;
-      }
-    }
-
-    // 기본값: 컨트롤러 이름에서 추출
-    return controllerClass.name.toLowerCase().replace('controller', '');
-  }
-
-  private getAllControllers(): any[] {
-    const controllers: any[] = [];
-
-    for (const module of this.modulesContainer.values()) {
-      for (const controller of module.controllers.values()) {
-        if (controller.metatype && controller.metatype !== SchemaController) {
-          (controllers as any).push(controller);
-        }
-      }
-    }
-
-    return controllers;
-  }
-
-  private generateEndpoints(crudMetadata: any): string[] {
-    const basePath = crudMetadata.controllerPath || crudMetadata.entityName.toLowerCase() + 's';
-    const endpoints: string[] = [];
-    const allowedMethods = crudMetadata.allowedMethods;
-
-    if (allowedMethods.includes && allowedMethods.includes('index')) {
-      (endpoints as any).push(`GET /${basePath}`);
-    }
-
-    if (allowedMethods.includes && allowedMethods.includes('show')) {
-      (endpoints as any).push(`GET /${basePath}/:id`);
-    }
-
-    if (allowedMethods.includes && allowedMethods.includes('create')) {
-      (endpoints as any).push(`POST /${basePath}`);
-    }
-
-    if (allowedMethods.includes && allowedMethods.includes('update')) {
-      (endpoints as any).push(`PUT /${basePath}/:id`);
-    }
-
-    if (allowedMethods.includes && allowedMethods.includes('destroy')) {
-      (endpoints as any).push(`DELETE /${basePath}/:id`);
-    }
-
-    if (allowedMethods.includes && allowedMethods.includes('upsert')) {
-      (endpoints as any).push(`POST /${basePath}/upsert`);
-    }
-
-    if (allowedMethods.includes && allowedMethods.includes('recover')) {
-      (endpoints as any).push(`POST /${basePath}/:id/recover`);
-    }
-
-    return endpoints;
+  /**
+ * 엔티티의 CRUD 설정 정보를 반환합니다.
+ */
+  private getCrudInfo(entityName: string) {
+    return this.crudMetadataService.getCrudInfo(entityName);
   }
 } 
