@@ -1,7 +1,7 @@
+import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-apple';
-import { Injectable } from '@nestjs/common';
-import { User, SocialProvider, UserRole } from 'src/modules/users/user.entity';
+import { SocialProvider, User } from 'src/modules/users/user.entity';
 
 @Injectable()
 export class AppleStrategy extends PassportStrategy(Strategy, 'apple') {
@@ -11,7 +11,9 @@ export class AppleStrategy extends PassportStrategy(Strategy, 'apple') {
       teamID: process.env.APPLE_TEAM_ID!,
       keyID: process.env.APPLE_KEY_ID!,
       privateKeyString: process.env.APPLE_PRIVATE_KEY!,
-      callbackURL: process.env.APPLE_CALLBACK_URL || 'http://localhost:3000/auth/apple/callback',
+      callbackURL:
+        process.env.APPLE_CALLBACK_URL ||
+        'http://localhost:3000/auth/apple/callback',
       scope: ['name', 'email'],
     });
   }
@@ -35,9 +37,11 @@ export class AppleStrategy extends PassportStrategy(Strategy, 'apple') {
 
     if (!user) {
       // 기존 로컬 계정이 있는지 확인
-      const existingUser = email ? await User.findOne({
-        where: { email, provider: SocialProvider.LOCAL },
-      }) : null;
+      const existingUser = email
+        ? await User.findOne({
+            where: { email, provider: SocialProvider.LOCAL },
+          })
+        : null;
 
       if (existingUser) {
         // 기존 로컬 계정에 Apple 연동
@@ -53,7 +57,6 @@ export class AppleStrategy extends PassportStrategy(Strategy, 'apple') {
           name,
           provider: SocialProvider.APPLE,
           providerId: id,
-          role: UserRole.USER,
         });
         await user.save();
       }
@@ -61,4 +64,4 @@ export class AppleStrategy extends PassportStrategy(Strategy, 'apple') {
 
     done(null, user);
   }
-} 
+}

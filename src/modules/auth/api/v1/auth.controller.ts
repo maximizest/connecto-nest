@@ -3,26 +3,25 @@ import {
   Body,
   Controller,
   Get,
+  Logger,
   Post,
   Req,
   Res,
-  UseGuards,
-  Logger,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
-import { User, UserRole, SocialProvider } from 'src/modules/users/user.entity';
-import { AuthSignupDto } from '../../dto/auth.signup.dto';
-import * as bcrypt from 'bcrypt';
-import { AuthSigninDto } from '../../dto/auth.signin.dto';
-import { Request, Response } from 'express';
-import { AuthService, JwtPayload } from '../../auth.service';
-import { CurrentUserData } from 'src/common/decorators/current-user.decorator';
 import { AuthGuard } from '@nestjs/passport';
+import * as bcrypt from 'bcrypt';
+import { Request, Response } from 'express';
 import {
-  SECURITY_CONSTANTS,
   ERROR_MESSAGES,
-  SUCCESS_MESSAGES
+  SECURITY_CONSTANTS,
+  SUCCESS_MESSAGES,
 } from 'src/common/constants/app.constants';
+import { SocialProvider, User } from 'src/modules/users/user.entity';
+import { AuthService, JwtPayload } from '../../auth.service';
+import { AuthSigninDto } from '../../dto/auth.signin.dto';
+import { AuthSignupDto } from '../../dto/auth.signup.dto';
 
 @Controller({
   path: 'auth',
@@ -31,23 +30,27 @@ import {
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   @Post('sign/up')
   async signUp(@Body() data: AuthSignupDto) {
     try {
-      const isExist = await User.exists({ where: { email: data.email } });
+      const existingUser = await User.findOne({
+        where: { email: data.email },
+      });
 
-      if (isExist) {
+      if (existingUser) {
         throw new BadRequestException(ERROR_MESSAGES.EMAIL_EXISTS);
       }
 
-      const hashedPassword = await bcrypt.hash(data.password, SECURITY_CONSTANTS.BCRYPT_SALT_ROUNDS);
+      const hashedPassword = await bcrypt.hash(
+        data.password,
+        SECURITY_CONSTANTS.BCRYPT_SALT_ROUNDS,
+      );
 
       const user = User.create({
-        ...data,
+        email: data.email,
         password: hashedPassword,
-        role: data.role || UserRole.USER,
         provider: SocialProvider.LOCAL,
       });
 
@@ -60,7 +63,7 @@ export class AuthController {
         throw error;
       }
 
-      this.logger.error('Sign up failed', error);
+      this.logger.error('Signup error', error);
       throw new BadRequestException(ERROR_MESSAGES.DATABASE_ERROR);
     }
   }
@@ -70,7 +73,7 @@ export class AuthController {
     try {
       const user = await User.findOne({
         where: { email: data.email, provider: SocialProvider.LOCAL },
-        select: ['id', 'email', 'password', 'name', 'role'],
+        select: ['id', 'email', 'password'],
       });
 
       if (!user) {
@@ -94,7 +97,6 @@ export class AuthController {
 
       const tokens = this.authService.generateTokenPair(payload);
 
-      // 리프레시 토큰 저장
       await User.update(user.id, { refreshToken: tokens.refreshToken });
 
       this.logger.log(`User signed in: ${user.email}`);
@@ -104,7 +106,7 @@ export class AuthController {
         throw error;
       }
 
-      this.logger.error('Sign in failed', error);
+      this.logger.error('Signin error', error);
       throw new BadRequestException(ERROR_MESSAGES.DATABASE_ERROR);
     }
   }
@@ -118,16 +120,18 @@ export class AuthController {
         throw new UnauthorizedException(ERROR_MESSAGES.AUTH_HEADER_REQUIRED);
       }
 
-      const refreshToken = this.authService.extractBearerToken(authHeader as string);
+      const refreshToken = this.authService.extractBearerToken(
+        authHeader as string,
+      );
 
       // 리프레시 토큰 검증
       const decoded = this.authService.verifyToken(refreshToken);
 
-      // 데이터베이스에서 사용자 및 리프레시 토큰 확인
+      // 데이터베이스에서 사용자 확인
       const user = await User.findOne({
         where: {
           id: decoded.id,
-          refreshToken: refreshToken
+          refreshToken: refreshToken,
         },
         select: ['id', 'email', 'refreshToken'],
       });
@@ -142,10 +146,10 @@ export class AuthController {
         email: user.email,
       };
 
-      const newAccessToken = this.authService.generateAccessToken(payload);
+      const accessToken = this.authService.generateAccessToken(payload);
 
-      this.logger.log(`Access token refreshed for user: ${user.email}`);
-      return { accessToken: newAccessToken };
+      this.logger.log(`Token refreshed for user: ${user.email}`);
+      return { accessToken };
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error;
@@ -179,7 +183,7 @@ export class AuthController {
         throw error;
       }
 
-      this.logger.error('Sign out failed', error);
+      this.logger.error('Signout error', error);
       throw new BadRequestException(ERROR_MESSAGES.LOGOUT_ERROR);
     }
   }
@@ -188,7 +192,9 @@ export class AuthController {
   @Get('google')
   async googleAuth(@Res() res: Response) {
     if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-      throw new BadRequestException('Google 소셜 로그인이 설정되지 않았습니다.');
+      throw new BadRequestException(
+        'Google 소셜 로그인이 설정되지 않았습니다.',
+      );
     }
 
     const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/auth/google/callback')}&response_type=code&scope=email%20profile`;
@@ -206,7 +212,9 @@ export class AuthController {
     await User.update(user.id, { refreshToken: tokens.refreshToken });
 
     // 프론트엔드로 토큰과 함께 리다이렉트
-    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback?token=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`);
+    return res.redirect(
+      `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback?token=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`,
+    );
   }
 
   // Kakao 소셜 로그인
@@ -230,7 +238,9 @@ export class AuthController {
 
     await User.update(user.id, { refreshToken: tokens.refreshToken });
 
-    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback?token=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`);
+    return res.redirect(
+      `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback?token=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`,
+    );
   }
 
   // Naver 소셜 로그인
@@ -254,13 +264,20 @@ export class AuthController {
 
     await User.update(user.id, { refreshToken: tokens.refreshToken });
 
-    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback?token=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`);
+    return res.redirect(
+      `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback?token=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`,
+    );
   }
 
   // Apple 소셜 로그인
   @Get('apple')
   async appleAuth(@Res() res: Response) {
-    if (!process.env.APPLE_CLIENT_ID || !process.env.APPLE_TEAM_ID || !process.env.APPLE_KEY_ID || !process.env.APPLE_PRIVATE_KEY) {
+    if (
+      !process.env.APPLE_CLIENT_ID ||
+      !process.env.APPLE_TEAM_ID ||
+      !process.env.APPLE_KEY_ID ||
+      !process.env.APPLE_PRIVATE_KEY
+    ) {
       throw new BadRequestException('Apple 소셜 로그인이 설정되지 않았습니다.');
     }
 
@@ -278,6 +295,8 @@ export class AuthController {
 
     await User.update(user.id, { refreshToken: tokens.refreshToken });
 
-    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback?token=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`);
+    return res.redirect(
+      `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback?token=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`,
+    );
   }
 }

@@ -1,7 +1,7 @@
+import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-kakao';
-import { Injectable } from '@nestjs/common';
-import { User, SocialProvider, UserRole } from 'src/modules/users/user.entity';
+import { SocialProvider, User } from 'src/modules/users/user.entity';
 
 @Injectable()
 export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
@@ -9,7 +9,9 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
     super({
       clientID: process.env.KAKAO_CLIENT_ID!,
       clientSecret: process.env.KAKAO_CLIENT_SECRET || '',
-      callbackURL: process.env.KAKAO_CALLBACK_URL || 'http://localhost:3000/auth/kakao/callback',
+      callbackURL:
+        process.env.KAKAO_CALLBACK_URL ||
+        'http://localhost:3000/auth/kakao/callback',
     });
   }
 
@@ -32,9 +34,11 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
 
     if (!user) {
       // 기존 로컬 계정이 있는지 확인
-      const existingUser = email ? await User.findOne({
-        where: { email, provider: SocialProvider.LOCAL },
-      }) : null;
+      const existingUser = email
+        ? await User.findOne({
+            where: { email, provider: SocialProvider.LOCAL },
+          })
+        : null;
 
       if (existingUser) {
         // 기존 로컬 계정에 Kakao 연동
@@ -50,7 +54,6 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
           name,
           provider: SocialProvider.KAKAO,
           providerId: String(id),
-          role: UserRole.USER,
         });
         await user.save();
       }
@@ -58,4 +61,4 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
 
     done(null, user);
   }
-} 
+}

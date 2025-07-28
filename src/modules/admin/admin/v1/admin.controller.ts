@@ -11,13 +11,13 @@ import {
   CurrentUserData,
 } from 'src/common/decorators/current-user.decorator';
 import { AdminGuard } from 'src/guards/admin.guard';
-import { User } from '../../user.entity';
-import { UserService } from '../../user.service';
+import { Admin } from '../../admin.entity';
+import { AdminService } from '../../admin.service';
 
 @Crud({
-  entity: User,
+  entity: Admin,
   allowedFilters: ['email', 'name'],
-  allowedParams: ['name', 'email', 'password', 'provider', 'providerId'],
+  allowedParams: ['name', 'email', 'password'],
   allowedIncludes: [],
   only: ['index', 'show', 'create', 'update', 'destroy'],
   routes: {
@@ -28,20 +28,14 @@ import { UserService } from '../../user.service';
     show: {
       allowedIncludes: [],
     },
-    create: {
-      allowedParams: ['name', 'email', 'password'],
-    },
-    update: {
-      allowedParams: ['name'],
-    },
   },
 })
 @Controller({
   path: 'admin/users',
   version: '1',
 })
-export class AdminUserController {
-  constructor(public readonly crudService: UserService) {}
+export class AdminController {
+  constructor(public readonly crudService: AdminService) {}
 
   @BeforeCreate()
   @BeforeUpdate()
@@ -56,7 +50,7 @@ export class AdminUserController {
   @Get('me')
   @UseGuards(AdminGuard)
   async me(@CurrentUser() currentUser: CurrentUserData) {
-    const user = await User.findOne({
+    const user = await Admin.findOne({
       where: { id: currentUser.id },
     });
 

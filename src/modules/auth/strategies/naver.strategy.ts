@@ -1,7 +1,7 @@
+import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-naver-v2';
-import { Injectable } from '@nestjs/common';
-import { User, SocialProvider, UserRole } from 'src/modules/users/user.entity';
+import { SocialProvider, User } from 'src/modules/users/user.entity';
 
 @Injectable()
 export class NaverStrategy extends PassportStrategy(Strategy, 'naver') {
@@ -9,7 +9,9 @@ export class NaverStrategy extends PassportStrategy(Strategy, 'naver') {
     super({
       clientID: process.env.NAVER_CLIENT_ID!,
       clientSecret: process.env.NAVER_CLIENT_SECRET!,
-      callbackURL: process.env.NAVER_CALLBACK_URL || 'http://localhost:3000/auth/naver/callback',
+      callbackURL:
+        process.env.NAVER_CALLBACK_URL ||
+        'http://localhost:3000/auth/naver/callback',
     });
   }
 
@@ -48,7 +50,6 @@ export class NaverStrategy extends PassportStrategy(Strategy, 'naver') {
           name,
           provider: SocialProvider.NAVER,
           providerId: id,
-          role: UserRole.USER,
         });
         await user.save();
       }
@@ -56,4 +57,4 @@ export class NaverStrategy extends PassportStrategy(Strategy, 'naver') {
 
     done(null, user);
   }
-} 
+}

@@ -1,11 +1,11 @@
 import * as dotenv from 'dotenv';
 import { DataSourceOptions } from 'typeorm';
-import { User } from '../modules/users/user.entity';
-import { Post } from '../modules/posts/post.entity';
 import {
   DATABASE_CONSTANTS,
-  ENV_KEYS
+  ENV_KEYS,
 } from '../common/constants/app.constants';
+import { Admin } from '../modules/admin/admin.entity';
+import { User } from '../modules/users/user.entity';
 
 // 환경변수 로드
 dotenv.config();
@@ -13,7 +13,7 @@ dotenv.config();
 /**
  * 모든 엔티티 목록 (중앙 관리)
  */
-export const ENTITIES = [User, Post];
+export const ENTITIES = [User, Admin];
 
 /**
  * 공통 데이터베이스 설정
@@ -21,7 +21,10 @@ export const ENTITIES = [User, Post];
 export const DATABASE_CONFIG: DataSourceOptions = {
   type: (process.env[ENV_KEYS.DATABASE_TYPE] as 'postgres') || 'postgres',
   host: process.env[ENV_KEYS.DATABASE_HOST] || 'localhost',
-  port: parseInt(process.env[ENV_KEYS.DATABASE_PORT] || DATABASE_CONSTANTS.DEFAULT_PORT.toString()),
+  port: parseInt(
+    process.env[ENV_KEYS.DATABASE_PORT] ||
+      DATABASE_CONSTANTS.DEFAULT_PORT.toString(),
+  ),
   username: process.env[ENV_KEYS.DATABASE_USERNAME] || 'postgres',
   password: process.env[ENV_KEYS.DATABASE_PASSWORD] || 'password',
   database: process.env[ENV_KEYS.DATABASE_NAME] || 'database',
@@ -30,18 +33,31 @@ export const DATABASE_CONFIG: DataSourceOptions = {
   logging: process.env[ENV_KEYS.DATABASE_LOGGING] === 'true' || false,
 
   // SSL 설정 개선
-  ssl: process.env[ENV_KEYS.DATABASE_SSL] === 'true' ? {
-    rejectUnauthorized: process.env[ENV_KEYS.DATABASE_SSL_REJECT_UNAUTHORIZED] !== 'false',
-  } : false,
+  ssl:
+    process.env[ENV_KEYS.DATABASE_SSL] === 'true'
+      ? {
+          rejectUnauthorized:
+            process.env[ENV_KEYS.DATABASE_SSL_REJECT_UNAUTHORIZED] !== 'false',
+        }
+      : false,
 
   // 연결 풀 설정 추가
   extra: {
     // 최대 연결 수
-    max: parseInt(process.env[ENV_KEYS.DATABASE_MAX_CONNECTIONS] || DATABASE_CONSTANTS.DEFAULT_MAX_CONNECTIONS.toString()),
+    max: parseInt(
+      process.env[ENV_KEYS.DATABASE_MAX_CONNECTIONS] ||
+        DATABASE_CONSTANTS.DEFAULT_MAX_CONNECTIONS.toString(),
+    ),
     // 최소 연결 수
-    min: parseInt(process.env[ENV_KEYS.DATABASE_MIN_CONNECTIONS] || DATABASE_CONSTANTS.DEFAULT_MIN_CONNECTIONS.toString()),
+    min: parseInt(
+      process.env[ENV_KEYS.DATABASE_MIN_CONNECTIONS] ||
+        DATABASE_CONSTANTS.DEFAULT_MIN_CONNECTIONS.toString(),
+    ),
     // 연결 시간 초과 (밀리초)
-    connectionTimeoutMillis: parseInt(process.env[ENV_KEYS.DATABASE_CONNECTION_TIMEOUT] || DATABASE_CONSTANTS.DEFAULT_CONNECTION_TIMEOUT.toString()),
+    connectionTimeoutMillis: parseInt(
+      process.env[ENV_KEYS.DATABASE_CONNECTION_TIMEOUT] ||
+        DATABASE_CONSTANTS.DEFAULT_CONNECTION_TIMEOUT.toString(),
+    ),
     // 유휴 연결 제거 시간 (밀리초)
     idleTimeoutMillis: 30000,
     // 연결 풀 이름
@@ -78,14 +94,16 @@ export const validateDatabaseConfig = () => {
     ENV_KEYS.DATABASE_PORT,
     ENV_KEYS.DATABASE_USERNAME,
     ENV_KEYS.DATABASE_PASSWORD,
-    ENV_KEYS.DATABASE_NAME
+    ENV_KEYS.DATABASE_NAME,
   ];
 
-  const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+  const missingVars = requiredEnvVars.filter(
+    (varName) => !process.env[varName],
+  );
 
   if (missingVars.length > 0) {
     console.error('❌ Missing required database environment variables:');
-    missingVars.forEach(varName => {
+    missingVars.forEach((varName) => {
       console.error(`   - ${varName}`);
     });
     console.error('\nPlease check your environment variables and try again.');
@@ -93,24 +111,42 @@ export const validateDatabaseConfig = () => {
   }
 
   // 데이터베이스 포트 검증
-  const port = parseInt(process.env[ENV_KEYS.DATABASE_PORT] || DATABASE_CONSTANTS.DEFAULT_PORT.toString());
+  const port = parseInt(
+    process.env[ENV_KEYS.DATABASE_PORT] ||
+      DATABASE_CONSTANTS.DEFAULT_PORT.toString(),
+  );
   if (isNaN(port) || port < 1 || port > 65535) {
-    console.error(`❌ ${ENV_KEYS.DATABASE_PORT} must be a valid port number (1-65535)`);
+    console.error(
+      `❌ ${ENV_KEYS.DATABASE_PORT} must be a valid port number (1-65535)`,
+    );
     process.exit(1);
   }
 
   // 연결 풀 설정 검증
-  const maxConnections = parseInt(process.env[ENV_KEYS.DATABASE_MAX_CONNECTIONS] || DATABASE_CONSTANTS.DEFAULT_MAX_CONNECTIONS.toString());
-  const minConnections = parseInt(process.env[ENV_KEYS.DATABASE_MIN_CONNECTIONS] || DATABASE_CONSTANTS.DEFAULT_MIN_CONNECTIONS.toString());
+  const maxConnections = parseInt(
+    process.env[ENV_KEYS.DATABASE_MAX_CONNECTIONS] ||
+      DATABASE_CONSTANTS.DEFAULT_MAX_CONNECTIONS.toString(),
+  );
+  const minConnections = parseInt(
+    process.env[ENV_KEYS.DATABASE_MIN_CONNECTIONS] ||
+      DATABASE_CONSTANTS.DEFAULT_MIN_CONNECTIONS.toString(),
+  );
 
   if (maxConnections < minConnections) {
-    console.error(`❌ ${ENV_KEYS.DATABASE_MAX_CONNECTIONS} must be greater than ${ENV_KEYS.DATABASE_MIN_CONNECTIONS}`);
+    console.error(
+      `❌ ${ENV_KEYS.DATABASE_MAX_CONNECTIONS} must be greater than ${ENV_KEYS.DATABASE_MIN_CONNECTIONS}`,
+    );
     process.exit(1);
   }
 
   // Synchronize 프로덕션 환경 경고
-  if (process.env[ENV_KEYS.NODE_ENV] === 'production' && process.env[ENV_KEYS.DATABASE_SYNCHRONIZE] === 'true') {
-    console.error(`❌ ${ENV_KEYS.DATABASE_SYNCHRONIZE}=true is not recommended in production`);
+  if (
+    process.env[ENV_KEYS.NODE_ENV] === 'production' &&
+    process.env[ENV_KEYS.DATABASE_SYNCHRONIZE] === 'true'
+  ) {
+    console.error(
+      `❌ ${ENV_KEYS.DATABASE_SYNCHRONIZE}=true is not recommended in production`,
+    );
     console.error('   Please use migrations instead');
     process.exit(1);
   }
@@ -119,7 +155,13 @@ export const validateDatabaseConfig = () => {
   console.log(`   - Host: ${DATABASE_CONFIG.host}:${DATABASE_CONFIG.port}`);
   console.log(`   - Database: ${DATABASE_CONFIG.database}`);
   console.log(`   - SSL: ${DATABASE_CONFIG.ssl ? 'enabled' : 'disabled'}`);
-  console.log(`   - Connection Pool: ${minConnections}-${maxConnections} connections`);
-  console.log(`   - Synchronize: ${DATABASE_CONFIG.synchronize ? 'enabled' : 'disabled'}`);
-  console.log(`   - Logging: ${DATABASE_CONFIG.logging ? 'enabled' : 'disabled'}`);
-}; 
+  console.log(
+    `   - Connection Pool: ${minConnections}-${maxConnections} connections`,
+  );
+  console.log(
+    `   - Synchronize: ${DATABASE_CONFIG.synchronize ? 'enabled' : 'disabled'}`,
+  );
+  console.log(
+    `   - Logging: ${DATABASE_CONFIG.logging ? 'enabled' : 'disabled'}`,
+  );
+};

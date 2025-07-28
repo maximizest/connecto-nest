@@ -1,18 +1,17 @@
 import {
-  Injectable,
   CanActivate,
   ExecutionContext,
+  Injectable,
   UnauthorizedException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { CurrentUserData } from '../common/decorators/current-user.decorator';
-import { User, UserRole } from '../modules/users/user.entity';
+import { Admin } from '../modules/admin/admin.entity';
 
 @Injectable()
 export class AdminGuard implements CanActivate {
-  constructor(private jwtService: JwtService) { }
+  constructor(private jwtService: JwtService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -30,25 +29,18 @@ export class AdminGuard implements CanActivate {
         },
       );
 
-      // 데이터베이스에서 사용자 정보를 조회하여 role 확인
-      const user = await User.findOne({
+      // 데이터베이스에서 관리자 존재 여부 확인
+      const admin = await Admin.findOne({
         where: { id: payload.id },
-        select: ['id', 'email', 'role'],
+        select: ['id', 'email'],
       });
 
-      if (!user) {
-        throw new UnauthorizedException('사용자를 찾을 수 없습니다');
-      }
-
-      if (user.role !== UserRole.ADMIN) {
-        throw new ForbiddenException('관리자 권한이 필요합니다');
+      if (!admin) {
+        throw new UnauthorizedException('관리자를 찾을 수 없습니다');
       }
 
       (request as Request & { user: CurrentUserData }).user = payload;
     } catch (error) {
-      if (error instanceof ForbiddenException) {
-        throw error;
-      }
       throw new UnauthorizedException('유효하지 않은 토큰입니다');
     }
 
@@ -59,4 +51,4 @@ export class AdminGuard implements CanActivate {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
   }
-} 
+}
