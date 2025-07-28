@@ -28,7 +28,7 @@
     "deploy:prod": "node scripts/migrate-and-start.js"
   },
   "dependencies": {
-    "@foryourdev/nestjs-crud": "^0.1.12",
+    "@foryourdev/nestjs-crud": "^0.1.14",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",

@@ -4,16 +4,17 @@ import {
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
-import { Crud } from '@foryourdev/nestjs-crud';
+import { BeforeCreate, BeforeUpdate, Crud, SaveBefore } from '@foryourdev/nestjs-crud';
 import { User } from '../../user.entity';
 import { UserService } from '../../user.service';
 import { AdminGuard } from 'src/guards/admin.guard';
 import { CurrentUser, CurrentUserData } from 'src/common/decorators/current-user.decorator';
+import * as bcrypt from 'bcrypt';
 
 @Crud({
   entity: User,
   allowedFilters: ['email', 'role', 'createdAt'],
-  allowedParams: ['phone', 'id'],
+  allowedParams: ['name', 'email', 'password', 'phone', 'role', 'provider', 'providerId'],
   allowedIncludes: ['posts'],
   only: ['index', 'show', 'create', 'update', 'destroy'],
 })
@@ -23,6 +24,16 @@ import { CurrentUser, CurrentUserData } from 'src/common/decorators/current-user
 })
 export class AdminUserController {
   constructor(public readonly crudService: UserService) { }
+
+  @BeforeCreate()
+  @BeforeUpdate()
+  async hashPassword(body: any) {
+    if (body.password) {
+      body.password = await bcrypt.hash(body.password, 10);
+    }
+
+    return body;
+  }
 
   @Get('me')
   @UseGuards(AdminGuard)

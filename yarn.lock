@@ -421,10 +421,10 @@
     "@eslint/core" "^0.15.1"
     levn "^0.4.1"
 
-"@foryourdev/nestjs-crud@^0.1.12":
-  version "0.1.12"
-  resolved "https://registry.npmjs.org/@foryourdev/nestjs-crud/-/nestjs-crud-0.1.12.tgz"
-  integrity sha512-ujX+YnK7aZqlAdQs/JeoAf//cUYkdv8qGufGhZBXBPG3qD/yRtrbBvvM7UEyd9gTHhQZPTZlHYrz2HoHzV2s3g==
+"@foryourdev/nestjs-crud@^0.1.14":
+  version "0.1.14"
+  resolved "https://registry.npmjs.org/@foryourdev/nestjs-crud/-/nestjs-crud-0.1.14.tgz"
+  integrity sha512-GpGaW95zv5dbagLnA1R+9Qk2h0dnCsPzDPX8f1jjFQxJVo6uIRwzSDBgxoGuD/GgrwueQKXgdG0c6dNa27tCbw==
   dependencies:
     "@nestjs/common" "^11.0.11"
     "@nestjs/core" "^11.0.11"

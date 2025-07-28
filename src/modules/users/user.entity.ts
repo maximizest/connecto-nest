@@ -8,7 +8,7 @@ import {
   OneToMany,
   Index,
 } from 'typeorm';
-import { IsString, IsEmail, IsOptional, IsDateString, Allow } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsDateString, Allow, IsEnum } from 'class-validator';
 import { Exclude } from 'class-transformer';
 import { Post } from '../posts/post.entity';
 
@@ -60,10 +60,11 @@ export class User extends BaseEntity {
   phone?: string;
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
-  @Exclude()
+  @IsEnum(UserRole)
   role: UserRole;
 
   @Column({ type: 'enum', enum: SocialProvider, default: SocialProvider.LOCAL })
+  @IsEnum(SocialProvider)
   provider: SocialProvider;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
@@ -80,10 +81,12 @@ export class User extends BaseEntity {
   refreshToken?: string | null;
 
   @CreateDateColumn()
+  @IsOptional()
   @IsDateString()
   createdAt: Date;
 
   @UpdateDateColumn()
+  @IsOptional()
   @IsDateString()
   updatedAt: Date;
 

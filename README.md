@@ -451,6 +451,59 @@ async createCustomUser(@ClassValidatedBody() userData: any) {
 - ✅ **올바른 방법**: `GET /users?filter[email_eq]=test@example.com`
 - ❌ **잘못된 방법**: `GET /users?filter[email][$eq]=test@example.com`
 
+### Entity Validation 데코레이터 필수 사항
+⚠️ **매우 중요**: @foryourdev/nestjs-crud에서 **모든 필드는 적절한 validation 데코레이터가 필요**합니다.
+
+```typescript
+// ✅ 올바른 방법 - CRUD에서 처리됨
+@Column({ type: 'varchar', length: 100 })
+@IsString()  // 필수!
+name: string;
+
+@Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
+@IsEnum(UserRole)  // 필수!
+role: UserRole;
+
+@Column({ type: 'varchar', length: 50, nullable: true })
+@IsOptional()  // nullable 필드는 필수!
+@IsString()
+phone?: string;
+
+// ❌ 잘못된 방법 - CRUD에서 처리되지 않음
+@Column({ type: 'varchar', length: 100 })
+name: string;  // validation 데코레이터 없음 = 처리 제외됨!
+```
+
+**주요 validation 데코레이터:**
+- `@IsString()` - 문자열 필드
+- `@IsEmail()` - 이메일 필드  
+- `@IsEnum(EnumClass)` - enum 필드
+- `@IsOptional()` - nullable/optional 필드 (다른 데코레이터와 함께 사용)
+- `@IsDateString()` - 날짜 필드
+- `@IsNumber()` - 숫자 필드
+
+**TypeORM 자동 생성 필드 특별 처리:**
+```typescript
+// TypeORM 자동 생성 필드는 @IsOptional() 필수!
+@CreateDateColumn()
+@IsOptional()    // 없으면 validation 에러 발생
+@IsDateString()
+createdAt: Date;
+
+@UpdateDateColumn()
+@IsOptional()    // 없으면 validation 에러 발생  
+@IsDateString()
+updatedAt: Date;
+
+@PrimaryGeneratedColumn()
+@IsOptional()    // PK도 선택적으로 처리
+id: number;
+```
+
+**디버깅 팁:**
+- 422 Unprocessable Entity 에러가 발생하면서 `"unknownValue": "an unknown value was passed to the validate function"` 메시지가 나타날 때는 해당 필드에 validation 데코레이터가 누락되었을 가능성이 높습니다.
+- 필드가 업데이트되지 않는다면 `allowedParams`에 포함되어 있는지와 동시에 적절한 validation 데코레이터가 있는지 확인하세요.
+
 ### 보안 설정
 - `allowedFilters`, `allowedParams`, `allowedIncludes` 미설정 시 **모든 접근이 차단**됩니다
 - 프로덕션 환경에서는 반드시 명시적인 허용 목록 설정이 필요합니다
