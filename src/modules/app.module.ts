@@ -1,3 +1,4 @@
+import { JestSwagModule } from '@foryourdev/jest-swag';
 import { Module, OnModuleInit } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
@@ -19,9 +20,19 @@ import { SchemaModule } from './schema/schema.module';
       global: true,
     }),
     TypeOrmModule.forRoot(DATABASE_CONFIG),
-    // 개발 환경에서만 스키마 모듈 등록
-    ...(process.env.NODE_ENV === 'development' || !process.env.NODE_ENV
-      ? [SchemaModule]
+    // 개발 환경과 테스트 환경에서만 스키마 모듈 등록, API 문서는 개발 환경에서만
+    ...(process.env.NODE_ENV !== 'production'
+      ? [
+          SchemaModule,
+          ...(process.env.NODE_ENV !== 'test'
+            ? [
+                JestSwagModule.forRoot({
+                  path: 'api-docs',
+                  title: 'ForyourBiz Template NestJS API Documentation',
+                }),
+              ]
+            : []),
+        ]
       : []),
   ],
 })

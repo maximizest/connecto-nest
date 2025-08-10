@@ -1,13 +1,13 @@
 import {
-  Injectable,
-  NestInterceptor,
-  ExecutionContext,
   CallHandler,
+  ExecutionContext,
+  Injectable,
   Logger,
+  NestInterceptor,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { tap, catchError } from 'rxjs/operators';
 import { Request, Response } from 'express';
+import { Observable } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
 
 export interface LogContext {
   requestId: string;
@@ -58,8 +58,10 @@ export class LoggingInterceptor implements NestInterceptor {
   }
 
   private generateRequestId(): string {
-    return Math.random().toString(36).substring(2, 15) +
-      Math.random().toString(36).substring(2, 15);
+    return (
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15)
+    );
   }
 
   private logRequest(context: LogContext, request: Request): void {
@@ -80,7 +82,11 @@ export class LoggingInterceptor implements NestInterceptor {
     this.logger.log(`${method} ${url}`, logData);
   }
 
-  private logResponse(context: LogContext, response: Response, data: any): void {
+  private logResponse(
+    context: LogContext,
+    response: Response,
+    data: any,
+  ): void {
     const { requestId, method, url } = context;
     const duration = Date.now() - context.startTime;
 
@@ -91,12 +97,15 @@ export class LoggingInterceptor implements NestInterceptor {
       url,
       statusCode: response.statusCode,
       duration: `${duration}ms`,
-      responseSize: JSON.stringify(data).length,
+      responseSize: this.getResponseSize(data),
       timestamp: new Date().toISOString(),
     };
 
     const logLevel = response.statusCode >= 400 ? 'warn' : 'log';
-    this.logger[logLevel](`${method} ${url} ${response.statusCode} - ${duration}ms`, logData);
+    this.logger[logLevel](
+      `${method} ${url} ${response.statusCode} - ${duration}ms`,
+      logData,
+    );
   }
 
   private logError(context: LogContext, error: any): void {
@@ -119,4 +128,38 @@ export class LoggingInterceptor implements NestInterceptor {
 
     this.logger.error(`${method} ${url} - ERROR after ${duration}ms`, logData);
   }
-} 
+
+  /**
+   * 순환 참조를 안전하게 처리하여 응답 크기를 계산합니다.
+   */
+  private getResponseSize(data: any): string {
+    if (data === null || data === undefined) {
+      return '0 bytes';
+    }
+
+    try {
+      const jsonString = JSON.stringify(data);
+      return `${jsonString.length} bytes`;
+    } catch (error) {
+      // 순환 참조나 기타 JSON.stringify 에러가 발생한 경우
+      if (
+        error instanceof TypeError &&
+        error.message.includes('circular structure')
+      ) {
+        return 'circular reference detected';
+      }
+
+      // 다른 타입의 데이터인 경우 대략적인 크기 추정
+      if (typeof data === 'string') {
+        return `~${data.length} bytes`;
+      }
+
+      if (typeof data === 'object') {
+        const keyCount = Object.keys(data).length;
+        return `object with ${keyCount} keys`;
+      }
+
+      return 'unknown size';
+    }
+  }
+}

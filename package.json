@@ -12,7 +12,7 @@
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
-    "start:dev": "nest start --watch",
+    "dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
@@ -21,6 +21,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "docs:generate": "jest --config ./test/jest-e2e.json --reporters=@foryourdev/jest-swag/dist/reporter.js",
+    "test:docs": "jest --config ./test/jest-e2e.json --reporters=default --reporters=@foryourdev/jest-swag/dist/reporter.js",
     "migration:generate": "node scripts/migration.js generate",
     "migration:create": "node scripts/migration.js create",
     "migration:template": "node scripts/migration-template.js",
@@ -31,7 +33,7 @@
     "deploy:prod": "node scripts/migrate-and-start.js"
   },
   "dependencies": {
-    "@foryourdev/jest-swag": "^1.0.2",
+    "@foryourdev/jest-swag": "^1.0.15",
     "@foryourdev/nestjs-crud": "^0.1.16",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
