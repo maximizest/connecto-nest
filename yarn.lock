@@ -421,10 +421,10 @@
     "@eslint/core" "^0.15.1"
     levn "^0.4.1"
 
-"@foryourdev/jest-swag@^1.0.17":
-  version "1.0.17"
-  resolved "https://registry.yarnpkg.com/@foryourdev/jest-swag/-/jest-swag-1.0.17.tgz#844a08ab3bfbb5c4547a4f9c9a12dbb391f9a4ba"
-  integrity sha512-+VFAPgmvF7VoBDjFtncVFG6R2dFqCeLVTJlxEzwx71wp6Uq7B/RuMa7F1eIjFW0FJ8kaE6EMWhx0aFVWVjnGeQ==
+"@foryourdev/jest-swag@^1.0.18":
+  version "1.0.18"
+  resolved "https://registry.yarnpkg.com/@foryourdev/jest-swag/-/jest-swag-1.0.18.tgz#a65763feccc10efa2a7b1b94509072617fe97f87"
+  integrity sha512-em+HQ5B0cYl+g7COzwrN4WkJkRjAlSbe1QpZjCnYJMjl7c/OAV2larCdx7T6q4vBW79zFcVeBzCArIHY1aonWw==
   dependencies:
     commander "^11.1.0"
     express "^4.18.2"

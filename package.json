@@ -33,7 +33,7 @@
     "deploy:prod": "node scripts/migrate-and-start.js"
   },
   "dependencies": {
-    "@foryourdev/jest-swag": "^1.0.17",
+    "@foryourdev/jest-swag": "^1.0.18",
     "@foryourdev/nestjs-crud": "^0.1.16",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
