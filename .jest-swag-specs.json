@@ -137,7 +137,7 @@
                   "properties": {
                     "timestamp": {
                       "type": "string",
-                      "example": "2025-08-10T04:17:27.944Z"
+                      "example": "2025-08-10T04:24:09.129Z"
                     },
                     "affectedCount": {
                       "type": "integer",
@@ -195,7 +195,7 @@
                     "pagination"
                   ],
                   "example": {
-                    "timestamp": "2025-08-10T04:17:27.944Z",
+                    "timestamp": "2025-08-10T04:24:09.129Z",
                     "affectedCount": 0,
                     "pagination": {
                       "type": "offset",
@@ -215,7 +215,7 @@
               "example": {
                 "data": [],
                 "metadata": {
-                  "timestamp": "2025-08-10T04:17:27.944Z",
+                  "timestamp": "2025-08-10T04:24:09.129Z",
                   "affectedCount": 0,
                   "pagination": {
                     "type": "offset",
@@ -231,7 +231,7 @@
             "example": {
               "data": [],
               "metadata": {
-                "timestamp": "2025-08-10T04:17:27.944Z",
+                "timestamp": "2025-08-10T04:24:09.129Z",
                 "affectedCount": 0,
                 "pagination": {
                   "type": "offset",
@@ -285,7 +285,7 @@
                   "properties": {
                     "timestamp": {
                       "type": "string",
-                      "example": "2025-08-10T04:17:27.944Z"
+                      "example": "2025-08-10T04:24:09.129Z"
                     },
                     "affectedCount": {
                       "type": "integer",
@@ -343,7 +343,7 @@
                     "pagination"
                   ],
                   "example": {
-                    "timestamp": "2025-08-10T04:17:27.944Z",
+                    "timestamp": "2025-08-10T04:24:09.129Z",
                     "affectedCount": 0,
                     "pagination": {
                       "type": "offset",
@@ -363,7 +363,7 @@
               "example": {
                 "data": [],
                 "metadata": {
-                  "timestamp": "2025-08-10T04:17:27.944Z",
+                  "timestamp": "2025-08-10T04:24:09.129Z",
                   "affectedCount": 0,
                   "pagination": {
                     "type": "offset",
@@ -379,7 +379,7 @@
             "example": {
               "data": [],
               "metadata": {
-                "timestamp": "2025-08-10T04:17:27.944Z",
+                "timestamp": "2025-08-10T04:24:09.129Z",
                 "affectedCount": 0,
                 "pagination": {
                   "type": "offset",

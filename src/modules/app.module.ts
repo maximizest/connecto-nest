@@ -3,6 +3,7 @@ import { Module, OnModuleInit } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { TEST_DATABASE_CONFIG } from '../config/database-test.config';
 import {
   DATABASE_CONFIG,
   validateDatabaseConfig,
@@ -19,7 +20,9 @@ import { SchemaModule } from './schema/schema.module';
       ...JWT_CONFIG,
       global: true,
     }),
-    TypeOrmModule.forRoot(DATABASE_CONFIG),
+    TypeOrmModule.forRoot(
+      process.env.NODE_ENV === 'test' ? TEST_DATABASE_CONFIG : DATABASE_CONFIG,
+    ),
     // 개발 환경과 테스트 환경에서만 스키마 모듈 등록, API 문서는 개발 환경에서만
     ...(process.env.NODE_ENV !== 'production'
       ? [
