@@ -1,8 +1,10 @@
-import { CrudExceptionFilter } from '@foryourdev/nestjs-crud';
-import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import {
+  setupCorsConfiguration,
+  setupGlobalConfiguration,
+} from './common/config/app-setup.config';
 import { ENV_KEYS, HTTP_CONSTANTS } from './common/constants/app.constants';
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { AppModule } from './modules/app.module';
 
 async function bootstrap() {
@@ -15,40 +17,11 @@ async function bootstrap() {
         : ['log', 'error', 'warn'],
   });
 
-  // CORS 설정
-  app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      process.env[ENV_KEYS.FRONTEND_URL],
-    ].filter(Boolean),
-    credentials: true,
-  });
+  // CORS 설정 적용
+  setupCorsConfiguration(app);
 
-  // 전역 파이프 설정
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: false,
-      forbidNonWhitelisted: false,
-      transform: true,
-      stopAtFirstError: true,
-    }),
-  );
-
-  // 전역 필터 설정
-  app.useGlobalFilters(new CrudExceptionFilter());
-
-  // 전역 인터셉터 설정 (로깅)
-  app.useGlobalInterceptors(new LoggingInterceptor());
-
-  // API 버전 관리
-  app.enableVersioning({
-    type: VersioningType.URI,
-    defaultVersion:
-      process.env[ENV_KEYS.API_VERSION] || HTTP_CONSTANTS.DEFAULT_API_VERSION,
-    prefix:
-      process.env[ENV_KEYS.API_PREFIX] || HTTP_CONSTANTS.DEFAULT_API_PREFIX,
-  });
+  // 전역 설정 적용
+  setupGlobalConfiguration(app);
 
   const port = process.env[ENV_KEYS.PORT] ?? HTTP_CONSTANTS.DEFAULT_PORT;
 
