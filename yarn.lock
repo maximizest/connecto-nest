@@ -423,7 +423,7 @@
 
 "@foryourdev/jest-swag@^1.0.18":
   version "1.0.18"
-  resolved "https://registry.npmjs.org/@foryourdev/jest-swag/-/jest-swag-1.0.18.tgz"
+  resolved "https://registry.yarnpkg.com/@foryourdev/jest-swag/-/jest-swag-1.0.18.tgz#a65763feccc10efa2a7b1b94509072617fe97f87"
   integrity sha512-em+HQ5B0cYl+g7COzwrN4WkJkRjAlSbe1QpZjCnYJMjl7c/OAV2larCdx7T6q4vBW79zFcVeBzCArIHY1aonWw==
   dependencies:
     commander "^11.1.0"
