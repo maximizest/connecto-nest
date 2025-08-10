@@ -421,6 +421,15 @@
     "@eslint/core" "^0.15.1"
     levn "^0.4.1"
 
+"@foryourdev/jest-swag@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@foryourdev/jest-swag/-/jest-swag-1.0.2.tgz#b578f4c76943dc718f3dd8bf80451a5f066144b1"
+  integrity sha512-gYH1HF8BwpfGSTp8bLxZzVnMEcVF68vX3WbeRJswlglQGXI5DL1Mlj+X1ha5XxOsXGxRdPXlaIrkt4kZZJUZxQ==
+  dependencies:
+    commander "^11.1.0"
+    express "^4.18.2"
+    swagger-ui-dist "^5.10.5"
+
 "@foryourdev/nestjs-crud@^0.1.16":
   version "0.1.16"
   resolved "https://registry.yarnpkg.com/@foryourdev/nestjs-crud/-/nestjs-crud-0.1.16.tgz#525e0f57a51f70c4761217cbb80e71b420523a63"
@@ -2729,6 +2738,11 @@ commander@4.1.1:
   version "4.1.1"
   resolved "https://registry.npmjs.org/commander/-/commander-4.1.1.tgz"
   integrity sha512-NOKm8xhkzAjzFx8B2v5OAHT+u5pRQc2UCa2Vq9jYL/31o2wi9mxBA7LIFs3sV5VSC49z6pEhfbMULvShKj26WA==
+
+commander@^11.1.0:
+  version "11.1.0"
+  resolved "https://registry.yarnpkg.com/commander/-/commander-11.1.0.tgz#62fdce76006a68e5c1ab3314dc92e800eb83d906"
+  integrity sha512-yPVavfyCcRhmorC7rWlkHn15b4wDVgVmBA7kV4QVBsF7kv/9TKJAbAXVTxvTnwP8HHKjRCJDClKbciiYS7p0DQ==
 
 commander@^2.20.0:
   version "2.20.3"
@@ -6566,6 +6580,13 @@ swagger-ui-dist@5.21.0:
   version "5.21.0"
   resolved "https://registry.npmjs.org/swagger-ui-dist/-/swagger-ui-dist-5.21.0.tgz"
   integrity sha512-E0K3AB6HvQd8yQNSMR7eE5bk+323AUxjtCz/4ZNKiahOlPhPJxqn3UPIGs00cyY/dhrTDJ61L7C/a8u6zhGrZg==
+  dependencies:
+    "@scarf/scarf" "=1.4.0"
+
+swagger-ui-dist@^5.10.5:
+  version "5.27.1"
+  resolved "https://registry.yarnpkg.com/swagger-ui-dist/-/swagger-ui-dist-5.27.1.tgz#556e77c659752e99621ac61ad5ef6cb0832279e7"
+  integrity sha512-oGtpYO3lnoaqyGtlJalvryl7TwzgRuxpOVWqEHx8af0YXI+Kt+4jMpLdgMtMcmWmuQ0QTCHLKExwrBFMSxvAUA==
   dependencies:
     "@scarf/scarf" "=1.4.0"
 
