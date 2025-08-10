@@ -11,33 +11,34 @@ import {
 import { JWT_CONFIG, validateJwtConfig } from '../config/jwt.config';
 import { SchemaModule } from './schema/schema.module';
 
+const NODE_ENV = process.env.NODE_ENV;
+// 기본 모듈 설정
+const modules: any[] = [
+  ConfigModule.forRoot({
+    isGlobal: true,
+  }),
+  JwtModule.register({
+    ...JWT_CONFIG,
+    global: true,
+  }),
+  TypeOrmModule.forRoot(
+    process.env.NODE_ENV === 'test' ? TEST_DATABASE_CONFIG : DATABASE_CONFIG,
+  ),
+];
+
+// 개발 && 테스트 환경 모듈
+if (NODE_ENV !== 'production') {
+  modules.push(SchemaModule);
+  modules.push(
+    JestSwagModule.forRoot({
+      path: 'api-docs',
+      title: 'ForyourBiz Template NestJS API Documentation',
+    }),
+  );
+}
+
 @Module({
-  imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
-    JwtModule.register({
-      ...JWT_CONFIG,
-      global: true,
-    }),
-    TypeOrmModule.forRoot(
-      process.env.NODE_ENV === 'test' ? TEST_DATABASE_CONFIG : DATABASE_CONFIG,
-    ),
-    // 개발 환경과 테스트 환경에서만 스키마 모듈 등록, API 문서는 개발 환경에서만
-    ...(process.env.NODE_ENV !== 'production'
-      ? [
-          SchemaModule,
-          ...(process.env.NODE_ENV !== 'test'
-            ? [
-                JestSwagModule.forRoot({
-                  path: 'api-docs',
-                  title: 'ForyourBiz Template NestJS API Documentation',
-                }),
-              ]
-            : []),
-        ]
-      : []),
-  ],
+  imports: modules,
 })
 export class AppModule implements OnModuleInit {
   onModuleInit() {
