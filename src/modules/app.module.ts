@@ -7,10 +7,7 @@ import {
   validateDatabaseConfig,
 } from '../config/database.config';
 import { JWT_CONFIG, validateJwtConfig } from '../config/jwt.config';
-import { AdminModule } from './admin/admin.module';
-import { AuthModule } from './auth/auth.module';
 import { SchemaModule } from './schema/schema.module';
-import { UserModule } from './users/user.module';
 
 @Module({
   imports: [
@@ -22,9 +19,6 @@ import { UserModule } from './users/user.module';
       global: true,
     }),
     TypeOrmModule.forRoot(DATABASE_CONFIG),
-    UserModule,
-    AuthModule,
-    AdminModule,
     // 개발 환경에서만 스키마 모듈 등록
     ...(process.env.NODE_ENV === 'development' || !process.env.NODE_ENV
       ? [SchemaModule]

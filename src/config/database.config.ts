@@ -4,8 +4,6 @@ import {
   DATABASE_CONSTANTS,
   ENV_KEYS,
 } from '../common/constants/app.constants';
-import { Admin } from '../modules/admin/admin.entity';
-import { User } from '../modules/users/user.entity';
 
 // 환경변수 로드
 dotenv.config();
@@ -13,7 +11,7 @@ dotenv.config();
 /**
  * 모든 엔티티 목록 (중앙 관리)
  */
-export const ENTITIES = [User, Admin];
+export const ENTITIES = [];
 
 /**
  * 공통 데이터베이스 설정
