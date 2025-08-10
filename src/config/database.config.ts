@@ -5,6 +5,23 @@ import {
   ENV_KEYS,
 } from '../common/constants/app.constants';
 
+// 테스트 환경 검증 함수를 별도로 임포트하지 않고 여기서 정의
+const validateTestDatabaseConfig = (): void => {
+  const requiredVars = [
+    ENV_KEYS.DATABASE_HOST,
+    ENV_KEYS.DATABASE_USERNAME,
+    ENV_KEYS.DATABASE_PASSWORD,
+  ];
+
+  const missingVars = requiredVars.filter((varName) => !process.env[varName]);
+
+  if (missingVars.length > 0) {
+    throw new Error(
+      `Missing test database environment variables: ${missingVars.join(', ')}`,
+    );
+  }
+};
+
 // 환경변수 로드
 dotenv.config();
 
@@ -87,6 +104,10 @@ export const MIGRATION_CONFIG: DataSourceOptions = {
  * 환경변수 검증 강화
  */
 export const validateDatabaseConfig = () => {
+  // 테스트 환경에서는 조용히 검증
+  if (process.env.NODE_ENV === 'test') {
+    return validateTestDatabaseConfig();
+  }
   const requiredEnvVars = [
     ENV_KEYS.DATABASE_HOST,
     ENV_KEYS.DATABASE_PORT,

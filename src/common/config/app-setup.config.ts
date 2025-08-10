@@ -58,6 +58,9 @@ export function setupTestConfiguration(app: INestApplication): void {
   // 테스트 환경에서 Schema API 활성화
   process.env.ENABLE_SCHEMA_API = 'true';
 
+  // 테스트 환경 표시
+  process.env.NODE_ENV = 'test';
+
   // 기본 글로벌 설정 적용
   setupGlobalConfiguration(app);
 }
