@@ -8,13 +8,15 @@ import {
 import {
   Controller,
   ForbiddenException,
+  Get,
   Logger,
   NotFoundException,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import {
   PlanetUser,
@@ -431,5 +433,434 @@ export class MessageController {
     }
 
     return searchText.trim().toLowerCase();
+  }
+
+  /**
+   * Planet 내 메시지 검색
+   * GET /api/v1/messages/search/planet/:planetId
+   */
+  @Get('search/planet/:planetId')
+  @UseGuards(AuthGuard, PlanetAccessGuard)
+  async searchInPlanet(
+    @Query('q') query?: string,
+    @Query('type') type?: MessageType,
+    @Query('sender') senderId?: number,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('fileType') fileType?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 20,
+    @Query('planetId') planetId?: string,
+    @Request() req?: any,
+  ) {
+    const user: User = req.user;
+    const planetIdNum = parseInt(planetId || req.params.planetId);
+
+    // 검색 파라미터 검증
+    const searchParams = this.validateSearchParams({
+      query,
+      type,
+      senderId,
+      startDate,
+      endDate,
+      fileType,
+      page,
+      limit,
+    });
+
+    // Planet 접근 권한은 Guard에서 이미 확인됨
+    const searchResult = await this.performMessageSearch({
+      planetId: planetIdNum,
+      ...searchParams,
+      userId: user.id,
+    });
+
+    this.logger.log(
+      `Message search in planet: planetId=${planetIdNum}, query=${query}, results=${searchResult.totalCount}`,
+    );
+
+    return searchResult;
+  }
+
+  /**
+   * Travel 내 모든 Planet 메시지 검색
+   * GET /api/v1/messages/search/travel/:travelId
+   */
+  @Get('search/travel/:travelId')
+  @UseGuards(AuthGuard)
+  async searchInTravel(
+    @Query('q') query?: string,
+    @Query('type') type?: MessageType,
+    @Query('sender') senderId?: number,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('fileType') fileType?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 20,
+    @Request() req?: any,
+  ) {
+    const user: User = req.user;
+    const travelId = parseInt(req.params.travelId);
+
+    // Travel 접근 권한 확인
+    const travelMembership = await this.travelUserRepository.findOne({
+      where: {
+        travelId,
+        userId: user.id,
+        status: TravelUserStatus.ACTIVE,
+      },
+    });
+
+    if (!travelMembership) {
+      throw new ForbiddenException('이 Travel에 접근할 권한이 없습니다.');
+    }
+
+    // 검색 파라미터 검증
+    const searchParams = this.validateSearchParams({
+      query,
+      type,
+      senderId,
+      startDate,
+      endDate,
+      fileType,
+      page,
+      limit,
+    });
+
+    // Travel 내 접근 가능한 Planet들 조회
+    const accessiblePlanets = await this.getAccessiblePlanets(
+      travelId,
+      user.id,
+    );
+
+    if (accessiblePlanets.length === 0) {
+      return {
+        messages: [],
+        totalCount: 0,
+        page: searchParams.page,
+        limit: searchParams.limit,
+        totalPages: 0,
+      };
+    }
+
+    // 여러 Planet에서 검색
+    const searchResult = await this.performMessageSearch({
+      planetIds: accessiblePlanets.map((p) => p.id),
+      travelId,
+      ...searchParams,
+      userId: user.id,
+    });
+
+    this.logger.log(
+      `Message search in travel: travelId=${travelId}, query=${query}, results=${searchResult.totalCount}`,
+    );
+
+    return searchResult;
+  }
+
+  /**
+   * 내가 보낸 메시지 검색 (모든 Planet)
+   * GET /api/v1/messages/search/my
+   */
+  @Get('search/my')
+  @UseGuards(AuthGuard)
+  async searchMyMessages(
+    @Query('q') query?: string,
+    @Query('type') type?: MessageType,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('fileType') fileType?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 20,
+    @Request() req?: any,
+  ) {
+    const user: User = req.user;
+
+    // 검색 파라미터 검증
+    const searchParams = this.validateSearchParams({
+      query,
+      type,
+      senderId: user.id, // 자동으로 자신의 메시지만
+      startDate,
+      endDate,
+      fileType,
+      page,
+      limit,
+    });
+
+    // 내 메시지 검색
+    const searchResult = await this.performMessageSearch({
+      ...searchParams,
+      userId: user.id,
+    });
+
+    this.logger.log(
+      `My message search: userId=${user.id}, query=${query}, results=${searchResult.totalCount}`,
+    );
+
+    return searchResult;
+  }
+
+  /**
+   * 검색 파라미터 검증
+   */
+  private validateSearchParams(params: any) {
+    const {
+      query,
+      type,
+      senderId,
+      startDate,
+      endDate,
+      fileType,
+      page = 1,
+      limit = 20,
+    } = params;
+
+    // 페이지네이션 제한
+    const validatedLimit = Math.min(Math.max(1, parseInt(String(limit))), 100);
+    const validatedPage = Math.max(1, parseInt(String(page)));
+
+    // 검색어 길이 제한
+    if (query && query.length < 2) {
+      throw new ForbiddenException('검색어는 2자 이상이어야 합니다.');
+    }
+
+    if (query && query.length > 100) {
+      throw new ForbiddenException('검색어는 100자 이하여야 합니다.');
+    }
+
+    // 날짜 검증
+    let validatedStartDate: Date | undefined;
+    let validatedEndDate: Date | undefined;
+
+    if (startDate) {
+      validatedStartDate = new Date(startDate);
+      if (isNaN(validatedStartDate.getTime())) {
+        throw new ForbiddenException('올바르지 않은 시작 날짜입니다.');
+      }
+    }
+
+    if (endDate) {
+      validatedEndDate = new Date(endDate);
+      if (isNaN(validatedEndDate.getTime())) {
+        throw new ForbiddenException('올바르지 않은 종료 날짜입니다.');
+      }
+    }
+
+    if (
+      validatedStartDate &&
+      validatedEndDate &&
+      validatedStartDate > validatedEndDate
+    ) {
+      throw new ForbiddenException(
+        '시작 날짜가 종료 날짜보다 늦을 수 없습니다.',
+      );
+    }
+
+    // 메시지 타입 검증
+    if (type && !Object.values(MessageType).includes(type)) {
+      throw new ForbiddenException('올바르지 않은 메시지 타입입니다.');
+    }
+
+    return {
+      query: query?.trim(),
+      type,
+      senderId: senderId ? parseInt(String(senderId)) : undefined,
+      startDate: validatedStartDate,
+      endDate: validatedEndDate,
+      fileType: fileType?.trim(),
+      page: validatedPage,
+      limit: validatedLimit,
+    };
+  }
+
+  /**
+   * 메시지 검색 실행
+   */
+  private async performMessageSearch(searchOptions: {
+    planetId?: number;
+    planetIds?: number[];
+    travelId?: number;
+    query?: string;
+    type?: MessageType;
+    senderId?: number;
+    startDate?: Date;
+    endDate?: Date;
+    fileType?: string;
+    page: number;
+    limit: number;
+    userId: number;
+  }): Promise<any> {
+    const {
+      planetId,
+      planetIds,
+      query,
+      type,
+      senderId,
+      startDate,
+      endDate,
+      fileType,
+      page,
+      limit,
+    } = searchOptions;
+
+    let queryBuilder: SelectQueryBuilder<Message> = this.messageRepository
+      .createQueryBuilder('message')
+      .leftJoinAndSelect('message.sender', 'sender')
+      .leftJoinAndSelect('message.planet', 'planet')
+      .where('message.isDeleted = :isDeleted', { isDeleted: false })
+      .orderBy('message.createdAt', 'DESC');
+
+    // Planet 조건
+    if (planetId) {
+      queryBuilder = queryBuilder.andWhere('message.planetId = :planetId', {
+        planetId,
+      });
+    } else if (planetIds && planetIds.length > 0) {
+      queryBuilder = queryBuilder.andWhere(
+        'message.planetId IN (:...planetIds)',
+        {
+          planetIds,
+        },
+      );
+    }
+
+    // 텍스트 검색
+    if (query) {
+      queryBuilder = queryBuilder.andWhere(
+        '(message.searchableText ILIKE :searchQuery OR message.content ILIKE :searchQuery OR message.fileMetadata::text ILIKE :fileQuery)',
+        {
+          searchQuery: `%${query}%`,
+          fileQuery: `%${query}%`,
+        },
+      );
+    }
+
+    // 메시지 타입 필터
+    if (type) {
+      queryBuilder = queryBuilder.andWhere('message.type = :type', { type });
+    }
+
+    // 발신자 필터
+    if (senderId) {
+      queryBuilder = queryBuilder.andWhere('message.senderId = :senderId', {
+        senderId,
+      });
+    }
+
+    // 날짜 범위 필터
+    if (startDate) {
+      queryBuilder = queryBuilder.andWhere('message.createdAt >= :startDate', {
+        startDate,
+      });
+    }
+
+    if (endDate) {
+      queryBuilder = queryBuilder.andWhere('message.createdAt <= :endDate', {
+        endDate,
+      });
+    }
+
+    // 파일 타입 필터 (파일 메시지만)
+    if (fileType) {
+      queryBuilder = queryBuilder
+        .andWhere('message.type IN (:...fileTypes)', {
+          fileTypes: [MessageType.IMAGE, MessageType.VIDEO, MessageType.FILE],
+        })
+        .andWhere(
+          "message.fileMetadata::jsonb ->> 'mimeType' ILIKE :fileType",
+          {
+            fileType: `%${fileType}%`,
+          },
+        );
+    }
+
+    // 총 개수 조회
+    const totalCount = await queryBuilder.getCount();
+
+    // 페이지네이션 적용
+    const offset = (page - 1) * limit;
+    queryBuilder = queryBuilder.skip(offset).take(limit);
+
+    // 검색 실행
+    const messages = await queryBuilder.getMany();
+
+    // 결과 가공
+    const processedMessages = messages.map((message) => ({
+      id: message.id,
+      type: message.type,
+      content: message.content,
+      fileMetadata: message.fileMetadata,
+      status: message.status,
+      createdAt: message.createdAt,
+      editedAt: message.editedAt,
+      isEdited: message.isEdited,
+      replyCount: message.replyCount,
+      readCount: message.readCount,
+      sender: {
+        id: message.sender.id,
+        name: message.sender.name,
+        avatar: message.sender.avatar,
+      },
+      planet: {
+        id: message.planet.id,
+        name: message.planet.name,
+        type: message.planet.type,
+      },
+      preview: message.getPreview(150),
+    }));
+
+    return {
+      messages: processedMessages,
+      totalCount,
+      page,
+      limit,
+      totalPages: Math.ceil(totalCount / limit),
+      searchSummary: {
+        query,
+        type,
+        senderId,
+        startDate,
+        endDate,
+        fileType,
+        hasMoreResults: totalCount > offset + messages.length,
+      },
+    };
+  }
+
+  /**
+   * 사용자가 접근 가능한 Planet 목록 조회
+   */
+  private async getAccessiblePlanets(
+    travelId: number,
+    userId: number,
+  ): Promise<Planet[]> {
+    // GROUP Planet들 (Travel 멤버십으로 접근)
+    const groupPlanets = await this.planetRepository
+      .createQueryBuilder('planet')
+      .innerJoin('planet.travel', 'travel')
+      .innerJoin('travel.members', 'travelUser')
+      .where('planet.travelId = :travelId', { travelId })
+      .andWhere('planet.type = :groupType', { groupType: PlanetType.GROUP })
+      .andWhere('planet.isActive = :isActive', { isActive: true })
+      .andWhere('travelUser.userId = :userId', { userId })
+      .andWhere('travelUser.status = :status', {
+        status: TravelUserStatus.ACTIVE,
+      })
+      .getMany();
+
+    // DIRECT Planet들 (직접 참여)
+    const directPlanets = await this.planetRepository
+      .createQueryBuilder('planet')
+      .innerJoin('planet.directMembers', 'planetUser')
+      .where('planet.type = :directType', { directType: PlanetType.DIRECT })
+      .andWhere('planet.isActive = :isActive', { isActive: true })
+      .andWhere('planetUser.userId = :userId', { userId })
+      .andWhere('planetUser.status = :status', {
+        status: PlanetUserStatus.ACTIVE,
+      })
+      .getMany();
+
+    return [...groupPlanets, ...directPlanets];
   }
 }
