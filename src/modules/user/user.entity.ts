@@ -41,6 +41,14 @@ export enum UserStatus {
 @Index(['email']) // 이메일 검색 최적화
 @Index(['isOnline']) // 온라인 상태 필터링 최적화
 @Index(['lastSeenAt']) // 마지막 접속 시간 정렬 최적화
+@Index(['status']) // 사용자 상태 필터링
+@Index(['isBanned']) // 밴 상태 필터링
+@Index(['banExpiresAt']) // 밴 만료 시간 정렬
+// 복합 인덱스 - 성능 향상
+@Index(['status', 'isOnline']) // 상태별 온라인 사용자 조회
+@Index(['provider', 'isOnline']) // 제공자별 온라인 사용자 조회
+@Index(['isBanned', 'banExpiresAt']) // 밴된 사용자의 만료일 조회
+@Index(['isOnline', 'lastSeenAt']) // 온라인 상태별 최근 접속 시간순
 export class User extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
@@ -92,6 +100,7 @@ export class User extends BaseEntity {
     comment: '사용자 온라인 상태',
   })
   @IsEnum(UserStatus)
+  @Index()
   status: UserStatus;
 
   @Column({
@@ -184,6 +193,7 @@ export class User extends BaseEntity {
     comment: '계정 정지 여부',
   })
   @IsBoolean()
+  @Index()
   isBanned: boolean;
 
   @Column({
@@ -193,6 +203,7 @@ export class User extends BaseEntity {
   })
   @IsOptional()
   @IsDateString()
+  @Index()
   banExpiresAt?: Date;
 
   /**

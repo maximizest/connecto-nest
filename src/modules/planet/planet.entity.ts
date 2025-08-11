@@ -74,7 +74,16 @@ interface TimeRestriction {
 @Index(['isActive']) // 활성 상태 필터링
 @Index(['createdBy']) // 생성자별 조회
 @Index(['lastMessageAt']) // 최근 메시지 정렬
-@Index(['travelId', 'type']) // Travel 내 타입별 조회 (복합 인덱스)
+@Index(['messageCount']) // 메시지 수 정렬 최적화
+@Index(['memberCount']) // 멤버 수 정렬 최적화
+// 복합 인덱스 - 성능 향상
+@Index(['travelId', 'type']) // Travel 내 타입별 조회
+@Index(['travelId', 'isActive']) // Travel 내 활성 Planet 조회
+@Index(['travelId', 'status']) // Travel 내 상태별 조회
+@Index(['type', 'isActive']) // 타입별 활성 Planet 조회
+@Index(['createdBy', 'type']) // 사용자별 타입 필터링
+@Index(['isActive', 'lastMessageAt']) // 활성 Planet의 최근 메시지순
+@Index(['travelId', 'isActive', 'lastMessageAt']) // Travel 내 활성 Planet 최근 메시지순
 export class Planet extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
@@ -179,6 +188,7 @@ export class Planet extends BaseEntity {
     comment: '현재 멤버 수',
   })
   @IsNumber()
+  @Index()
   memberCount: number;
 
   @Column({
@@ -198,6 +208,7 @@ export class Planet extends BaseEntity {
     comment: '총 메시지 수',
   })
   @IsNumber()
+  @Index()
   messageCount: number;
 
   @Column({

@@ -80,9 +80,21 @@ interface SystemMessageMetadata {
 @Index(['type']) // 타입별 필터링
 @Index(['status']) // 상태별 필터링
 @Index(['createdAt']) // 시간순 정렬 최적화
-@Index(['planetId', 'createdAt']) // Planet 내 시간순 조회 (복합 인덱스)
-@Index(['senderId', 'createdAt']) // 사용자별 시간순 조회
 @Index(['isDeleted']) // 삭제되지 않은 메시지 필터링
+@Index(['isEdited']) // 편집된 메시지 필터링
+@Index(['editedAt']) // 편집 시간 정렬
+@Index(['searchableText']) // 검색 최적화 (텍스트 검색)
+// 복합 인덱스 - 성능 향상
+@Index(['planetId', 'createdAt']) // Planet 내 시간순 조회
+@Index(['senderId', 'createdAt']) // 사용자별 시간순 조회
+@Index(['planetId', 'type']) // Planet 내 타입별 조회
+@Index(['planetId', 'senderId']) // Planet 내 발신자별 조회
+@Index(['planetId', 'isDeleted']) // Planet 내 삭제되지 않은 메시지
+@Index(['type', 'createdAt']) // 타입별 시간순 조회
+@Index(['status', 'createdAt']) // 상태별 시간순 조회
+@Index(['planetId', 'type', 'createdAt']) // Planet 내 타입별 시간순 조회
+@Index(['planetId', 'isDeleted', 'createdAt']) // Planet 내 활성 메시지 시간순
+@Index(['senderId', 'type', 'createdAt']) // 사용자별 타입별 시간순 조회
 export class Message extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
@@ -202,6 +214,7 @@ export class Message extends BaseEntity {
     comment: '편집 여부',
   })
   @IsBoolean()
+  @Index()
   isEdited: boolean;
 
   @Column({
@@ -211,6 +224,7 @@ export class Message extends BaseEntity {
   })
   @IsOptional()
   @IsDateString()
+  @Index()
   editedAt?: Date;
 
   @Column({
@@ -289,6 +303,7 @@ export class Message extends BaseEntity {
   })
   @IsOptional()
   @IsString()
+  @Index()
   searchableText?: string;
 
   /**

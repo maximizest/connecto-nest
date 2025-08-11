@@ -48,6 +48,15 @@ export enum TravelVisibility {
 @Index(['createdBy']) // 생성자별 조회 최적화
 @Index(['visibility']) // 공개 설정별 필터링
 @Index(['isActive']) // 활성 상태 필터링
+@Index(['inviteCode']) // 초대 코드 검색 최적화
+@Index(['lastActivityAt']) // 활동 시간 정렬 최적화
+// 복합 인덱스 - 성능 향상
+@Index(['status', 'isActive']) // 활성 상태 + 상태별 조회
+@Index(['isActive', 'expiryDate']) // 활성 Travel의 만료일 조회
+@Index(['status', 'expiryDate']) // 상태별 만료일 조회
+@Index(['visibility', 'isActive']) // 공개 설정별 활성 Travel 조회
+@Index(['createdBy', 'status']) // 사용자별 상태 필터링
+@Index(['createdBy', 'isActive', 'expiryDate']) // 사용자별 활성 Travel 만료일순
 export class Travel extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
@@ -231,6 +240,7 @@ export class Travel extends BaseEntity {
   })
   @IsOptional()
   @IsDateString()
+  @Index()
   lastActivityAt?: Date;
 
   /**

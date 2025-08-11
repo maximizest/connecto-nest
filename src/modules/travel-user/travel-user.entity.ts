@@ -48,8 +48,17 @@ export enum TravelUserStatus {
 @Index(['role']) // 역할별 필터링
 @Index(['status']) // 상태별 필터링
 @Index(['joinedAt']) // 가입 순서 정렬
-@Index(['travelId', 'status']) // Travel 내 활성 멤버 조회 (복합 인덱스)
-@Index(['travelId', 'role']) // Travel 내 역할별 조회 (복합 인덱스)
+@Index(['invitedBy']) // 초대자별 조회
+@Index(['lastSeenAt']) // 마지막 접속 시간 정렬
+@Index(['leftAt']) // 탈퇴 시간 정렬
+// 복합 인덱스 - 성능 향상
+@Index(['travelId', 'status']) // Travel 내 활성 멤버 조회
+@Index(['travelId', 'role']) // Travel 내 역할별 조회
+@Index(['userId', 'status']) // 사용자별 활성 Travel 조회
+@Index(['status', 'joinedAt']) // 상태별 가입순 정렬
+@Index(['travelId', 'status', 'role']) // Travel 내 상태별 역할 조회
+@Index(['userId', 'joinedAt']) // 사용자별 가입순 Travel
+@Index(['invitedBy', 'status']) // 초대자별 상태 조회
 export class TravelUser extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
@@ -117,6 +126,7 @@ export class TravelUser extends BaseEntity {
   })
   @IsOptional()
   @IsDateString()
+  @Index()
   lastSeenAt?: Date;
 
   @Column({
@@ -126,6 +136,7 @@ export class TravelUser extends BaseEntity {
   })
   @IsOptional()
   @IsDateString()
+  @Index()
   leftAt?: Date;
 
   /**
@@ -138,6 +149,7 @@ export class TravelUser extends BaseEntity {
   })
   @IsOptional()
   @IsNumber()
+  @Index()
   invitedBy?: number;
 
   @ManyToOne(() => User, { eager: false })
