@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '../cache/cache.module';
-import { SecurityController } from './api/v1/security.controller';
+
 import {
   EnhancedResourceGuard,
   FileSecurityGuard,
@@ -27,7 +27,7 @@ import { SecurityService } from './security.service';
     UserBehaviorGuard,
     EnhancedResourceGuard,
   ],
-  controllers: [SecurityController],
+  controllers: [],
   exports: [
     SecurityService,
     IpBlockGuard,

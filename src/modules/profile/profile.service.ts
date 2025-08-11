@@ -27,6 +27,6 @@ export class ProfileService extends CrudService<Profile> {
    * (nestjs-crud의 표준 기능으로도 가능하지만, 편의를 위해 제공)
    */
   async findByUserId(userId: number): Promise<Profile | null> {
-    return this.findOne({ where: { userId } });
+    return this.repository.findOne({ where: { userId } });
   }
 }

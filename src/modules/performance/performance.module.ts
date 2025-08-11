@@ -4,7 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '../cache/cache.module';
 import { NotificationModule } from '../notification/notification.module';
-import { PerformanceController } from './api/v1/performance.controller';
+
 import {
   CachePerformanceInterceptor,
   DatabasePerformanceInterceptor,
@@ -29,7 +29,7 @@ import { SystemMonitoringService } from './services/system-monitoring.service';
     DatabasePerformanceInterceptor,
     CachePerformanceInterceptor,
   ],
-  controllers: [PerformanceController],
+  controllers: [],
   exports: [
     PerformanceService,
     SystemMonitoringService,
