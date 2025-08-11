@@ -9,6 +9,7 @@ import {
   validateDatabaseConfig,
 } from '../config/database.config';
 import { JWT_CONFIG, validateJwtConfig } from '../config/jwt.config';
+import { AdminModule } from './admin/admin.module';
 import { SchemaModule } from './schema/schema.module';
 
 const NODE_ENV = process.env.NODE_ENV;
@@ -36,6 +37,9 @@ if (NODE_ENV !== 'production') {
     }),
   );
 }
+
+// 모듈 추가
+modules.push(AdminModule);
 
 @Module({
   imports: modules,

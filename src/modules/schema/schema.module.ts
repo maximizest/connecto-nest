@@ -1,15 +1,11 @@
 import { Module } from '@nestjs/common';
-import { SchemaController } from './schema.controller';
 import { DevOnlyGuard } from '../../guards/dev-only.guard';
-import { SecurityValidationService } from './services/security-validation.service';
+import { SchemaController } from './api/v1/schema.controller';
 import { CrudMetadataService } from './services/crud-metadata.service';
+import { SecurityValidationService } from './services/security-validation.service';
 
 @Module({
   controllers: [SchemaController],
-  providers: [
-    DevOnlyGuard,
-    SecurityValidationService,
-    CrudMetadataService,
-  ],
+  providers: [DevOnlyGuard, SecurityValidationService, CrudMetadataService],
 })
-export class SchemaModule { } 
+export class SchemaModule {}

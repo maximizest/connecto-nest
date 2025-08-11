@@ -12,4 +12,4 @@ import { AdminController } from './admin/v1/admin.controller';
   providers: [AdminService, AuthGuard, AdminGuard],
   exports: [AdminService],
 })
-export class UserModule {}
+export class AdminModule {}

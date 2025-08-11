@@ -1,6 +1,7 @@
 import { BeforeCreate, BeforeUpdate, Crud } from '@foryourdev/nestjs-crud';
-import { Controller } from '@nestjs/common';
+import { Controller, UseGuards } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { AdminGuard } from 'src/guards/admin.guard';
 import { Admin } from '../../admin.entity';
 import { AdminService } from '../../admin.service';
 
@@ -12,9 +13,10 @@ import { AdminService } from '../../admin.service';
   only: ['index', 'show', 'create', 'update', 'destroy'],
 })
 @Controller({
-  path: 'admin/users',
+  path: 'admin/admins',
   version: '1',
 })
+@UseGuards(AdminGuard)
 export class AdminController {
   constructor(public readonly crudService: AdminService) {}
 

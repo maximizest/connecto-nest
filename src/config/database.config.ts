@@ -4,6 +4,7 @@ import {
   DATABASE_CONSTANTS,
   ENV_KEYS,
 } from '../common/constants/app.constants';
+import { Admin } from '../modules/admin/admin.entity';
 
 // 테스트 환경 검증 함수를 별도로 임포트하지 않고 여기서 정의
 const validateTestDatabaseConfig = (): void => {
@@ -28,7 +29,7 @@ dotenv.config();
 /**
  * 모든 엔티티 목록 (중앙 관리)
  */
-export const ENTITIES = [];
+export const ENTITIES = [Admin];
 
 /**
  * 공통 데이터베이스 설정
