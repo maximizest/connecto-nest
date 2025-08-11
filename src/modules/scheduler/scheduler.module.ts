@@ -5,10 +5,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { CacheModule } from '../cache/cache.module';
 import { FileUpload } from '../file-upload/file-upload.entity';
+import { Message } from '../message/message.entity';
 import { NotificationModule } from '../notification/notification.module';
 import { Planet } from '../planet/planet.entity';
+import { MessageReadReceipt } from '../read-receipt/read-receipt.entity';
 import { StorageService } from '../storage/storage.service';
 import { Travel } from '../travel/travel.entity';
+import { User } from '../user/user.entity';
 import { VideoProcessing } from '../video-processing/video-processing.entity';
 import { SchedulerController } from './api/v1/scheduler.controller';
 import { SchedulerService } from './scheduler.service';
@@ -17,7 +20,15 @@ import { SchedulerService } from './scheduler.service';
   imports: [
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
-    TypeOrmModule.forFeature([Travel, Planet, FileUpload, VideoProcessing]),
+    TypeOrmModule.forFeature([
+      Travel,
+      Planet,
+      Message,
+      MessageReadReceipt,
+      User,
+      FileUpload,
+      VideoProcessing,
+    ]),
     CacheModule,
     NotificationModule,
     AnalyticsModule,

@@ -12,6 +12,10 @@ import { PushNotificationService } from './services/push-notification.service';
   imports: [TypeOrmModule.forFeature([Notification, User, Travel, Planet])],
   providers: [NotificationService, PushNotificationService],
   controllers: [NotificationController],
-  exports: [NotificationService, PushNotificationService],
+  exports: [
+    NotificationService,
+    PushNotificationService,
+    TypeOrmModule.forFeature([Notification]),
+  ],
 })
 export class NotificationModule {}

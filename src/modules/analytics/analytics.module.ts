@@ -26,6 +26,6 @@ import { AnalyticsController } from './api/v1/analytics.controller';
   ],
   providers: [AnalyticsService],
   controllers: [AnalyticsController],
-  exports: [AnalyticsService],
+  exports: [AnalyticsService, TypeOrmModule.forFeature([Analytics])],
 })
 export class AnalyticsModule {}
