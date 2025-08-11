@@ -8,11 +8,8 @@ import {
 import {
   Controller,
   ForbiddenException,
-  Get,
   Logger,
   NotFoundException,
-  Param,
-  Post,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -268,17 +265,17 @@ export class PlanetUserController {
 
     // 상태 변경 처리
     if (body.status) {
-      // 밴 처리인지 확인
+      // 밴 처리는 Admin 전용 기능
       if (body.status === PlanetUserStatus.BANNED) {
-        return await this.handlePlanetBan(body, user, existingPlanetUser);
+        throw new ForbiddenException('관리자만 멤버를 밴할 수 있습니다.');
       }
 
-      // 밴 해제 처리인지 확인 (ACTIVE로 상태 변경 시)
+      // 밴 해제 처리도 Admin 전용 기능
       if (
         body.status === PlanetUserStatus.ACTIVE &&
         existingPlanetUser.status === PlanetUserStatus.BANNED
       ) {
-        return await this.handlePlanetUnban(body, user, existingPlanetUser);
+        throw new ForbiddenException('관리자만 멤버 밴을 해제할 수 있습니다.');
       }
 
       // 초대 수락/거절 처리
@@ -402,224 +399,5 @@ export class PlanetUserController {
         error.stack,
       );
     }
-  }
-
-  /**
-   * Planet 밴 처리
-   */
-  private async handlePlanetBan(
-    body: any,
-    user: User,
-    existingPlanetUser: PlanetUser,
-  ): Promise<any> {
-    // 밴 권한 확인: Planet은 Admin이 생성하므로 일반 사용자는 밴 권한 없음
-    throw new ForbiddenException('관리자만 멤버를 밴할 수 있습니다.');
-
-    // 자기 자신을 밴할 수 없음
-    if (existingPlanetUser.userId === user.id) {
-      throw new ForbiddenException('자기 자신을 밴할 수 없습니다.');
-    }
-
-    // 밴 정보 설정
-    body.status = PlanetUserStatus.BANNED;
-    body.bannedAt = new Date();
-    body.bannedBy = user.id;
-    body.banReason = body.banReason || '규칙 위반';
-
-    // 밴 기간 설정 (초 단위)
-    if (body.banDuration && body.banDuration > 0) {
-      body.banExpiresAt = new Date(Date.now() + body.banDuration * 1000);
-    }
-
-    // 불필요한 필드 제거
-    delete body.banDuration;
-
-    this.logger.log(
-      `Planet member banned: planetId=${existingPlanetUser.planetId}, userId=${existingPlanetUser.userId}, bannedBy=${user.id}, reason=${body.banReason}`,
-    );
-
-    return body;
-  }
-
-  /**
-   * Planet 밴 해제 처리
-   */
-  private async handlePlanetUnban(
-    body: any,
-    user: User,
-    existingPlanetUser: PlanetUser,
-  ): Promise<any> {
-    // 밴 해제 권한 확인: Planet은 Admin이 생성하므로 일반 사용자는 밴 해제 권한 없음
-    throw new ForbiddenException('관리자만 멤버 밴을 해제할 수 있습니다.');
-
-    // 밴 상태인지 확인
-    if (existingPlanetUser.status !== PlanetUserStatus.BANNED) {
-      throw new ForbiddenException('밴 상태가 아닌 사용자입니다.');
-    }
-
-    // 밴 해제 정보 설정
-    body.status = PlanetUserStatus.ACTIVE;
-    body.bannedAt = null;
-    body.banExpiresAt = null;
-    body.bannedBy = null;
-    body.banReason = null;
-
-    this.logger.log(
-      `Planet member unbanned: planetId=${existingPlanetUser.planetId}, userId=${existingPlanetUser.userId}, unbannedBy=${user.id}`,
-    );
-
-    return body;
-  }
-
-  /**
-   * Planet 멤버 밴 (별도 엔드포인트)
-   * POST /api/v1/planet-users/:id/ban
-   */
-  @Post(':id/ban')
-  async banPlanetMember(
-    @Param('id') planetUserId: string,
-    @Request() req: any,
-  ) {
-    const user: User = req.user;
-
-    // 기존 PlanetUser 조회
-    const existingPlanetUser = await this.planetUserRepository.findOne({
-      where: { id: parseInt(planetUserId) },
-      relations: ['user', 'planet'],
-    });
-
-    if (!existingPlanetUser) {
-      throw new NotFoundException('Planet 멤버를 찾을 수 없습니다.');
-    }
-
-    // 권한 확인: Planet은 Admin이 생성하므로 일반 사용자는 밴 권한 없음
-    throw new ForbiddenException('관리자만 멤버를 밴할 수 있습니다.');
-
-    if (existingPlanetUser.userId === user.id) {
-      throw new ForbiddenException('자기 자신을 밴할 수 없습니다.');
-    }
-
-    // 엔티티의 banUser 메서드 사용
-    existingPlanetUser.banUser(user.id, req.body?.reason, req.body?.duration);
-    await this.planetUserRepository.save(existingPlanetUser);
-
-    this.logger.log(
-      `Planet member banned via endpoint: planetUserId=${planetUserId}, bannedBy=${user.id}`,
-    );
-
-    return {
-      success: true,
-      message: '멤버가 성공적으로 밴되었습니다.',
-      bannedUser: {
-        id: existingPlanetUser.id,
-        userId: existingPlanetUser.userId,
-        planetId: existingPlanetUser.planetId,
-        bannedAt: existingPlanetUser.bannedAt,
-        banReason: existingPlanetUser.banReason,
-        banExpiresAt: existingPlanetUser.banExpiresAt,
-      },
-    };
-  }
-
-  /**
-   * Planet 멤버 밴 해제 (별도 엔드포인트)
-   * POST /api/v1/planet-users/:id/unban
-   */
-  @Post(':id/unban')
-  async unbanPlanetMember(
-    @Param('id') planetUserId: string,
-    @Request() req: any,
-  ) {
-    const user: User = req.user;
-
-    // 기존 PlanetUser 조회
-    const existingPlanetUser = await this.planetUserRepository.findOne({
-      where: { id: parseInt(planetUserId) },
-      relations: ['user', 'planet'],
-    });
-
-    if (!existingPlanetUser) {
-      throw new NotFoundException('Planet 멤버를 찾을 수 없습니다.');
-    }
-
-    // 권한 확인: Planet 생성자만 가능
-    // 권한 확인: Planet은 Admin이 생성하므로 일반 사용자는 밴 해제 권한 없음
-    throw new ForbiddenException('관리자만 멤버 밴을 해제할 수 있습니다.');
-
-    if (existingPlanetUser.status !== PlanetUserStatus.BANNED) {
-      throw new ForbiddenException('밴 상태가 아닌 사용자입니다.');
-    }
-
-    // 엔티티의 unbanUser 메서드 사용
-    existingPlanetUser.unbanUser();
-    await this.planetUserRepository.save(existingPlanetUser);
-
-    this.logger.log(
-      `Planet member unbanned via endpoint: planetUserId=${planetUserId}, unbannedBy=${user.id}`,
-    );
-
-    return {
-      success: true,
-      message: '멤버 밴이 성공적으로 해제되었습니다.',
-      unbannedUser: {
-        id: existingPlanetUser.id,
-        userId: existingPlanetUser.userId,
-        planetId: existingPlanetUser.planetId,
-        status: existingPlanetUser.status,
-      },
-    };
-  }
-
-  /**
-   * Planet 밴 목록 조회 (생성자용)
-   * GET /api/v1/planet-users/banned/:planetId
-   */
-  @Get('banned/:planetId')
-  async getBannedPlanetMembers(
-    @Param('planetId') planetId: string,
-    @Request() req: any,
-  ) {
-    const user: User = req.user;
-
-    // Planet 확인 및 권한 검증
-    const planet = await this.planetRepository.findOne({
-      where: { id: parseInt(planetId) },
-    });
-
-    if (!planet) {
-      throw new NotFoundException('Planet을 찾을 수 없습니다.');
-    }
-
-    // 권한 확인: Planet은 Admin이 생성하므로 일반 사용자는 밴 목록 조회 권한 없음
-    throw new ForbiddenException('관리자만 밴 목록을 조회할 수 있습니다.');
-
-    // 밴된 멤버 목록 조회
-    const bannedMembers = await this.planetUserRepository.find({
-      where: {
-        planetId: parseInt(planetId),
-        status: PlanetUserStatus.BANNED,
-      },
-      relations: ['user'],
-      order: { bannedAt: 'DESC' },
-    });
-
-    return {
-      planetId: parseInt(planetId),
-      bannedMembers: bannedMembers.map((member) => ({
-        id: member.id,
-        user: {
-          id: member.user.id,
-          name: member.user.name,
-          avatar: member.user.avatar,
-        },
-        bannedAt: member.bannedAt,
-        banExpiresAt: member.banExpiresAt,
-        bannedBy: member.bannedBy,
-        banReason: member.banReason,
-        remainingBanTime: member.getBanRemainingSeconds(),
-        isPermanentBan: !member.banExpiresAt,
-      })),
-      totalCount: bannedMembers.length,
-    };
   }
 }
