@@ -262,7 +262,7 @@ export class PlanetCacheService {
     try {
       const key = `${this.PLANET_ONLINE_MEMBERS_KEY}:${planetId}`;
       const members = await this.redisService.getJson(key);
-      return members || [];
+      return (members as number[]) || [];
     } catch (error) {
       this.logger.warn(
         `Failed to get cached planet online members ${planetId}: ${error.message}`,
@@ -347,13 +347,13 @@ export class PlanetCacheService {
 
       // 만료된 타이핑 상태 필터링 (30초 이상된 것)
       const now = new Date();
-      const validUsers = users.filter((user: TypingUser) => {
+      const validUsers = (users as TypingUser[]).filter((user: TypingUser) => {
         const startedAt = new Date(user.startedAt);
         return now.getTime() - startedAt.getTime() < 30000;
       });
 
       // 필터링된 결과로 캐시 업데이트
-      if (validUsers.length !== users.length) {
+      if (validUsers.length !== (users as TypingUser[]).length) {
         await this.setTypingUsers(planetId, validUsers);
       }
 
@@ -498,7 +498,7 @@ export class PlanetCacheService {
       memberCount: planet.memberCount,
       messageCount: planet.messageCount,
       lastMessageAt: planet.lastMessageAt,
-      timeRestrictions: planet.timeRestrictions,
+      timeRestrictions: planet.timeRestriction,
       settings: planet.settings,
       createdAt: planet.createdAt,
       updatedAt: planet.updatedAt,
@@ -536,9 +536,9 @@ export class PlanetCacheService {
       content: message.content,
       senderId: message.senderId,
       senderName,
-      fileUrl: message.fileUrl,
-      fileName: message.fileName,
-      fileSize: message.fileSize,
+      fileUrl: message.fileMetadata?.url,
+      fileName: message.fileMetadata?.fileName,
+      fileSize: message.fileMetadata?.fileSize,
       isEdited: message.isEdited,
       editedAt: message.editedAt,
       createdAt: message.createdAt,

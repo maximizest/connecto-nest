@@ -126,7 +126,8 @@ export class OnlinePresenceService {
   private async addToOnlineUsersList(userId: number): Promise<void> {
     try {
       const key = this.ONLINE_USERS_KEY;
-      const currentUsers = (await this.redisService.getJson(key)) || [];
+      const currentUsers =
+        ((await this.redisService.getJson(key)) as number[]) || [];
 
       if (!currentUsers.includes(userId)) {
         currentUsers.push(userId);
@@ -149,7 +150,8 @@ export class OnlinePresenceService {
   private async removeFromOnlineUsersList(userId: number): Promise<void> {
     try {
       const key = this.ONLINE_USERS_KEY;
-      const currentUsers = (await this.redisService.getJson(key)) || [];
+      const currentUsers =
+        ((await this.redisService.getJson(key)) as number[]) || [];
       const updatedUsers = currentUsers.filter((id: number) => id !== userId);
 
       if (updatedUsers.length !== currentUsers.length) {
@@ -172,7 +174,7 @@ export class OnlinePresenceService {
   async getOnlineUserCount(): Promise<number> {
     try {
       const key = this.ONLINE_USERS_KEY;
-      const users = (await this.redisService.getJson(key)) || [];
+      const users = ((await this.redisService.getJson(key)) as number[]) || [];
       return users.length;
     } catch (error) {
       this.logger.warn(`Failed to get online user count: ${error.message}`);
@@ -199,7 +201,8 @@ export class OnlinePresenceService {
   async addUserSocket(userId: number, socketId: string): Promise<void> {
     try {
       const key = `${this.USER_SOCKETS_KEY}:${userId}`;
-      const sockets = (await this.redisService.getJson(key)) || [];
+      const sockets =
+        ((await this.redisService.getJson(key)) as string[]) || [];
 
       if (!sockets.includes(socketId)) {
         sockets.push(socketId);
@@ -227,7 +230,8 @@ export class OnlinePresenceService {
   async removeUserSocket(userId: number, socketId: string): Promise<void> {
     try {
       const key = `${this.USER_SOCKETS_KEY}:${userId}`;
-      const sockets = (await this.redisService.getJson(key)) || [];
+      const sockets =
+        ((await this.redisService.getJson(key)) as string[]) || [];
       const updatedSockets = sockets.filter((id: string) => id !== socketId);
 
       if (updatedSockets.length > 0) {
@@ -278,7 +282,7 @@ export class OnlinePresenceService {
   async getUserSockets(userId: number): Promise<string[]> {
     try {
       const key = `${this.USER_SOCKETS_KEY}:${userId}`;
-      return (await this.redisService.getJson(key)) || [];
+      return ((await this.redisService.getJson(key)) as string[]) || [];
     } catch (error) {
       this.logger.warn(
         `Failed to get user sockets ${userId}: ${error.message}`,
@@ -293,7 +297,8 @@ export class OnlinePresenceService {
   async recordUserActivity(activity: UserActivity): Promise<void> {
     try {
       const key = `${this.USER_ACTIVITY_KEY}:${activity.userId}`;
-      const activities = (await this.redisService.getJson(key)) || [];
+      const activities =
+        ((await this.redisService.getJson(key)) as UserActivity[]) || [];
 
       // 최근 활동을 맨 앞에 추가하고 최대 50개까지만 유지
       activities.unshift(activity);
@@ -324,7 +329,8 @@ export class OnlinePresenceService {
   ): Promise<UserActivity[]> {
     try {
       const key = `${this.USER_ACTIVITY_KEY}:${userId}`;
-      const activities = (await this.redisService.getJson(key)) || [];
+      const activities =
+        ((await this.redisService.getJson(key)) as UserActivity[]) || [];
       return activities.slice(0, limit);
     } catch (error) {
       this.logger.warn(
@@ -480,7 +486,7 @@ export class OnlinePresenceService {
     return {
       userId: user.id,
       name: user.name,
-      avatarUrl: user.avatarUrl,
+      avatarUrl: user.avatar,
       status: user.status,
       lastSeenAt: user.lastSeenAt || new Date(),
       connectedAt: new Date(),

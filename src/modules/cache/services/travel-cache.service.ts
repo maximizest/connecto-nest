@@ -244,7 +244,7 @@ export class TravelCacheService {
     try {
       const key = `${this.TRAVEL_ONLINE_MEMBERS_KEY}:${travelId}`;
       const members = await this.redisService.getJson(key);
-      return members || [];
+      return (members as number[]) || [];
     } catch (error) {
       this.logger.warn(
         `Failed to get cached travel online members ${travelId}: ${error.message}`,

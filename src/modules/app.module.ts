@@ -22,6 +22,7 @@ import { StorageModule } from './storage/storage.module';
 import { TravelUserModule } from './travel-user/travel-user.module';
 import { TravelModule } from './travel/travel.module';
 import { UserModule } from './user/user.module';
+import { WebSocketModule } from './websocket/websocket.module';
 
 const NODE_ENV = process.env.NODE_ENV;
 // 기본 모듈 설정
@@ -60,6 +61,7 @@ modules.push(TravelUserModule);
 modules.push(PlanetModule);
 modules.push(PlanetUserModule);
 modules.push(MessageModule);
+modules.push(WebSocketModule);
 
 @Module({
   imports: modules,

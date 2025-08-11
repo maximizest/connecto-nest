@@ -67,17 +67,165 @@ export class EntityController {
 - crudResponse() 래퍼 함수 사용
 - RESTful API 설계 원칙 준수
 - API 버전 관리: `@Controller({ path: 'resource-name', version: '1' })`
+- **중요**: 모든 컨트롤러는 사용자용 API만 개발 (관리자 라우트는 별도 개발 예정)
 
-### CRUD 컨트롤러 설정:
+## 🚀 @foryourdev/nestjs-crud 사용 규칙
+
+### 핵심 원칙
+- **MUST**: 모든 서비스는 CrudService를 상속받아 사용
+- **MUST**: 모든 컨트롤러는 @Crud 데코레이터 사용
+- **지양**: 커스텀 함수 최소화, 표준 CRUD 액션(index, show, create, update, destroy) 최대 활용
+- **필수**: 보안을 위해 allowedFilters, allowedParams, allowedIncludes 설정
+
+### 서비스 패턴:
 ```typescript
+@Injectable()
+export class EntityService extends CrudService<Entity> {
+  constructor(
+    @InjectRepository(Entity)
+    repository: Repository<Entity>,
+  ) {
+    super(repository);
+  }
+  
+  // 커스텀 함수는 최대한 지양하고, 필요시에만 추가
+  // 대부분의 비즈니스 로직은 컨트롤러의 lifecycle hooks에서 처리
+}
+```
+
+### 컨트롤러 패턴:
+```typescript
+@Controller({ path: 'entities', version: '1' })
 @Crud({
-  entity: EntityClass,
-  allowedFilters: [],              // 필터링 허용 필드
-  allowedParams: ['field1', 'field2'], // 쿼리 파라미터 허용 필드
-  allowedIncludes: [],             // 관계 포함 허용 필드
+  entity: Entity,
+  allowedFilters: ['field1', 'field2'],     // 필터링 허용 필드 (보안 필수)
+  allowedParams: ['field1', 'field2'],      // 쿼리 파라미터 허용 필드 (보안 필수)
+  allowedIncludes: ['relation1'],           // 관계 포함 허용 필드 (보안 필수)
   only: ['index', 'show', 'create', 'update', 'destroy'], // 허용 액션
 })
+export class EntityController {
+  constructor(public readonly crudService: EntityService) {}
+  
+  // Lifecycle hooks로 비즈니스 로직 처리
+  @BeforeCreate()
+  async preprocessCreate(body: any) {
+    // 생성 전 데이터 전처리
+    return body;
+  }
+  
+  @BeforeUpdate()
+  async preprocessUpdate(body: any) {
+    // 수정 전 데이터 전처리
+    return body;
+  }
+}
 ```
+
+### 자동 생성되는 API 엔드포인트:
+| HTTP Method | Endpoint | 설명 | Method Name |
+|-------------|----------|------|-------------|
+| GET | `/entities` | 목록 조회 (페이지네이션) | `index` |
+| GET | `/entities/:id` | 단일 조회 | `show` |
+| POST | `/entities` | 생성 | `create` |
+| PUT | `/entities/:id` | 수정 | `update` |
+| DELETE | `/entities/:id` | 삭제 | `destroy` |
+| POST | `/entities/upsert` | 생성/수정 | `upsert` |
+| POST | `/entities/:id/recover` | 복구 | `recover` |
+
+### 보안 설정 (필수):
+```typescript
+@Crud({
+  entity: Entity,
+  // 🔒 보안: 허용하지 않은 필드는 자동 차단
+  allowedFilters: ['name', 'status', 'createdAt'],
+  allowedParams: ['name', 'description', 'status'],
+  allowedIncludes: ['user', 'tags'],
+  
+  // 특정 액션만 허용 (필요에 따라 제한)
+  only: ['index', 'show', 'create', 'update'],
+  
+  // 라우트별 개별 설정 가능
+  routes: {
+    index: {
+      allowedFilters: ['name', 'status', 'user.id'],
+      allowedIncludes: ['user'],
+    },
+    show: {
+      allowedIncludes: ['user', 'tags', 'comments'],
+    },
+  },
+})
+```
+
+### 고급 쿼리 필터링 지원:
+- `_eq`: 정확히 일치 (`name_eq=John`)
+- `_ne`: 일치하지 않음 (`status_ne=inactive`)
+- `_gt`, `_gte`: 초과, 이상 (`age_gt=18`)
+- `_lt`, `_lte`: 미만, 이하 (`age_lt=65`)
+- `_between`: 범위 (`age_between=18,65`)
+- `_like`, `_ilike`: 패턴 검색 (`name_like=%John%`)
+- `_in`, `_not_in`: 배열 포함/제외 (`id_in=1,2,3`)
+- `_null`, `_not_null`: NULL 체크
+
+### Lifecycle Hooks 활용:
+```typescript
+// 생성/수정 전 데이터 전처리
+@BeforeCreate()
+@BeforeUpdate()
+async preprocessData(body: any, context: any) {
+  // 패스워드 해싱
+  if (body.password) {
+    body.password = await bcrypt.hash(body.password, 10);
+  }
+  
+  // 현재 사용자 ID 자동 설정
+  if (context.request?.user?.id) {
+    body.userId = context.request.user.id;
+  }
+  
+  return body;
+}
+
+// 생성/수정 후 추가 로직
+@AfterCreate()
+@AfterUpdate()
+async postProcess(entity: any, context: any) {
+  // 캐시 무효화, 이벤트 발행 등
+  this.eventEmitter.emit('entity.updated', { entity });
+  return entity;
+}
+
+// 삭제 전 권한 확인
+@BeforeDelete()
+async validateDelete(id: number, context: any) {
+  const userId = context.request?.user?.id;
+  const entity = await this.crudService.findOne(id);
+  
+  if (entity.userId !== userId) {
+    throw new ForbiddenException('삭제 권한이 없습니다.');
+  }
+  
+  return true;
+}
+```
+
+### RESTful Query 예시:
+```bash
+# 필터링 + 정렬 + 페이지네이션
+GET /api/v1/users?filter[status_eq]=active&sort=-createdAt&page[number]=1&page[size]=10
+
+# 관계 포함 + 중첩 필터링
+GET /api/v1/posts?filter[author.name_like]=%John%&include=author,tags&sort=-publishedAt
+
+# 복합 필터링
+GET /api/v1/products?filter[price_between]=100,500&filter[category.name_in]=electronics,books
+```
+
+### 관리자 API 제외 규칙
+- **금지**: 관리자 전용 라우트 개발 (예: `/admin/*`, 관리자 권한 체크 등)
+- **금지**: AdminGuard 사용 (사용자용 API에서는 AuthGuard만 사용)
+- **원칙**: 모든 개발하는 API는 일반 사용자 대상으로만 구현
+- **참고**: 관리자 기능은 별도 개발 예정이므로 고려하지 않음
 
 ### 데이터 전처리:
 - @BeforeCreate(), @BeforeUpdate() 데코레이터 활용
