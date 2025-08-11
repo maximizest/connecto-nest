@@ -82,6 +82,55 @@ export const LOG_CONSTANTS = {
 } as const;
 
 /**
+ * 파일 업로드 관련 상수
+ */
+export const FILE_CONSTANTS = {
+  DEFAULT_MAX_FILE_SIZE: 10485760, // 10MB
+  DEFAULT_MAX_VIDEO_SIZE: 104857600, // 100MB
+  DEFAULT_MAX_IMAGE_SIZE: 5242880, // 5MB
+  ALLOWED_IMAGE_TYPES: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+  ALLOWED_VIDEO_TYPES: ['mp4', 'avi', 'mov', 'webm'],
+  ALLOWED_FILE_TYPES: ['pdf', 'doc', 'docx', 'txt', 'zip', 'rar'],
+  UPLOAD_TIMEOUT: 30000, // 30초
+  THUMBNAIL_SIZE: 200, // 썸네일 크기 (px)
+} as const;
+
+/**
+ * 채팅 관련 상수
+ */
+export const CHAT_CONSTANTS = {
+  MESSAGE_TYPES: {
+    TEXT: 'text',
+    IMAGE: 'image',
+    VIDEO: 'video',
+    FILE: 'file',
+    SYSTEM: 'system',
+  },
+  CHATROOM_TYPES: {
+    DIRECT: 'direct',
+    GROUP: 'group',
+    CHANNEL: 'channel',
+  },
+  USER_ROLES: {
+    MEMBER: 'member',
+    ADMIN: 'admin',
+    OWNER: 'owner',
+  },
+  USER_STATUS: {
+    ONLINE: 'online',
+    OFFLINE: 'offline',
+    AWAY: 'away',
+    BUSY: 'busy',
+  },
+  MAX_MESSAGE_LENGTH: 4000,
+  MAX_CHATROOM_NAME_LENGTH: 100,
+  RECENT_MESSAGES_COUNT: 50,
+  TYPING_TIMEOUT: 3000, // 3초
+  HEARTBEAT_INTERVAL: 30000, // 30초
+  CACHE_TTL: 3600, // 1시간
+} as const;
+
+/**
  * 환경변수 키 상수
  */
 export const ENV_KEYS = {
@@ -118,4 +167,28 @@ export const ENV_KEYS = {
 
   // 로그
   LOG_LEVEL: 'LOG_LEVEL',
-} as const; 
+
+  // Redis
+  REDIS_URL: 'REDIS_URL',
+  REDIS_HOST: 'REDIS_HOST',
+  REDIS_PORT: 'REDIS_PORT',
+  REDIS_USERNAME: 'REDIS_USERNAME',
+  REDIS_PASSWORD: 'REDIS_PASSWORD',
+  REDIS_DB: 'REDIS_DB',
+
+  // 파일 스토리지
+  STORAGE_TYPE: 'STORAGE_TYPE',
+  STORAGE_ENDPOINT: 'STORAGE_ENDPOINT',
+  STORAGE_BUCKET: 'STORAGE_BUCKET',
+  STORAGE_ACCESS_KEY_ID: 'STORAGE_ACCESS_KEY_ID',
+  STORAGE_SECRET_ACCESS_KEY: 'STORAGE_SECRET_ACCESS_KEY',
+  STORAGE_REGION: 'STORAGE_REGION',
+  STORAGE_PUBLIC_URL: 'STORAGE_PUBLIC_URL',
+
+  // 파일 업로드 제한
+  MAX_FILE_SIZE: 'MAX_FILE_SIZE',
+  MAX_VIDEO_SIZE: 'MAX_VIDEO_SIZE',
+  ALLOWED_IMAGE_TYPES: 'ALLOWED_IMAGE_TYPES',
+  ALLOWED_VIDEO_TYPES: 'ALLOWED_VIDEO_TYPES',
+  ALLOWED_FILE_TYPES: 'ALLOWED_FILE_TYPES',
+} as const;

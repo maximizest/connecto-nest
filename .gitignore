@@ -199,3 +199,5 @@ temp/
 # NestJS specific
 *.tgz
 .eslintcache 
+
+test-ai
