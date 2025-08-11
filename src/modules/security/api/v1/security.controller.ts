@@ -157,7 +157,7 @@ export class SecurityController {
     if (query.startDate) filters.startDate = new Date(query.startDate);
     if (query.endDate) filters.endDate = new Date(query.endDate);
 
-    const events = await this.securityService.getSecurityEvents(
+    const events = await this.crudService.getSecurityEvents(
       filters,
       query.limit || 50,
     );
@@ -182,7 +182,7 @@ export class SecurityController {
     topThreats: any;
     recommendations: string[];
   }> {
-    const stats = await this.securityService.getSecurityStats(days || 7);
+    const stats = await this.crudService.getSecurityStats(days || 7);
 
     const recommendations = this.generateSecurityRecommendations(stats);
 
@@ -213,7 +213,7 @@ export class SecurityController {
     count: number;
     alertLevel: 'normal' | 'warning' | 'critical';
   }> {
-    const events = await this.securityService.getSecurityEvents({
+    const events = await this.crudService.getSecurityEvents({
       riskLevel: SecurityRiskLevel.CRITICAL,
       startDate: new Date(Date.now() - 24 * 60 * 60 * 1000), // 24시간 전
     });
@@ -265,7 +265,7 @@ export class SecurityController {
       throw new BadRequestException('유효하지 않은 IP 주소입니다.');
     }
 
-    await this.securityService.blockIp(
+    await this.crudService.blockIp(
       blockData.ipAddress,
       blockData.reason,
       blockData.riskLevel,
@@ -294,7 +294,7 @@ export class SecurityController {
       throw new BadRequestException('유효하지 않은 IP 주소입니다.');
     }
 
-    await this.securityService.unblockIp(ipAddress);
+    await this.crudService.unblockIp(ipAddress);
 
     return {
       message: 'IP 주소 차단이 해제되었습니다.',
@@ -318,7 +318,7 @@ export class SecurityController {
       throw new BadRequestException('유효하지 않은 IP 주소입니다.');
     }
 
-    const isBlocked = await this.securityService.isIpBlocked(ipAddress);
+    const isBlocked = await this.crudService.isIpBlocked(ipAddress);
 
     return {
       ipAddress,
@@ -404,7 +404,7 @@ export class SecurityController {
     recommendations: string[];
     stats: any;
   }> {
-    const recentEvents = await this.securityService.getSecurityEvents(
+    const recentEvents = await this.crudService.getSecurityEvents(
       {
         userId,
         startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7일간
@@ -484,7 +484,7 @@ export class SecurityController {
     const period = query.period || 'weekly';
     const days = period === 'daily' ? 1 : period === 'weekly' ? 7 : 30;
 
-    const stats = await this.securityService.getSecurityStats(days);
+    const stats = await this.crudService.getSecurityStats(days);
 
     const report = {
       summary: stats,
