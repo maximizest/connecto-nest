@@ -19,6 +19,11 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthGuard } from '../../../../guards/auth.guard';
+import {
+  PlanetUser,
+  PlanetUserRole,
+  PlanetUserStatus,
+} from '../../../planet-user/planet-user.entity';
 import { Planet, PlanetType } from '../../../planet/planet.entity';
 import { Travel } from '../../../travel/travel.entity';
 import { User } from '../../../user/user.entity';
@@ -60,8 +65,7 @@ import { TravelUserService } from '../../travel-user.service';
 
   // Body에서 허용할 파라미터 (생성/수정 시)
   allowedParams: [
-    'travelId',
-    'inviteCode', // 가입 시 초대 코드
+    'inviteCode', // Travel 참여용 초대코드 (필수)
     'role', // 관리자가 권한 변경 시
     'status', // 관리자가 상태 변경 시 (탈퇴 포함)
     'banReason', // 밴 사유
@@ -96,8 +100,7 @@ import { TravelUserService } from '../../travel-user.service';
     // 가입: 초대 코드 필수
     create: {
       allowedParams: [
-        'travelId',
-        'inviteCode', // 초대 코드 또는 공개 Travel
+        'inviteCode', // 초대 코드로만 참여 가능
       ],
     },
 
@@ -124,6 +127,8 @@ export class TravelUserController {
     private readonly travelRepository: Repository<Travel>,
     @InjectRepository(Planet)
     private readonly planetRepository: Repository<Planet>,
+    @InjectRepository(PlanetUser)
+    private readonly planetUserRepository: Repository<PlanetUser>,
   ) {}
 
   /**
@@ -133,19 +138,30 @@ export class TravelUserController {
   async beforeCreate(body: any, @Request() req: any): Promise<any> {
     const user: User = req.user;
 
-    // 사용자 정보 설정
-    body.userId = user.id;
-    body.joinedAt = new Date();
-    body.invitedBy = user.id; // 셀프 초대로 설정 (초대 코드 사용)
+    // 초대코드 필수 확인
+    if (!body.inviteCode) {
+      throw new ForbiddenException(
+        'Travel 참여를 위해서는 초대코드가 필요합니다.',
+      );
+    }
 
-    // Travel 존재 확인
+    // 초대코드로 Travel 찾기
     const travel = await this.travelRepository.findOne({
-      where: { id: body.travelId },
+      where: {
+        inviteCode: body.inviteCode,
+        inviteCodeEnabled: true,
+      },
     });
 
     if (!travel) {
-      throw new NotFoundException('존재하지 않는 Travel입니다.');
+      throw new NotFoundException('유효하지 않은 초대코드입니다.');
     }
+
+    // 사용자 정보 설정
+    body.userId = user.id;
+    body.travelId = travel.id; // 초대코드로 찾은 Travel ID 설정
+    body.joinedAt = new Date();
+    body.invitedBy = user.id; // 셀프 초대로 설정 (초대 코드 사용)
 
     if (!travel.isActive) {
       throw new ForbiddenException('비활성화된 Travel입니다.');
@@ -246,17 +262,39 @@ export class TravelUserController {
           1,
         );
 
-        // 해당 Travel의 모든 GROUP Planet memberCount 증가
-        await this.planetRepository
-          .createQueryBuilder()
-          .update(Planet)
-          .set({
-            memberCount: () => 'member_count + 1',
-          })
-          .where('travel_id = :travelId', { travelId: entity.travelId })
-          .andWhere('type = :type', { type: PlanetType.GROUP })
-          .andWhere('is_active = :isActive', { isActive: true })
-          .execute();
+        // 해당 Travel의 모든 GROUP Planet에 자동 참여 처리
+        const groupPlanets = await this.planetRepository.find({
+          where: {
+            travelId: entity.travelId,
+            type: PlanetType.GROUP,
+            isActive: true,
+          },
+        });
+
+        for (const planet of groupPlanets) {
+          // 각 그룹 Planet에 사용자 추가
+          const planetUser = this.planetUserRepository.create({
+            planetId: planet.id,
+            userId: entity.userId,
+            status: PlanetUserStatus.ACTIVE,
+            role: PlanetUserRole.PARTICIPANT,
+            joinedAt: new Date(),
+            invitedBy: entity.invitedBy || entity.userId,
+          });
+
+          await this.planetUserRepository.save(planetUser);
+
+          // Planet의 memberCount 증가
+          await this.planetRepository.increment(
+            { id: planet.id },
+            'memberCount',
+            1,
+          );
+
+          this.logger.log(
+            `User auto-joined group planet: userId=${entity.userId}, planetId=${planet.id}`,
+          );
+        }
 
         this.logger.log(
           `Travel joined successfully: id=${entity.id}, travelId=${entity.travelId}, userId=${entity.userId}`,
