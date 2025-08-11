@@ -7,8 +7,11 @@ import { Between, LessThan, Not, Repository } from 'typeorm';
 import { AggregationPeriod, Analytics } from '../analytics/analytics.entity';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { RedisService } from '../cache/redis.service';
+import {
+  FileUpload,
+  FileUploadStatus,
+} from '../file-upload/file-upload.entity';
 import { Message } from '../message/message.entity';
-import { MessageReadReceipt } from '../message/read-receipt.entity';
 import {
   Notification,
   NotificationChannel,
@@ -17,14 +20,14 @@ import {
 } from '../notification/notification.entity';
 import { NotificationService } from '../notification/notification.service';
 import { Planet } from '../planet/planet.entity';
-import { FileUpload, FileUploadStatus } from '../storage/file-upload.entity';
+import { MessageReadReceipt } from '../read-receipt/read-receipt.entity';
 import { StorageService } from '../storage/storage.service';
+import { Travel, TravelStatus } from '../travel/travel.entity';
+import { User } from '../user/user.entity';
 import {
   VideoProcessing,
   VideoProcessingStatus,
-} from '../storage/video-processing.entity';
-import { Travel, TravelStatus } from '../travel/travel.entity';
-import { User } from '../user/user.entity';
+} from '../video-processing/video-processing.entity';
 
 /**
  * 스케줄링 작업 통계

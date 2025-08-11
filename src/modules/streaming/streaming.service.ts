@@ -12,16 +12,16 @@ import {
   STREAMING_CONFIG,
 } from '../../config/streaming.config';
 import { RedisService } from '../cache/redis.service';
-import { StorageService } from './storage.service';
+import { StorageService } from '../storage/storage.service';
+import {
+  VideoProcessing,
+  VideoProcessingStatus,
+} from '../video-processing/video-processing.entity';
 import {
   DeviceType,
   StreamingSession,
   StreamingSessionStatus,
 } from './streaming-session.entity';
-import {
-  VideoProcessing,
-  VideoProcessingStatus,
-} from './video-processing.entity';
 
 interface StreamChunk {
   start: number;

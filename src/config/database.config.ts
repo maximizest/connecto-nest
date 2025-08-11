@@ -6,8 +6,8 @@ import {
 } from '../common/constants/app.constants';
 import { Admin } from '../modules/admin/admin.entity';
 import { Analytics } from '../modules/analytics/analytics.entity';
+import { FileUpload } from '../modules/file-upload/file-upload.entity';
 import { Message } from '../modules/message/message.entity';
-import { MessageReadReceipt } from '../modules/message/read-receipt.entity';
 import { Notification } from '../modules/notification/notification.entity';
 import {
   PerformanceAlert,
@@ -15,17 +15,17 @@ import {
 } from '../modules/performance/performance.entity';
 import { PlanetUser } from '../modules/planet-user/planet-user.entity';
 import { Planet } from '../modules/planet/planet.entity';
+import { MessageReadReceipt } from '../modules/read-receipt/read-receipt.entity';
 import {
   BlockedIp,
   FileScanResult,
   SecurityEvent,
 } from '../modules/security/security.entity';
-import { FileUpload } from '../modules/storage/file-upload.entity';
-import { StreamingSession } from '../modules/storage/streaming-session.entity';
-import { VideoProcessing } from '../modules/storage/video-processing.entity';
+import { StreamingSession } from '../modules/streaming/streaming-session.entity';
 import { TravelUser } from '../modules/travel-user/travel-user.entity';
 import { Travel } from '../modules/travel/travel.entity';
 import { User } from '../modules/user/user.entity';
+import { VideoProcessing } from '../modules/video-processing/video-processing.entity';
 
 // 테스트 환경 검증 함수를 별도로 임포트하지 않고 여기서 정의
 const validateTestDatabaseConfig = (): void => {

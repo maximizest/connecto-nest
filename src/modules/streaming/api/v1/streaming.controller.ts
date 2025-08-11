@@ -19,8 +19,8 @@ import {
   STREAMING_CONFIG,
 } from '../../../../config/streaming.config';
 import { AuthGuard } from '../../../../guards/auth.guard';
+import { StorageService } from '../../../storage/storage.service';
 import { User } from '../../../user/user.entity';
-import { StorageService } from '../../storage.service';
 import { StreamingService } from '../../streaming.service';
 
 interface StreamingRequest extends Request {

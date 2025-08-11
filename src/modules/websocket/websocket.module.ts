@@ -6,13 +6,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ENV_KEYS } from '../../common/constants/app.constants';
 import { RedisModule } from '../cache/redis.module';
 import { Message } from '../message/message.entity';
-import { MessageReadReceipt } from '../message/read-receipt.entity';
-import { ReadReceiptService } from '../message/read-receipt.service';
 import { Notification } from '../notification/notification.entity';
 import { NotificationService } from '../notification/notification.service';
 import { PushNotificationService } from '../notification/services/push-notification.service';
 import { PlanetUser } from '../planet-user/planet-user.entity';
 import { Planet } from '../planet/planet.entity';
+import { MessageReadReceipt } from '../read-receipt/read-receipt.entity';
+import { ReadReceiptModule } from '../read-receipt/read-receipt.module';
 import { TravelUser } from '../travel-user/travel-user.entity';
 import { Travel } from '../travel/travel.entity';
 import { User } from '../user/user.entity';
@@ -28,6 +28,7 @@ import { WebSocketRoomService } from './services/websocket-room.service';
 @Module({
   imports: [
     RedisModule,
+    ReadReceiptModule,
     TypeOrmModule.forFeature([
       User,
       Travel,
@@ -62,7 +63,6 @@ import { WebSocketRoomService } from './services/websocket-room.service';
     TypingIndicatorService,
     NotificationService,
     PushNotificationService,
-    ReadReceiptService,
     Reflector,
   ],
   exports: [

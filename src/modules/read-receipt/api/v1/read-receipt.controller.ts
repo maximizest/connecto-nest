@@ -15,9 +15,9 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthGuard } from '../../../../guards/auth.guard';
+import { Message } from '../../../message/message.entity';
 import { Planet } from '../../../planet/planet.entity';
 import { User } from '../../../user/user.entity';
-import { Message } from '../../message.entity';
 import { MessageReadReceipt } from '../../read-receipt.entity';
 import { ReadReceiptService } from '../../read-receipt.service';
 

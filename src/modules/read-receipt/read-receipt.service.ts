@@ -2,16 +2,16 @@ import { CrudService } from '@foryourdev/nestjs-crud';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Message } from '../../message/message.entity';
 import {
   PlanetUser,
   PlanetUserStatus,
-} from '../planet-user/planet-user.entity';
-import { Planet, PlanetType } from '../planet/planet.entity';
+} from '../../planet-user/planet-user.entity';
+import { Planet, PlanetType } from '../../planet/planet.entity';
 import {
   TravelUser,
   TravelUserStatus,
-} from '../travel-user/travel-user.entity';
-import { Message } from './message.entity';
+} from '../../travel-user/travel-user.entity';
 import { MessageReadReceipt } from './read-receipt.entity';
 
 /**

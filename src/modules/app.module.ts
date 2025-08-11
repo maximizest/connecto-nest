@@ -16,18 +16,22 @@ import { AdminModule } from './admin/admin.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { CacheModule } from './cache/cache.module';
 import { RedisModule } from './cache/redis.module';
+import { FileUploadModule } from './file-upload/file-upload.module';
 import { MessageModule } from './message/message.module';
 import { NotificationModule } from './notification/notification.module';
 import { PerformanceModule } from './performance/performance.module';
 import { PlanetUserModule } from './planet-user/planet-user.module';
 import { PlanetModule } from './planet/planet.module';
+import { ReadReceiptModule } from './read-receipt/read-receipt.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { SchemaModule } from './schema/schema.module';
 import { SecurityModule } from './security/security.module';
 import { StorageModule } from './storage/storage.module';
+import { StreamingModule } from './streaming/streaming.module';
 import { TravelUserModule } from './travel-user/travel-user.module';
 import { TravelModule } from './travel/travel.module';
 import { UserModule } from './user/user.module';
+import { VideoProcessingModule } from './video-processing/video-processing.module';
 import { WebSocketModule } from './websocket/websocket.module';
 
 const NODE_ENV = process.env.NODE_ENV;
@@ -61,6 +65,9 @@ if (NODE_ENV !== 'production') {
 modules.push(RedisModule);
 modules.push(CacheModule);
 modules.push(StorageModule);
+modules.push(FileUploadModule);
+modules.push(StreamingModule);
+modules.push(VideoProcessingModule);
 modules.push(NotificationModule);
 modules.push(AnalyticsModule);
 modules.push(PerformanceModule);
@@ -73,6 +80,7 @@ modules.push(TravelUserModule);
 modules.push(PlanetModule);
 modules.push(PlanetUserModule);
 modules.push(MessageModule);
+modules.push(ReadReceiptModule);
 modules.push(WebSocketModule);
 
 @Module({

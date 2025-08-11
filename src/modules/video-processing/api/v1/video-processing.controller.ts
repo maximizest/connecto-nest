@@ -12,8 +12,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '../../../../guards/auth.guard';
+import { FileUploadService } from '../../../file-upload/file-upload.service';
 import { User } from '../../../user/user.entity';
-import { FileUploadService } from '../../file-upload.service';
 import {
   VideoProcessingStatus,
   VideoProcessingType,

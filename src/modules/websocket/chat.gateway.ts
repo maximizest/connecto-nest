@@ -23,10 +23,10 @@ import { Repository } from 'typeorm';
 import { OnlinePresenceService } from '../cache/services/online-presence.service';
 import { PlanetCacheService } from '../cache/services/planet-cache.service';
 import { Message } from '../message/message.entity';
-import { MessageReadReceipt } from '../message/read-receipt.entity';
-import { ReadReceiptService } from '../message/read-receipt.service';
 import { NotificationService } from '../notification/notification.service';
 import { Planet } from '../planet/planet.entity';
+import { MessageReadReceipt } from '../read-receipt/read-receipt.entity';
+import { ReadReceiptService } from '../read-receipt/read-receipt.service';
 import { User } from '../user/user.entity';
 import {
   FileUploadRateLimit,

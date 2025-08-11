@@ -20,10 +20,10 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { STORAGE_SETTINGS } from '../../../../config/storage.config';
 import { AuthGuard } from '../../../../guards/auth.guard';
+import { StorageService } from '../../../storage/storage.service';
 import { User } from '../../../user/user.entity';
 import { FileUploadType } from '../../file-upload.entity';
 import { FileUploadService } from '../../file-upload.service';
-import { StorageService } from '../../storage.service';
 
 interface ChunkUploadDto {
   uploadId: string;

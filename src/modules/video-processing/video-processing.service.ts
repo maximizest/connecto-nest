@@ -10,7 +10,7 @@ import {
   SUPPORTED_VIDEO_FORMATS,
   VIDEO_PROCESSING_CONFIG,
 } from '../../config/video-processing.config';
-import { StorageService } from './storage.service';
+import { StorageService } from '../storage/storage.service';
 import {
   VideoProcessing,
   VideoProcessingStatus,
