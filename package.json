@@ -38,7 +38,7 @@
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@ffprobe-installer/ffprobe": "^2.1.2",
     "@foryourdev/jest-swag": "^1.0.18",
-    "@foryourdev/nestjs-crud": "^0.1.16",
+    "@foryourdev/nestjs-crud": "^0.1.17",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
