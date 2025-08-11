@@ -89,18 +89,24 @@ export class EntityController {
 - 필수 환경변수는 검증 함수 구현
 - .env 파일 사용, 민감정보 git 제외
 
-### 채팅 메시지 타입
+### Travel-Planet 구조
+- **Travel**: Planet들의 상위 그룹, 여행 단위 관리
+- **Planet**: 실제 채팅방 (단체 채팅 / 1:1 채팅)
+- **권한**: Travel 소속 유저는 단체 Planet 접근, 1:1 Planet은 직접 초대만
+- **만기 관리**: Travel 만료 시 모든 Planet 비활성화
+
+### 채팅 메시지 타입 (모든 파일 500MB 통일)
 - **텍스트 메시지**: 기본 텍스트 메시지 (최대 4000자)
-- **이미지 메시지**: jpg, jpeg, png, gif, webp (최대 5MB)
-- **비디오 메시지**: mp4, avi, mov, webm (최대 100MB)  
-- **파일 메시지**: pdf, doc, docx, txt, zip, rar (최대 10MB)
+- **이미지 메시지**: jpg, jpeg, png, gif, webp (최대 500MB)
+- **비디오 메시지**: mp4, avi, mov, webm (최대 500MB)  
+- **파일 메시지**: pdf, doc, docx, txt, zip, rar (최대 500MB)
 - **시스템 메시지**: 시스템 알림 및 이벤트
 
-### 파일 스토리지
-- Cloudflare R2 스토리지 사용
-- 파일 타입별 검증 및 크기 제한
+### 대용량 파일 스토리지
+- Cloudflare R2 스토리지 사용 (500MB 지원)
+- 청크 업로드 방식 (5MB 단위)
 - 썸네일 자동 생성 (이미지/비디오)
-- CDN을 통한 빠른 파일 전송
+- CDN 및 스트리밍 최적화
 
 ### 에러 처리
 - ERROR_MESSAGES 상수 사용

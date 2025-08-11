@@ -9,8 +9,12 @@ import {
   validateDatabaseConfig,
 } from '../config/database.config';
 import { JWT_CONFIG, validateJwtConfig } from '../config/jwt.config';
+import { validateRedisConfig } from '../config/redis.config';
+import { validateStorageConfig } from '../config/storage.config';
 import { AdminModule } from './admin/admin.module';
+import { RedisModule } from './cache/redis.module';
 import { SchemaModule } from './schema/schema.module';
+import { StorageModule } from './storage/storage.module';
 
 const NODE_ENV = process.env.NODE_ENV;
 // 기본 모듈 설정
@@ -39,6 +43,8 @@ if (NODE_ENV !== 'production') {
 }
 
 // 모듈 추가
+modules.push(RedisModule);
+modules.push(StorageModule);
 modules.push(AdminModule);
 
 @Module({
@@ -49,6 +55,8 @@ export class AppModule implements OnModuleInit {
     console.log('🚀 Application Configuration Validation:');
     validateDatabaseConfig();
     validateJwtConfig();
+    validateRedisConfig();
+    validateStorageConfig();
     console.log('✅ All configurations validated successfully!\n');
   }
 }

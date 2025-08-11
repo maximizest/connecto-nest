@@ -85,14 +85,15 @@ export const LOG_CONSTANTS = {
  * 파일 업로드 관련 상수
  */
 export const FILE_CONSTANTS = {
-  DEFAULT_MAX_FILE_SIZE: 10485760, // 10MB
-  DEFAULT_MAX_VIDEO_SIZE: 104857600, // 100MB
-  DEFAULT_MAX_IMAGE_SIZE: 5242880, // 5MB
+  DEFAULT_MAX_FILE_SIZE: 524288000, // 500MB
+  DEFAULT_MAX_VIDEO_SIZE: 524288000, // 500MB
+  DEFAULT_MAX_IMAGE_SIZE: 524288000, // 500MB
   ALLOWED_IMAGE_TYPES: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
   ALLOWED_VIDEO_TYPES: ['mp4', 'avi', 'mov', 'webm'],
   ALLOWED_FILE_TYPES: ['pdf', 'doc', 'docx', 'txt', 'zip', 'rar'],
-  UPLOAD_TIMEOUT: 30000, // 30초
+  UPLOAD_TIMEOUT: 300000, // 5분 (대용량 파일)
   THUMBNAIL_SIZE: 200, // 썸네일 크기 (px)
+  CHUNK_SIZE: 5242880, // 5MB 청크 단위
 } as const;
 
 /**
@@ -106,10 +107,9 @@ export const CHAT_CONSTANTS = {
     FILE: 'file',
     SYSTEM: 'system',
   },
-  CHATROOM_TYPES: {
-    DIRECT: 'direct',
-    GROUP: 'group',
-    CHANNEL: 'channel',
+  PLANET_TYPES: {
+    DIRECT: 'direct', // 1:1 채팅
+    GROUP: 'group', // 단체 채팅
   },
   USER_ROLES: {
     MEMBER: 'member',
@@ -123,11 +123,23 @@ export const CHAT_CONSTANTS = {
     BUSY: 'busy',
   },
   MAX_MESSAGE_LENGTH: 4000,
-  MAX_CHATROOM_NAME_LENGTH: 100,
+  MAX_TRAVEL_NAME_LENGTH: 100,
+  MAX_PLANET_NAME_LENGTH: 100,
   RECENT_MESSAGES_COUNT: 50,
   TYPING_TIMEOUT: 3000, // 3초
   HEARTBEAT_INTERVAL: 30000, // 30초
   CACHE_TTL: 3600, // 1시간
+} as const;
+
+/**
+ * Travel/Planet 관련 상수
+ */
+export const TRAVEL_CONSTANTS = {
+  DEFAULT_MAX_PLANETS_PER_TRAVEL: 10,
+  MAX_GROUP_PLANET_MEMBERS: 100,
+  MAX_DIRECT_PLANET_MEMBERS: 2,
+  TRAVEL_EXPIRY_WARNING_DAYS: 7, // 만료 7일 전 경고
+  PLANET_INACTIVE_DAYS: 30, // 30일 비활성 시 정리 대상
 } as const;
 
 /**
@@ -185,10 +197,16 @@ export const ENV_KEYS = {
   STORAGE_REGION: 'STORAGE_REGION',
   STORAGE_PUBLIC_URL: 'STORAGE_PUBLIC_URL',
 
-  // 파일 업로드 제한
+  // 파일 업로드 제한 (500MB 통일)
   MAX_FILE_SIZE: 'MAX_FILE_SIZE',
+  MAX_IMAGE_SIZE: 'MAX_IMAGE_SIZE',
   MAX_VIDEO_SIZE: 'MAX_VIDEO_SIZE',
   ALLOWED_IMAGE_TYPES: 'ALLOWED_IMAGE_TYPES',
   ALLOWED_VIDEO_TYPES: 'ALLOWED_VIDEO_TYPES',
   ALLOWED_FILE_TYPES: 'ALLOWED_FILE_TYPES',
+
+  // Travel/Planet 설정
+  TRAVEL_MAX_PLANETS: 'TRAVEL_MAX_PLANETS',
+  PLANET_MAX_MEMBERS_GROUP: 'PLANET_MAX_MEMBERS_GROUP',
+  PLANET_MAX_MEMBERS_DIRECT: 'PLANET_MAX_MEMBERS_DIRECT',
 } as const;
