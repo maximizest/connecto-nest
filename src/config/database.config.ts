@@ -9,6 +9,7 @@ import { Message } from '../modules/message/message.entity';
 import { PlanetUser } from '../modules/planet-user/planet-user.entity';
 import { Planet } from '../modules/planet/planet.entity';
 import { FileUpload } from '../modules/storage/file-upload.entity';
+import { StreamingSession } from '../modules/storage/streaming-session.entity';
 import { VideoProcessing } from '../modules/storage/video-processing.entity';
 import { TravelUser } from '../modules/travel-user/travel-user.entity';
 import { Travel } from '../modules/travel/travel.entity';
@@ -47,6 +48,7 @@ export const ENTITIES = [
   Message,
   FileUpload,
   VideoProcessing,
+  StreamingSession,
 ];
 
 /**
