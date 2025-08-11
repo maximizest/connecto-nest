@@ -57,10 +57,7 @@ export enum VideoQualityProfile {
  * 비디오 프로세싱 작업 엔티티
  */
 @Entity('video_processing')
-@Index(['userId']) // 사용자별 작업 조회
-@Index(['status']) // 상태별 조회
-@Index(['processingType']) // 타입별 조회
-@Index(['createdAt']) // 시간별 정렬
+// 복합 인덱스 - 성능 향상
 @Index(['userId', 'status']) // 사용자별 상태 조회 최적화
 @Index(['status', 'createdAt']) // 상태별 시간순 조회
 export class VideoProcessing extends BaseEntity {
@@ -72,7 +69,7 @@ export class VideoProcessing extends BaseEntity {
    */
   @Column({ comment: '요청한 사용자 ID' })
   @IsNumber()
-  @Index()
+  @Index() // 사용자별 작업 조회
   userId: number;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
@@ -97,7 +94,7 @@ export class VideoProcessing extends BaseEntity {
     comment: '프로세싱 타입',
   })
   @IsEnum(VideoProcessingType)
-  @Index()
+  @Index() // 타입별 조회
   processingType: VideoProcessingType;
 
   @Column({
@@ -107,7 +104,7 @@ export class VideoProcessing extends BaseEntity {
     comment: '프로세싱 상태',
   })
   @IsEnum(VideoProcessingStatus)
-  @Index()
+  @Index() // 상태별 조회
   status: VideoProcessingStatus;
 
   @Column({
@@ -278,7 +275,7 @@ export class VideoProcessing extends BaseEntity {
 
   @CreateDateColumn({ comment: '생성 시간' })
   @IsDateString()
-  @Index()
+  @Index() // 시간별 정렬
   createdAt: Date;
 
   @UpdateDateColumn({ comment: '수정 시간' })

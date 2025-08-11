@@ -53,10 +53,6 @@ export enum AggregationPeriod {
  * Travel/Planet의 통계 및 분석 데이터를 저장하는 엔티티
  */
 @Entity('analytics')
-@Index(['type']) // 분석 타입별 조회 최적화
-@Index(['entityType', 'entityId']) // 엔티티별 조회 최적화
-@Index(['period']) // 집계 주기별 조회 최적화
-@Index(['date']) // 날짜별 조회 최적화
 // 복합 인덱스
 @Index(['type', 'entityType', 'entityId', 'period']) // 메인 분석 쿼리
 @Index(['entityType', 'entityId', 'date']) // 시계열 분석
@@ -73,6 +69,7 @@ export class Analytics extends BaseEntity {
     enum: AnalyticsType,
     comment: '분석 데이터 타입',
   })
+  @Index() // 분석 타입별 조회 최적화
   type: AnalyticsType;
 
   @Column({
@@ -80,14 +77,14 @@ export class Analytics extends BaseEntity {
     length: 50,
     comment: '대상 엔티티 타입 (travel, planet, user 등)',
   })
-  @Index()
+  @Index() // 엔티티 타입별 조회
   entityType: string;
 
   @Column({
     type: 'int',
     comment: '대상 엔티티 ID',
   })
-  @Index()
+  @Index() // 엔티티 ID별 조회
   entityId: number;
 
   /**
@@ -98,13 +95,14 @@ export class Analytics extends BaseEntity {
     enum: AggregationPeriod,
     comment: '집계 주기',
   })
+  @Index() // 집계 주기별 조회 최적화
   period: AggregationPeriod;
 
   @Column({
     type: 'date',
     comment: '집계 날짜',
   })
-  @Index()
+  @Index() // 날짜별 조회 최적화
   date: Date;
 
   /**

@@ -75,15 +75,6 @@ interface SystemMessageMetadata {
 }
 
 @Entity('messages')
-@Index(['planetId']) // Planet별 조회 최적화
-@Index(['senderId']) // 발신자별 조회
-@Index(['type']) // 타입별 필터링
-@Index(['status']) // 상태별 필터링
-@Index(['createdAt']) // 시간순 정렬 최적화
-@Index(['isDeleted']) // 삭제되지 않은 메시지 필터링
-@Index(['isEdited']) // 편집된 메시지 필터링
-@Index(['editedAt']) // 편집 시간 정렬
-@Index(['searchableText']) // 검색 최적화 (텍스트 검색)
 // 복합 인덱스 - 성능 향상
 @Index(['planetId', 'createdAt']) // Planet 내 시간순 조회
 @Index(['senderId', 'createdAt']) // 사용자별 시간순 조회
@@ -108,12 +99,12 @@ export class Message extends BaseEntity {
     comment: '메시지 타입',
   })
   @IsEnum(MessageType)
-  @Index()
+  @Index() // 타입별 필터링
   type: MessageType;
 
   @Column({ comment: '소속 Planet ID' })
   @IsNumber()
-  @Index()
+  @Index() // Planet별 조회 최적화
   planetId: number;
 
   @ManyToOne(() => Planet, { eager: false })
@@ -122,7 +113,7 @@ export class Message extends BaseEntity {
 
   @Column({ comment: '메시지 발신자 ID' })
   @IsNumber()
-  @Index()
+  @Index() // 발신자별 조회
   senderId: number;
 
   @ManyToOne(() => User, { eager: false })
@@ -176,6 +167,7 @@ export class Message extends BaseEntity {
     comment: '메시지 상태',
   })
   @IsEnum(MessageStatus)
+  @Index() // 상태별 필터링
   status: MessageStatus;
 
   @Column({
@@ -184,7 +176,7 @@ export class Message extends BaseEntity {
     comment: '삭제 여부 (소프트 삭제)',
   })
   @IsBoolean()
-  @Index()
+  @Index() // 삭제되지 않은 메시지 필터링
   isDeleted: boolean;
 
   @Column({
@@ -214,7 +206,7 @@ export class Message extends BaseEntity {
     comment: '편집 여부',
   })
   @IsBoolean()
-  @Index()
+  @Index() // 편집된 메시지 필터링
   isEdited: boolean;
 
   @Column({
@@ -224,7 +216,7 @@ export class Message extends BaseEntity {
   })
   @IsOptional()
   @IsDateString()
-  @Index()
+  @Index() // 편집 시간 정렬
   editedAt?: Date;
 
   @Column({
@@ -246,7 +238,7 @@ export class Message extends BaseEntity {
   })
   @IsOptional()
   @IsNumber()
-  @Index()
+  @Index() // 답장 메시지 조회
   replyToMessageId?: number;
 
   @ManyToOne(() => Message, { eager: false })
@@ -303,7 +295,7 @@ export class Message extends BaseEntity {
   })
   @IsOptional()
   @IsString()
-  @Index()
+  @Index() // 검색 최적화 (텍스트 검색)
   searchableText?: string;
 
   /**
@@ -337,7 +329,7 @@ export class Message extends BaseEntity {
   @CreateDateColumn({ comment: '메시지 전송 시간' })
   @IsOptional()
   @IsDateString()
-  @Index()
+  @Index() // 시간순 정렬 최적화
   createdAt: Date;
 
   @UpdateDateColumn({ comment: '메시지 수정 시간' })

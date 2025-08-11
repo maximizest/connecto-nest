@@ -45,10 +45,7 @@ export enum DeviceType {
  * 스트리밍 세션 엔티티
  */
 @Entity('streaming_sessions')
-@Index(['userId']) // 사용자별 세션 조회
-@Index(['status']) // 상태별 조회
-@Index(['storageKey']) // 파일별 조회
-@Index(['createdAt']) // 시간별 정렬
+// 복합 인덱스 - 성능 향상
 @Index(['userId', 'status']) // 사용자별 상태 조회 최적화
 @Index(['status', 'createdAt']) // 상태별 시간순 조회
 @Index(['storageKey', 'createdAt']) // 파일별 시간순 조회
@@ -61,7 +58,7 @@ export class StreamingSession extends BaseEntity {
    */
   @Column({ comment: '스트리밍 요청 사용자 ID' })
   @IsNumber()
-  @Index()
+  @Index() // 사용자별 세션 조회
   userId: number;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
@@ -74,13 +71,13 @@ export class StreamingSession extends BaseEntity {
   @Column({ type: 'varchar', length: 100, unique: true, comment: '세션 ID' })
   @IsString()
   @MaxLength(100)
-  @Index()
+  @Index() // 세션 ID별 조회 최적화
   sessionId: string;
 
   @Column({ type: 'varchar', length: 500, comment: '스트리밍 파일 키' })
   @IsString()
   @MaxLength(500)
-  @Index()
+  @Index() // 파일별 조회
   storageKey: string;
 
   @Column({
@@ -90,7 +87,7 @@ export class StreamingSession extends BaseEntity {
     comment: '세션 상태',
   })
   @IsEnum(StreamingSessionStatus)
-  @Index()
+  @Index() // 상태별 조회
   status: StreamingSessionStatus;
 
   /**
@@ -256,7 +253,7 @@ export class StreamingSession extends BaseEntity {
 
   @CreateDateColumn({ comment: '생성 시간' })
   @IsDateString()
-  @Index()
+  @Index() // 시간별 정렬
   createdAt: Date;
 
   @UpdateDateColumn({ comment: '수정 시간' })

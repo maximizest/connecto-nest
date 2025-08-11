@@ -43,13 +43,8 @@ export enum PlanetUserStatus {
 
 @Entity('planet_users')
 @Unique(['planetId', 'userId']) // Planet당 사용자는 하나의 레코드만
-@Index(['planetId']) // Planet별 멤버 조회 최적화
-@Index(['userId']) // 사용자별 Planet 조회 최적화
-@Index(['status']) // 상태별 필터링
-@Index(['role']) // 역할별 필터링
-@Index(['joinedAt']) // 가입 순서 정렬
-@Index(['lastReadMessageId']) // 읽음 상태 조회 최적화
-@Index(['planetId', 'status']) // Planet 내 활성 멤버 조회 (복합 인덱스)
+// 복합 인덱스 - 성능 향상
+@Index(['planetId', 'status']) // Planet 내 활성 멤버 조회
 export class PlanetUser extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
@@ -59,7 +54,7 @@ export class PlanetUser extends BaseEntity {
    */
   @Column({ comment: 'Planet ID' })
   @IsNumber()
-  @Index()
+  @Index() // Planet별 멤버 조회 최적화
   planetId: number;
 
   @ManyToOne(() => Planet, { eager: false, onDelete: 'CASCADE' })
@@ -68,7 +63,7 @@ export class PlanetUser extends BaseEntity {
 
   @Column({ comment: '사용자 ID' })
   @IsNumber()
-  @Index()
+  @Index() // 사용자별 Planet 조회 최적화
   userId: number;
 
   @ManyToOne(() => User, { eager: false, onDelete: 'CASCADE' })
@@ -85,6 +80,7 @@ export class PlanetUser extends BaseEntity {
     comment: 'Planet 내 역할',
   })
   @IsEnum(PlanetUserRole)
+  @Index() // 역할별 필터링
   role: PlanetUserRole;
 
   @Column({
@@ -94,7 +90,7 @@ export class PlanetUser extends BaseEntity {
     comment: '참여 상태',
   })
   @IsEnum(PlanetUserStatus)
-  @Index()
+  @Index() // 상태별 필터링
   status: PlanetUserStatus;
 
   /**
@@ -106,7 +102,7 @@ export class PlanetUser extends BaseEntity {
     comment: '참여 날짜',
   })
   @IsDateString()
-  @Index()
+  @Index() // 가입 순서 정렬
   joinedAt: Date;
 
   @Column({
@@ -171,7 +167,7 @@ export class PlanetUser extends BaseEntity {
   })
   @IsOptional()
   @IsNumber()
-  @Index()
+  @Index() // 읽음 상태 조회 최적화
   lastReadMessageId?: number;
 
   @Column({

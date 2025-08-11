@@ -44,13 +44,6 @@ export enum TravelVisibility {
 }
 
 @Entity('travels')
-@Index(['status']) // 상태별 조회 최적화
-@Index(['expiryDate']) // 만료 날짜 정렬 최적화
-@Index(['createdBy']) // 생성자별 조회 최적화
-@Index(['visibility']) // 공개 설정별 필터링
-@Index(['isActive']) // 활성 상태 필터링
-@Index(['inviteCode']) // 초대 코드 검색 최적화
-@Index(['lastActivityAt']) // 활동 시간 정렬 최적화
 // 복합 인덱스 - 성능 향상
 @Index(['status', 'isActive']) // 활성 상태 + 상태별 조회
 @Index(['isActive', 'expiryDate']) // 활성 Travel의 만료일 조회
@@ -96,6 +89,7 @@ export class Travel extends BaseEntity {
    */
   @Column({ comment: '여행 생성자 ID' })
   @IsNumber()
+  @Index() // 생성자별 조회 최적화
   createdBy: number;
 
   @ManyToOne(() => User, { eager: false })
@@ -112,6 +106,7 @@ export class Travel extends BaseEntity {
     comment: '여행 상태',
   })
   @IsEnum(TravelStatus)
+  @Index() // 상태별 조회 최적화
   status: TravelStatus;
 
   @Column({
@@ -120,7 +115,7 @@ export class Travel extends BaseEntity {
     comment: '활성 상태',
   })
   @IsBoolean()
-  @Index()
+  @Index() // 활성 상태 필터링
   isActive: boolean;
 
   /**
@@ -149,7 +144,7 @@ export class Travel extends BaseEntity {
     comment: '채팅 만료 날짜 (이후 채팅 불가)',
   })
   @IsDateString()
-  @Index()
+  @Index() // 만료 날짜 정렬 최적화
   expiryDate: Date;
 
   /**
@@ -162,6 +157,7 @@ export class Travel extends BaseEntity {
     comment: '공개 설정',
   })
   @IsEnum(TravelVisibility)
+  @Index() // 공개 설정별 필터링
   visibility: TravelVisibility;
 
   @Column({
@@ -173,7 +169,7 @@ export class Travel extends BaseEntity {
   })
   @IsOptional()
   @IsString()
-  @Index()
+  @Index() // 초대 코드 검색 최적화
   inviteCode?: string;
 
   @Column({
@@ -241,7 +237,7 @@ export class Travel extends BaseEntity {
   })
   @IsOptional()
   @IsDateString()
-  @Index()
+  @Index() // 활동 시간 정렬 최적화
   lastActivityAt?: Date;
 
   /**

@@ -69,14 +69,6 @@ interface TimeRestriction {
 }
 
 @Entity('planets')
-@Index(['type']) // 타입별 조회 최적화
-@Index(['travelId']) // Travel별 조회 최적화
-@Index(['status']) // 상태별 필터링
-@Index(['isActive']) // 활성 상태 필터링
-@Index(['createdBy']) // 생성자별 조회
-@Index(['lastMessageAt']) // 최근 메시지 정렬
-@Index(['messageCount']) // 메시지 수 정렬 최적화
-@Index(['memberCount']) // 멤버 수 정렬 최적화
 // 복합 인덱스 - 성능 향상
 @Index(['travelId', 'type']) // Travel 내 타입별 조회
 @Index(['travelId', 'isActive']) // Travel 내 활성 Planet 조회
@@ -127,12 +119,12 @@ export class Planet extends BaseEntity {
     comment: 'Planet 타입 (단체/1:1)',
   })
   @IsEnum(PlanetType)
-  @Index()
+  @Index() // 타입별 조회 최적화
   type: PlanetType;
 
   @Column({ comment: '소속 Travel ID' })
   @IsNumber()
-  @Index()
+  @Index() // Travel별 조회 최적화
   travelId: number;
 
   @ManyToOne(() => Travel, { eager: false })
@@ -141,6 +133,7 @@ export class Planet extends BaseEntity {
 
   @Column({ comment: 'Planet 생성자 ID' })
   @IsNumber()
+  @Index() // 생성자별 조회
   createdBy: number;
 
   @ManyToOne(() => User, { eager: false })
@@ -157,6 +150,7 @@ export class Planet extends BaseEntity {
     comment: 'Planet 상태',
   })
   @IsEnum(PlanetStatus)
+  @Index() // 상태별 필터링
   status: PlanetStatus;
 
   @Column({
@@ -165,7 +159,7 @@ export class Planet extends BaseEntity {
     comment: '활성 상태',
   })
   @IsBoolean()
-  @Index()
+  @Index() // 활성 상태 필터링
   isActive: boolean;
 
   /**
@@ -189,7 +183,7 @@ export class Planet extends BaseEntity {
     comment: '현재 멤버 수',
   })
   @IsNumber()
-  @Index()
+  @Index() // 멤버 수 정렬 최적화
   memberCount: number;
 
   @Column({
@@ -209,7 +203,7 @@ export class Planet extends BaseEntity {
     comment: '총 메시지 수',
   })
   @IsNumber()
-  @Index()
+  @Index() // 메시지 수 정렬 최적화
   messageCount: number;
 
   @Column({
@@ -219,7 +213,7 @@ export class Planet extends BaseEntity {
   })
   @IsOptional()
   @IsDateString()
-  @Index()
+  @Index() // 최근 메시지 정렬
   lastMessageAt?: Date;
 
   @Column({
@@ -272,7 +266,7 @@ export class Planet extends BaseEntity {
   })
   @IsOptional()
   @IsNumber()
-  @Index()
+  @Index() // 1:1 채팅 파트너 조회 최적화
   partnerId?: number;
 
   @ManyToOne(() => User, { eager: false })

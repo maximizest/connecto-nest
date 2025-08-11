@@ -44,10 +44,7 @@ export enum FileUploadType {
  * 파일 업로드 추적 엔티티
  */
 @Entity('file_uploads')
-@Index(['userId']) // 사용자별 업로드 조회
-@Index(['status']) // 상태별 조회
-@Index(['uploadType']) // 업로드 타입별 조회
-@Index(['createdAt']) // 시간별 정렬
+// 복합 인덱스 - 성능 향상
 @Index(['userId', 'status']) // 사용자별 상태 조회 최적화
 @Index(['status', 'createdAt']) // 상태별 시간순 조회
 export class FileUpload extends BaseEntity {
@@ -59,7 +56,7 @@ export class FileUpload extends BaseEntity {
    */
   @Column({ comment: '업로드한 사용자 ID' })
   @IsNumber()
-  @Index()
+  @Index() // 사용자별 업로드 조회
   userId: number;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
@@ -77,7 +74,7 @@ export class FileUpload extends BaseEntity {
   @Column({ type: 'varchar', length: 500, comment: '스토리지 키 (경로)' })
   @IsString()
   @MaxLength(500)
-  @Index()
+  @Index() // 스토리지 키별 조회
   storageKey: string;
 
   @Column({ type: 'varchar', length: 100, comment: '파일 MIME 타입' })
@@ -98,7 +95,7 @@ export class FileUpload extends BaseEntity {
     comment: '업로드 타입',
   })
   @IsEnum(FileUploadType)
-  @Index()
+  @Index() // 업로드 타입별 조회
   uploadType: FileUploadType;
 
   @Column({
@@ -108,7 +105,7 @@ export class FileUpload extends BaseEntity {
     comment: '업로드 상태',
   })
   @IsEnum(FileUploadStatus)
-  @Index()
+  @Index() // 상태별 조회
   status: FileUploadStatus;
 
   @Column({
@@ -209,7 +206,7 @@ export class FileUpload extends BaseEntity {
 
   @CreateDateColumn({ comment: '생성 시간' })
   @IsDateString()
-  @Index()
+  @Index() // 시간별 정렬
   createdAt: Date;
 
   @UpdateDateColumn({ comment: '수정 시간' })

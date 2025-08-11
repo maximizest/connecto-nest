@@ -96,13 +96,6 @@ export enum NotificationChannel {
 }
 
 @Entity('notifications')
-@Index(['userId']) // 사용자별 알림 조회 최적화
-@Index(['type']) // 알림 타입별 필터링
-@Index(['status']) // 상태별 필터링
-@Index(['priority']) // 우선순위별 필터링
-@Index(['isRead']) // 읽음 상태 필터링
-@Index(['createdAt']) // 생성 시간 정렬 최적화
-@Index(['scheduledAt']) // 예약 알림 최적화
 // 복합 인덱스
 @Index(['userId', 'isRead']) // 사용자별 읽지 않은 알림
 @Index(['userId', 'status']) // 사용자별 상태 필터링
@@ -119,7 +112,7 @@ export class Notification extends BaseEntity {
    */
   @Column({ comment: '알림 받을 사용자 ID' })
   @IsNumber()
-  @Index()
+  @Index() // 사용자별 알림 조회 최적화
   userId: number;
 
   @ManyToOne(() => User, { eager: false })
@@ -132,7 +125,7 @@ export class Notification extends BaseEntity {
     comment: '알림 타입',
   })
   @IsEnum(NotificationType)
-  @Index()
+  @Index() // 알림 타입별 필터링
   type: NotificationType;
 
   @Column({
@@ -160,6 +153,7 @@ export class Notification extends BaseEntity {
     comment: '알림 우선순위',
   })
   @IsEnum(NotificationPriority)
+  @Index() // 우선순위별 필터링
   priority: NotificationPriority;
 
   @Column({
@@ -169,6 +163,7 @@ export class Notification extends BaseEntity {
     comment: '알림 상태',
   })
   @IsEnum(NotificationStatus)
+  @Index() // 상태별 필터링
   status: NotificationStatus;
 
   /**
@@ -180,7 +175,7 @@ export class Notification extends BaseEntity {
     comment: '읽음 여부',
   })
   @IsBoolean()
-  @Index()
+  @Index() // 읽음 상태 필터링
   isRead: boolean;
 
   @Column({
@@ -202,7 +197,7 @@ export class Notification extends BaseEntity {
   })
   @IsOptional()
   @IsNumber()
-  @Index()
+  @Index() // Travel별 알림 조회
   travelId?: number;
 
   @ManyToOne(() => Travel, { eager: false })
@@ -216,7 +211,7 @@ export class Notification extends BaseEntity {
   })
   @IsOptional()
   @IsNumber()
-  @Index()
+  @Index() // Planet별 알림 조회
   planetId?: number;
 
   @ManyToOne(() => Planet, { eager: false })
@@ -283,7 +278,7 @@ export class Notification extends BaseEntity {
   })
   @IsOptional()
   @IsDateString()
-  @Index()
+  @Index() // 예약 알림 최적화
   scheduledAt?: Date;
 
   @Column({
@@ -363,6 +358,7 @@ export class Notification extends BaseEntity {
   @CreateDateColumn({ comment: '알림 생성 시간' })
   @IsOptional()
   @IsDateString()
+  @Index() // 생성 시간 정렬 최적화
   createdAt: Date;
 
   @UpdateDateColumn({ comment: '알림 정보 수정 시간' })

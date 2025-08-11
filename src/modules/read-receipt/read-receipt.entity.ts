@@ -31,11 +31,6 @@ import { User } from '../user/user.entity';
  */
 @Entity('message_read_receipts')
 @Unique(['messageId', 'userId']) // 동일 사용자가 같은 메시지를 중복으로 읽음 처리하지 않도록
-@Index(['planetId']) // Planet별 조회 최적화
-@Index(['userId']) // 사용자별 조회 최적화
-@Index(['messageId']) // 메시지별 조회 최적화
-@Index(['readAt']) // 읽은 시간 정렬
-@Index(['isRead']) // 읽음 상태별 필터링
 // 복합 인덱스 - 성능 향상
 @Index(['planetId', 'userId']) // Planet 내 사용자별 읽음 상태
 @Index(['planetId', 'isRead']) // Planet 내 읽음 상태별 조회
@@ -52,7 +47,7 @@ export class MessageReadReceipt extends BaseEntity {
    */
   @Column({ comment: '메시지 ID' })
   @IsNumber()
-  @Index()
+  @Index() // 메시지별 조회 최적화
   messageId: number;
 
   @ManyToOne(() => Message, { eager: false, onDelete: 'CASCADE' })
@@ -61,7 +56,7 @@ export class MessageReadReceipt extends BaseEntity {
 
   @Column({ comment: '사용자 ID' })
   @IsNumber()
-  @Index()
+  @Index() // 사용자별 조회 최적화
   userId: number;
 
   @ManyToOne(() => User, { eager: false, onDelete: 'CASCADE' })
@@ -70,7 +65,7 @@ export class MessageReadReceipt extends BaseEntity {
 
   @Column({ comment: 'Planet ID' })
   @IsNumber()
-  @Index()
+  @Index() // Planet별 조회 최적화
   planetId: number;
 
   @ManyToOne(() => Planet, { eager: false, onDelete: 'CASCADE' })
@@ -86,7 +81,7 @@ export class MessageReadReceipt extends BaseEntity {
     comment: '읽음 여부',
   })
   @IsBoolean()
-  @Index()
+  @Index() // 읽음 상태별 필터링
   isRead: boolean;
 
   @Column({
@@ -95,7 +90,7 @@ export class MessageReadReceipt extends BaseEntity {
     comment: '읽은 시간',
   })
   @IsDateString()
-  @Index()
+  @Index() // 읽은 시간 정렬
   readAt: Date;
 
   @Column({

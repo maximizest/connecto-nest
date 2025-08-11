@@ -43,14 +43,6 @@ export enum TravelUserStatus {
 
 @Entity('travel_users')
 @Unique(['travelId', 'userId']) // Travel당 사용자는 하나의 레코드만
-@Index(['travelId']) // Travel별 멤버 조회 최적화
-@Index(['userId']) // 사용자별 Travel 조회 최적화
-@Index(['role']) // 역할별 필터링
-@Index(['status']) // 상태별 필터링
-@Index(['joinedAt']) // 가입 순서 정렬
-@Index(['invitedBy']) // 초대자별 조회
-@Index(['lastSeenAt']) // 마지막 접속 시간 정렬
-@Index(['leftAt']) // 탈퇴 시간 정렬
 // 복합 인덱스 - 성능 향상
 @Index(['travelId', 'status']) // Travel 내 활성 멤버 조회
 @Index(['travelId', 'role']) // Travel 내 역할별 조회
@@ -68,7 +60,7 @@ export class TravelUser extends BaseEntity {
    */
   @Column({ comment: 'Travel ID' })
   @IsNumber()
-  @Index()
+  @Index() // Travel별 멤버 조회 최적화
   travelId: number;
 
   @ManyToOne(() => Travel, { eager: false, onDelete: 'CASCADE' })
@@ -77,7 +69,7 @@ export class TravelUser extends BaseEntity {
 
   @Column({ comment: '사용자 ID' })
   @IsNumber()
-  @Index()
+  @Index() // 사용자별 Travel 조회 최적화
   userId: number;
 
   @ManyToOne(() => User, { eager: false, onDelete: 'CASCADE' })
@@ -94,7 +86,7 @@ export class TravelUser extends BaseEntity {
     comment: 'Travel 내 역할',
   })
   @IsEnum(TravelUserRole)
-  @Index()
+  @Index() // 역할별 필터링
   role: TravelUserRole;
 
   @Column({
@@ -104,7 +96,7 @@ export class TravelUser extends BaseEntity {
     comment: '참여 상태',
   })
   @IsEnum(TravelUserStatus)
-  @Index()
+  @Index() // 상태별 필터링
   status: TravelUserStatus;
 
   /**
@@ -116,7 +108,7 @@ export class TravelUser extends BaseEntity {
     comment: '가입 날짜',
   })
   @IsDateString()
-  @Index()
+  @Index() // 가입 순서 정렬
   joinedAt: Date;
 
   @Column({
@@ -126,7 +118,7 @@ export class TravelUser extends BaseEntity {
   })
   @IsOptional()
   @IsDateString()
-  @Index()
+  @Index() // 마지막 접속 시간 정렬
   lastSeenAt?: Date;
 
   @Column({
@@ -136,7 +128,7 @@ export class TravelUser extends BaseEntity {
   })
   @IsOptional()
   @IsDateString()
-  @Index()
+  @Index() // 탈퇴 시간 정렬
   leftAt?: Date;
 
   /**
@@ -149,7 +141,7 @@ export class TravelUser extends BaseEntity {
   })
   @IsOptional()
   @IsNumber()
-  @Index()
+  @Index() // 초대자별 조회
   invitedBy?: number;
 
   @ManyToOne(() => User, { eager: false })

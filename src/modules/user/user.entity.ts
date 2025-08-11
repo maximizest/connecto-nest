@@ -38,12 +38,6 @@ export enum UserStatus {
 
 @Entity('users')
 @Index(['socialId', 'provider'], { unique: true }) // 소셜 ID + 제공자 조합 고유
-@Index(['email']) // 이메일 검색 최적화
-@Index(['isOnline']) // 온라인 상태 필터링 최적화
-@Index(['lastSeenAt']) // 마지막 접속 시간 정렬 최적화
-@Index(['status']) // 사용자 상태 필터링
-@Index(['isBanned']) // 밴 상태 필터링
-@Index(['banExpiresAt']) // 밴 만료 시간 정렬
 // 복합 인덱스 - 성능 향상
 @Index(['status', 'isOnline']) // 상태별 온라인 사용자 조회
 @Index(['provider', 'isOnline']) // 제공자별 온라인 사용자 조회
@@ -58,7 +52,7 @@ export class User extends BaseEntity {
    */
   @Column({ type: 'varchar', length: 255, comment: '소셜 로그인 고유 ID' })
   @IsString()
-  @Index()
+  @Index() // 소셜 ID 조회 최적화
   socialId: string;
 
   @Column({
@@ -67,6 +61,7 @@ export class User extends BaseEntity {
     comment: '소셜 로그인 제공자 (Google, Apple)',
   })
   @IsEnum(SocialProvider)
+  @Index() // 제공자별 조회 최적화
   provider: SocialProvider;
 
   /**
@@ -83,6 +78,7 @@ export class User extends BaseEntity {
     comment: '이메일 주소',
   })
   @IsEmail()
+  @Index() // 이메일 검색 최적화
   email: string;
 
   @Column({ type: 'text', nullable: true, comment: '프로필 이미지 URL' })
@@ -100,7 +96,7 @@ export class User extends BaseEntity {
     comment: '사용자 온라인 상태',
   })
   @IsEnum(UserStatus)
-  @Index()
+  @Index() // 사용자 상태 필터링
   status: UserStatus;
 
   @Column({
@@ -109,7 +105,7 @@ export class User extends BaseEntity {
     comment: '현재 온라인 여부 (실시간)',
   })
   @IsBoolean()
-  @Index()
+  @Index() // 온라인 상태 필터링 최적화
   isOnline: boolean;
 
   @Column({
@@ -119,6 +115,7 @@ export class User extends BaseEntity {
   })
   @IsOptional()
   @IsDateString()
+  @Index() // 마지막 접속 시간 정렬 최적화
   lastSeenAt?: Date;
 
   /**
@@ -193,7 +190,7 @@ export class User extends BaseEntity {
     comment: '계정 정지 여부',
   })
   @IsBoolean()
-  @Index()
+  @Index() // 밤 상태 필터링
   isBanned: boolean;
 
   @Column({
@@ -203,7 +200,7 @@ export class User extends BaseEntity {
   })
   @IsOptional()
   @IsDateString()
-  @Index()
+  @Index() // 밤 만료 시간 정렬
   banExpiresAt?: Date;
 
   /**
