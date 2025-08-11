@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Redis } from 'ioredis';
 import { CHAT_CONSTANTS } from '../../common/constants/app.constants';
-import { REDIS_CONFIG } from '../../config/redis.config';
+import { REDIS_CONFIG, TEST_REDIS_CONFIG } from '../../config/redis.config';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
@@ -16,24 +16,32 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     try {
+      // 환경에 따른 Redis 설정 선택
+      const redisConfig =
+        process.env.NODE_ENV === 'test' ? TEST_REDIS_CONFIG : REDIS_CONFIG;
+
       // Redis 인스턴스 생성
-      if (REDIS_CONFIG.url) {
-        this.redis = new Redis(REDIS_CONFIG.url, {
-          ...REDIS_CONFIG,
+      if (redisConfig.url) {
+        this.redis = new Redis(redisConfig.url, {
+          ...redisConfig,
         });
       } else {
-        this.redis = new Redis(REDIS_CONFIG);
+        this.redis = new Redis(redisConfig);
       }
 
       // 연결 이벤트 리스너 설정
       this.redis.on('connect', () => {
         this.isConnected = true;
-        this.logger.log('✅ Redis connected successfully');
+        const environment =
+          process.env.NODE_ENV === 'test' ? 'Test' : 'Production';
+        this.logger.log(`✅ ${environment} Redis connected successfully`);
       });
 
       this.redis.on('ready', () => {
         this.isConnected = true;
-        this.logger.log('🟢 Redis is ready');
+        const environment =
+          process.env.NODE_ENV === 'test' ? 'Test' : 'Production';
+        this.logger.log(`🟢 ${environment} Redis is ready`);
       });
 
       this.redis.on('error', (error) => {
@@ -53,10 +61,14 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       // 연결 테스트 (실패해도 앱이 종료되지 않음)
       try {
         await this.redis.ping();
-        this.logger.log('🏓 Redis ping successful');
+        const environment =
+          process.env.NODE_ENV === 'test' ? 'Test' : 'Production';
+        this.logger.log(`🏓 ${environment} Redis ping successful`);
       } catch (pingError) {
+        const environment =
+          process.env.NODE_ENV === 'test' ? 'Test' : 'Production';
         this.logger.warn(
-          '⚠️ Redis ping failed, but service will continue without caching:',
+          `⚠️ ${environment} Redis ping failed, but service will continue without caching:`,
           pingError.message,
         );
       }
