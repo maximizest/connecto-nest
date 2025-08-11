@@ -119,33 +119,29 @@ export class ProfileController {
    * 프로필 수정 전 데이터 전처리
    */
   @BeforeUpdate()
-  async preprocessUpdate(body: any, context: any) {
-    // userId는 수정 불가 (보안)
-    delete body.userId;
-    delete body.id;
-
+  async preprocessUpdate(entity: Profile, context: any) {
     // 닉네임이 비어있으면 이름을 사용
-    if (body.nickname === '' && body.name) {
-      body.nickname = body.name;
+    if (entity.nickname === '' && entity.name) {
+      entity.nickname = entity.name;
     }
 
     // 나이 유효성 검사
-    if (body.age !== undefined && body.age !== null) {
-      const age = Number(body.age);
+    if (entity.age !== undefined && entity.age !== null) {
+      const age = Number(entity.age);
       if (isNaN(age) || age < 1 || age > 150) {
         throw new Error('나이는 1~150 사이의 숫자여야 합니다.');
       }
-      body.age = age;
+      entity.age = age;
     }
 
     // 설정 값 병합 (기존 설정 유지)
-    if (body.settings && context.currentEntity?.settings) {
-      body.settings = {
+    if (entity.settings && context.currentEntity?.settings) {
+      entity.settings = {
         ...context.currentEntity.settings,
-        ...body.settings,
+        ...entity.settings,
       };
     }
 
-    return body;
+    return entity;
   }
 }

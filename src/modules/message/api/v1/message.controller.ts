@@ -230,78 +230,67 @@ export class MessageController {
    * 메시지 수정 전 검증 (편집 및 소프트 삭제 처리)
    */
   @BeforeUpdate()
-  async beforeUpdate(body: any, context: any): Promise<any> {
+  async beforeUpdate(entity: Message, context: any): Promise<Message> {
     const user: User = context.request?.user;
-    const messageId = parseInt(context.request?.params?.id);
-
-    // 기존 메시지 조회
-    const existingMessage = await this.messageRepository.findOne({
-      where: { id: messageId },
-      relations: ['sender', 'planet'],
-    });
-
-    if (!existingMessage) {
-      throw new NotFoundException('메시지를 찾을 수 없습니다.');
-    }
+    const messageId = entity.id;
 
     // 소프트 삭제 요청 처리
-    if (body.isDeleted === true) {
+    if (entity.isDeleted === true) {
       // 권한 확인: 발신자만 삭제 가능
-      if (!existingMessage.canDelete(user.id)) {
+      if (!entity.canDelete(user.id)) {
         throw new ForbiddenException('메시지 삭제 권한이 없습니다.');
       }
 
       // 소프트 삭제 데이터 설정
-      body.isDeleted = true;
-      body.deletedAt = new Date();
-      body.deletedBy = user.id;
-      body.content = undefined; // 내용 제거
-      body.fileMetadata = undefined; // 파일 정보 제거
+      entity.isDeleted = true;
+      entity.deletedAt = new Date();
+      entity.deletedBy = user.id;
+      entity.content = undefined; // 내용 제거
+      entity.fileMetadata = undefined; // 파일 정보 제거
 
       this.logger.log(
         `Soft deleting message: id=${messageId}, senderId=${user.id}`,
       );
 
-      return body;
+      return entity;
     }
 
     // 일반 편집 처리
     // 권한 확인: 발신자만 수정 가능
-    if (existingMessage.senderId !== user.id) {
+    if (entity.senderId !== user.id) {
       throw new ForbiddenException('메시지 수정 권한이 없습니다.');
     }
 
     // 삭제된 메시지는 수정 불가
-    if (existingMessage.isDeleted) {
+    const originalDeleted = context.currentEntity?.isDeleted;
+    if (originalDeleted) {
       throw new ForbiddenException('삭제된 메시지는 수정할 수 없습니다.');
     }
 
     // 텍스트 메시지만 수정 가능
-    if (body.content && !existingMessage.isTextMessage()) {
+    if (entity.content && !entity.isTextMessage()) {
       throw new ForbiddenException('텍스트 메시지만 수정 가능합니다.');
     }
 
     // 수정 시간 제한 확인 (기본 15분)
-    if (body.content && !existingMessage.canEdit(user.id)) {
+    if (entity.content && !entity.canEdit(user.id)) {
       throw new ForbiddenException('메시지 수정 시간이 만료되었습니다.');
     }
 
     // content 수정 시 편집 정보 업데이트
-    if (body.content && body.content !== existingMessage.content) {
-      if (!existingMessage.isEdited) {
-        body.originalContent = existingMessage.content; // 원본 보존
+    const originalContent = context.currentEntity?.content;
+    if (entity.content && entity.content !== originalContent) {
+      if (!entity.isEdited) {
+        entity.originalContent = originalContent; // 원본 보존
       }
-      body.isEdited = true;
-      body.editedAt = new Date();
-      body.searchableText = this.generateSearchableText({
-        ...existingMessage,
-        ...body,
-      });
+      entity.isEdited = true;
+      entity.editedAt = new Date();
+      entity.searchableText = this.generateSearchableText(entity);
     }
 
     this.logger.log(`Updating message: id=${messageId}, senderId=${user.id}`);
 
-    return body;
+    return entity;
   }
 
   /**

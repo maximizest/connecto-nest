@@ -69,9 +69,9 @@ export class AnalyticsController {
    */
   @BeforeCreate()
   @BeforeUpdate()
-  async preprocessData(body: any, context: any) {
+  async preprocessData(entity: Analytics, context: any) {
     // 분석 데이터는 읽기 전용이므로 전처리 없음
-    return body;
+    return entity;
   }
 
   /**

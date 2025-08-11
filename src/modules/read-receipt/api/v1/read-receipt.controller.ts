@@ -124,18 +124,14 @@ export class ReadReceiptController {
    * 읽음 영수증 수정 전 검증
    */
   @BeforeUpdate()
-  async beforeUpdate(body: any, context: any): Promise<any> {
-    // 읽음 영수증은 수정 불가 (읽음 상태만 가능)
-    const allowedFields = ['isRead', 'metadata'];
-    const filteredBody = {};
+  async beforeUpdate(
+    entity: MessageReadReceipt,
+    context: any,
+  ): Promise<MessageReadReceipt> {
+    // 읽음 영수증은 isRead와 metadata만 수정 가능
+    // 다른 필드 변경 시도는 무시됨
 
-    allowedFields.forEach((field) => {
-      if (body[field] !== undefined) {
-        filteredBody[field] = body[field];
-      }
-    });
-
-    return filteredBody;
+    return entity;
   }
 
   /**

@@ -241,83 +241,62 @@ export class PlanetUserController {
    * 초대 수락/거절 전 검증
    */
   @BeforeUpdate()
-  async beforeUpdate(body: any, context: any): Promise<any> {
+  async beforeUpdate(entity: PlanetUser, context: any): Promise<PlanetUser> {
     const user: User = context.request?.user;
 
-    // Update 작업에서는 ID가 context에서 필요
-    const planetUserId = parseInt(context.request?.params?.id);
-
-    // 기존 PlanetUser 조회
-    const existingPlanetUser = await this.planetUserRepository.findOne({
-      where: { id: planetUserId },
-      relations: ['user', 'planet', 'invitedBy'],
-    });
-
-    if (!existingPlanetUser) {
-      throw new NotFoundException('Planet 멤버십을 찾을 수 없습니다.');
-    }
-
     // 권한 확인: 본인의 멤버십만 수정 가능 (Planet은 Admin이 생성하므로 사용자는 생성자가 될 수 없음)
-    const canModify = existingPlanetUser.userId === user.id; // 본인의 멤버십만
+    const canModify = entity.userId === user.id; // 본인의 멤버십만
 
     if (!canModify) {
       throw new ForbiddenException('본인의 멤버십만 관리할 수 있습니다.');
     }
 
     // 상태 변경 처리
-    if (body.status) {
+    if (entity.status) {
+      const originalStatus = context.currentEntity?.status;
+
       // 밴 처리는 Admin 전용 기능
-      if (body.status === PlanetUserStatus.BANNED) {
+      if (entity.status === PlanetUserStatus.BANNED) {
         throw new ForbiddenException('관리자만 멤버를 밴할 수 있습니다.');
       }
 
       // 밴 해제 처리도 Admin 전용 기능
       if (
-        body.status === PlanetUserStatus.ACTIVE &&
-        existingPlanetUser.status === PlanetUserStatus.BANNED
+        entity.status === PlanetUserStatus.ACTIVE &&
+        originalStatus === PlanetUserStatus.BANNED
       ) {
         throw new ForbiddenException('관리자만 멤버 밴을 해제할 수 있습니다.');
       }
 
       // 초대 수락/거절 처리
-      if (existingPlanetUser.userId !== user.id) {
+      if (entity.userId !== user.id) {
         // Planet은 Admin이 생성하므로 일반 사용자는 다른 사용자의 초대를 관리할 수 없음
         throw new ForbiddenException('본인의 초대만 수락/거절할 수 있습니다.');
       }
 
-      if (
-        existingPlanetUser.status !== PlanetUserStatus.INVITED &&
-        body.status !== PlanetUserStatus.BANNED &&
-        body.status !== PlanetUserStatus.ACTIVE
-      ) {
+      // 대기 중인 초대만 수락/거절 가능
+      if (originalStatus !== PlanetUserStatus.INVITED) {
         throw new ForbiddenException(
           '대기 중인 초대만 수락/거절할 수 있습니다.',
         );
       }
 
       // 수락/거절 상태 검증
-      if (body.status === PlanetUserStatus.ACTIVE) {
-        body.joinedAt = new Date();
+      if (entity.status === PlanetUserStatus.ACTIVE) {
+        entity.joinedAt = new Date();
         this.logger.log(
-          `Direct planet invitation accepted: planetId=${existingPlanetUser.planetId}, userId=${user.id}`,
+          `Direct planet invitation accepted: planetId=${entity.planetId}, userId=${user.id}`,
         );
-      } else if (body.status === PlanetUserStatus.LEFT) {
-        body.leftAt = new Date();
+      } else if (entity.status === PlanetUserStatus.LEFT) {
+        entity.leftAt = new Date();
         this.logger.log(
-          `Direct planet invitation declined: planetId=${existingPlanetUser.planetId}, userId=${user.id}`,
+          `Direct planet invitation declined: planetId=${entity.planetId}, userId=${user.id}`,
         );
       } else {
         throw new ForbiddenException('올바르지 않은 상태입니다.');
       }
     }
-
-    // 수정 불가능한 필드들
-    delete body.userId;
-    delete body.planetId;
-    delete body.role;
-    delete body.invitedBy;
-
-    return body;
+    return entity;
   }
 
   /**

@@ -23,14 +23,14 @@ export class AdminController {
 
   @BeforeCreate()
   @BeforeUpdate()
-  async hashPassword(body: any, context: any) {
-    if (body.password) {
-      body.password = await bcrypt.hash(
-        body.password,
+  async hashPassword(entity: Admin, context: any) {
+    if (entity.password) {
+      entity.password = await bcrypt.hash(
+        entity.password,
         SECURITY_CONSTANTS.BCRYPT_SALT_ROUNDS,
       );
     }
 
-    return body;
+    return entity;
   }
 }

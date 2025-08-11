@@ -84,17 +84,17 @@ export class NotificationController {
    */
   @BeforeCreate()
   @BeforeUpdate()
-  async preprocessData(body: any, context: any) {
+  async preprocessData(entity: Notification, context: any) {
     const user: User = context.request?.user;
 
     if (user) {
       // 사용자는 자신의 알림만 조회 가능하도록 필터링
       if (context.request?.method === 'GET') {
-        body.userId = user.id;
+        entity.userId = user.id;
       }
     }
 
-    return body;
+    return entity;
   }
 
   /**

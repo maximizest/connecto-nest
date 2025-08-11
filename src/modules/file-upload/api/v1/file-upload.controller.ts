@@ -123,7 +123,7 @@ export class FileUploadController {
    * 파일 업로드 레코드 업데이트 전 전처리
    */
   @BeforeUpdate()
-  async preprocessUpdateUpload(body: any, context: any) {
+  async preprocessUpdateUpload(entity: FileUpload, context: any) {
     const user: User = context.request?.user;
 
     // 사용자 권한 확인
@@ -132,16 +132,16 @@ export class FileUploadController {
     }
 
     // 진행률 재계산 (청크 업로드의 경우)
-    if (body.completedChunks !== undefined && body.totalChunks > 0) {
-      body.progress = Math.round(
-        (body.completedChunks / body.totalChunks) * 100,
+    if (entity.completedChunks !== undefined && entity.totalChunks > 0) {
+      entity.progress = Math.round(
+        (entity.completedChunks / entity.totalChunks) * 100,
       );
     }
 
     this.logger.log(
       `Updating upload record ${context.currentEntity?.id} for user ${user?.id}`,
     );
-    return body;
+    return entity;
   }
 
   /**

@@ -135,49 +135,32 @@ export class UserController {
    * 사용자 정보 수정 전 검증
    */
   @BeforeUpdate()
-  async beforeUpdate(body: any, context: any): Promise<any> {
+  async beforeUpdate(entity: User, context: any): Promise<User> {
     const user: User = context.request?.user;
-    const targetUserId = parseInt(context.request?.params?.id);
+    const targetUserId = entity.id;
 
     // 본인의 정보만 수정 가능
     if (user.id !== targetUserId) {
       throw new ForbiddenException('본인의 정보만 수정할 수 있습니다.');
     }
 
-    // 기존 사용자 정보 확인
-    const existingUser = await this.userRepository.findOne({
-      where: { id: targetUserId },
-    });
-
-    if (!existingUser) {
-      throw new NotFoundException('사용자를 찾을 수 없습니다.');
-    }
-
-    if (!existingUser.isActive) {
+    if (!entity.isActive) {
       throw new ForbiddenException('비활성화된 계정입니다.');
     }
 
     // 온라인 상태 업데이트 시 lastSeenAt 갱신
-    if (body.isOnline !== undefined) {
-      body.lastSeenAt = new Date();
+    if (entity.isOnline !== undefined) {
+      entity.lastSeenAt = new Date();
 
       // 온라인 상태가 false로 변경되면 현재 시간을 lastSeenAt으로 설정
-      if (!body.isOnline) {
-        body.lastSeenAt = new Date();
+      if (!entity.isOnline) {
+        entity.lastSeenAt = new Date();
       }
     }
 
-    // 수정 불가능한 필드들
-    delete body.socialId;
-    delete body.provider;
-    delete body.email;
-    delete body.status;
-    delete body.createdAt;
-    delete body.socialMetadata;
-
     this.logger.log(`User profile updating: userId=${user.id}`);
 
-    return body;
+    return entity;
   }
 
   /**

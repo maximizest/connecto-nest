@@ -320,24 +320,14 @@ export class TravelUserController {
    * Travel 멤버 수정 전 검증 (권한 변경 및 탈퇴 처리)
    */
   @BeforeUpdate()
-  async beforeUpdate(body: any, context: any): Promise<any> {
+  async beforeUpdate(entity: TravelUser, context: any): Promise<TravelUser> {
     const user: User = context.request?.user;
-    const travelUserId = parseInt(context.request?.params?.id);
-
-    // 기존 TravelUser 조회
-    const existingTravelUser = await this.travelUserRepository.findOne({
-      where: { id: travelUserId },
-      relations: ['user', 'travel'],
-    });
-
-    if (!existingTravelUser) {
-      throw new NotFoundException('Travel 멤버를 찾을 수 없습니다.');
-    }
+    const travelUserId = entity.id;
 
     // 권한 확인: 본인이거나 관리자 이상이어야 함
     const requesterMembership = await this.travelUserRepository.findOne({
       where: {
-        travelId: existingTravelUser.travelId,
+        travelId: entity.travelId,
         userId: user.id,
         status: TravelUserStatus.ACTIVE,
       },
@@ -348,34 +338,35 @@ export class TravelUserController {
     }
 
     // 탈퇴 처리인지 확인
-    if (body.status === TravelUserStatus.LEFT) {
+    if (entity.status === TravelUserStatus.LEFT) {
       return await this.handleTravelLeave(
-        body,
+        entity,
         user,
-        existingTravelUser,
+        entity,
         requesterMembership,
       );
     }
 
     // 밴 처리인지 확인
-    if (body.status === TravelUserStatus.BANNED) {
+    if (entity.status === TravelUserStatus.BANNED) {
       return await this.handleTravelBan(
-        body,
+        entity,
         user,
-        existingTravelUser,
+        entity,
         requesterMembership,
       );
     }
 
     // 밴 해제 처리인지 확인 (ACTIVE로 상태 변경 시)
+    const originalStatus = context.currentEntity?.status;
     if (
-      body.status === TravelUserStatus.ACTIVE &&
-      existingTravelUser.status === TravelUserStatus.BANNED
+      entity.status === TravelUserStatus.ACTIVE &&
+      originalStatus === TravelUserStatus.BANNED
     ) {
       return await this.handleTravelUnban(
-        body,
+        entity,
         user,
-        existingTravelUser,
+        entity,
         requesterMembership,
       );
     }
@@ -384,36 +375,31 @@ export class TravelUserController {
     const canManage =
       requesterMembership.role === TravelUserRole.OWNER ||
       requesterMembership.role === TravelUserRole.ADMIN ||
-      requesterMembership.userId === existingTravelUser.userId;
+      requesterMembership.userId === entity.userId;
 
     if (!canManage) {
       throw new ForbiddenException('멤버 관리 권한이 없습니다.');
     }
 
     // 역할 변경 권한 확인
-    if (body.role && body.role !== existingTravelUser.role) {
+    const originalRole = context.currentEntity?.role;
+    if (entity.role && entity.role !== originalRole) {
       // OWNER만 다른 사람의 권한을 변경할 수 있음
       if (requesterMembership.role !== TravelUserRole.OWNER) {
         throw new ForbiddenException('소유자만 권한을 변경할 수 있습니다.');
       }
 
       // OWNER 권한은 양도할 수 없음 (별도 API 필요)
-      if (body.role === TravelUserRole.OWNER) {
+      if (entity.role === TravelUserRole.OWNER) {
         throw new ForbiddenException('소유자 권한은 직접 양도할 수 없습니다.');
       }
     }
-
-    // 수정 불가능한 필드들
-    delete body.userId;
-    delete body.travelId;
-    delete body.joinedAt;
-    delete body.invitedBy;
 
     this.logger.log(
       `Updating travel member: id=${travelUserId}, updatedBy=${user.id}`,
     );
 
-    return body;
+    return entity;
   }
 
   /**
