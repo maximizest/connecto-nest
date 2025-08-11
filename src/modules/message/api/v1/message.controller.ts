@@ -810,7 +810,7 @@ export class MessageController {
         },
       });
 
-      return !!(planetUser && planetUser.role === 'creator');
+      return !!(planetUser && planetUser.role === 'moderator');
     }
 
     return false;

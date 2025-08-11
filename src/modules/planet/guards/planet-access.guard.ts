@@ -82,17 +82,16 @@ export class PlanetAccessGuard implements CanActivate {
       throw new NotFoundException('존재하지 않는 Planet입니다.');
     }
 
-    // 비활성화된 Planet 확인 (생성자는 접근 가능)
-    if (!planet.isActive && planet.createdBy !== user.id) {
+    // 비활성화된 Planet 확인 (Admin이 생성하므로 일반 사용자는 비활성 Planet 접근 불가)
+    if (!planet.isActive) {
       throw new ForbiddenException('비활성화된 Planet입니다.');
     }
 
-    // 수정/삭제 권한: 생성자만 가능
+    // 수정/삭제 권한: Admin이 생성하므로 일반 사용자는 수정/삭제 불가
     if (method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
-      if (planet.createdBy !== user.id) {
-        throw new ForbiddenException('Planet 수정/삭제 권한이 없습니다.');
-      }
-      return true;
+      throw new ForbiddenException(
+        '관리자만 Planet을 수정/삭제할 수 있습니다.',
+      );
     }
 
     // 조회 권한 확인

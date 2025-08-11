@@ -379,7 +379,7 @@ export class UserController {
         lastActivityAt: travel.lastActivityAt,
         createdAt: travel.createdAt,
 
-        isCreator: travel.createdBy === user.id,
+        isCreatedByAdmin: true, // Admin이 생성하므로 사용자는 생성자가 아님
       })),
       totalCount: travels.length,
     };
@@ -403,7 +403,7 @@ export class UserController {
         travelId: planet.travelId,
         timeRestriction: planet.timeRestriction,
         createdAt: planet.createdAt,
-        isCreator: planet.createdBy === user.id,
+        isCreatedByAdmin: true, // Admin이 생성하므로 사용자는 생성자가 아님
         // 1:1 Planet의 경우 상대방 정보 (추후 구현)
         // otherMember: planet.type === PlanetType.DIRECT ? otherMemberInfo : null,
       })),

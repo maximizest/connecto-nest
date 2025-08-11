@@ -82,10 +82,8 @@ export class TravelAccessGuard implements CanActivate {
 
     // Travel 멤버가 아닌 경우
     if (!travelUser) {
-      // 소유자인지 확인 (생성자는 항상 접근 가능)
-      if (travel.createdBy === user.id) {
-        return true;
-      }
+      // Travel은 Admin이 생성하므로 일반 사용자는 소유자가 될 수 없음
+      // (멤버가 아니면 접근 불가)
 
       throw new ForbiddenException('이 Travel에 접근할 권한이 없습니다.');
     }
@@ -95,14 +93,13 @@ export class TravelAccessGuard implements CanActivate {
       throw new ForbiddenException('만료된 Travel은 조회만 가능합니다.');
     }
 
-    // 취소/완료된 Travel 확인 (소유자만 접근)
+    // 취소/완료된 Travel 확인 (Admin이 생성하므로 일반 사용자는 수정 불가)
     if (
       (travel.status === 'cancelled' || travel.status === 'completed') &&
-      travel.createdBy !== user.id &&
       method !== 'GET'
     ) {
       throw new ForbiddenException(
-        '완료되거나 취소된 Travel은 소유자만 수정할 수 있습니다.',
+        '완료되거나 취소된 Travel은 관리자만 수정할 수 있습니다.',
       );
     }
 
@@ -138,10 +135,10 @@ export class TravelAccessGuard implements CanActivate {
       return parseInt(request.query['filter[travelId_eq]']);
     }
 
-    if (request.query?.['filter[createdBy_eq]']) {
-      // 생성자별 필터링인 경우 해당 사용자 ID 반환 (특수 케이스)
-      const userId = parseInt(request.query['filter[createdBy_eq]']);
-      return userId;
+    if (request.query?.['filter[createdByAdminId_eq]']) {
+      // Admin별 필터링인 경우 해당 Admin ID 반환 (특수 케이스)
+      const adminId = parseInt(request.query['filter[createdByAdminId_eq]']);
+      return adminId;
     }
 
     return null;

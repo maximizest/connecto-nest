@@ -21,7 +21,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { TRAVEL_CONSTANTS } from '../../common/constants/app.constants';
-import { User } from '../user/user.entity';
+import { Admin } from '../admin/admin.entity';
 
 /**
  * Travel 상태
@@ -49,8 +49,8 @@ export enum TravelVisibility {
 @Index(['isActive', 'expiryDate']) // 활성 Travel의 만료일 조회
 @Index(['status', 'expiryDate']) // 상태별 만료일 조회
 @Index(['visibility', 'isActive']) // 공개 설정별 활성 Travel 조회
-@Index(['createdBy', 'status']) // 사용자별 상태 필터링
-@Index(['createdBy', 'isActive', 'expiryDate']) // 사용자별 활성 Travel 만료일순
+@Index(['createdByAdminId', 'status']) // 관리자별 상태 필터링
+@Index(['createdByAdminId', 'isActive', 'expiryDate']) // 관리자별 활성 Travel 만료일순
 export class Travel extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
@@ -85,16 +85,16 @@ export class Travel extends BaseEntity {
   imageUrl?: string;
 
   /**
-   * 소유자 및 관리
+   * 소유자 및 관리 (Admin 전용)
    */
-  @Column({ comment: '여행 생성자 ID' })
+  @Column({ comment: '여행 생성 관리자 ID' })
   @IsNumber()
-  @Index() // 생성자별 조회 최적화
-  createdBy: number;
+  @Index() // 관리자별 조회 최적화
+  createdByAdminId: number;
 
-  @ManyToOne(() => User, { eager: false })
-  @JoinColumn({ name: 'createdBy' })
-  creator: User;
+  @ManyToOne(() => Admin, { eager: false })
+  @JoinColumn({ name: 'createdByAdminId' })
+  admin: Admin;
 
   /**
    * 상태 관리

@@ -206,7 +206,7 @@ export class OnlinePresenceController {
       // Travel 접근 권한 확인
       const travel = await this.travelRepository.findOne({
         where: { id: travelId },
-        relations: ['creator', 'travelUsers'],
+        relations: ['admin', 'travelUsers'],
       });
 
       if (!travel) {
@@ -320,7 +320,7 @@ export class OnlinePresenceController {
       // Travel 접근 권한 확인
       const travel = await this.travelRepository.findOne({
         where: { id: travelId },
-        relations: ['creator', 'travelUsers', 'planets'],
+        relations: ['admin', 'travelUsers', 'planets'],
       });
 
       if (!travel) {

@@ -33,7 +33,7 @@ import { PlanetService } from '../../planet.service';
   allowedFilters: [
     'travelId',
     'type',
-    'createdBy',
+    'createdByAdminId',
     'isActive',
     'name',
     'createdAt',
@@ -41,7 +41,7 @@ import { PlanetService } from '../../planet.service';
 
   // 관계 포함 허용 필드
   allowedIncludes: [
-    'creator',
+    'admin',
     'travel',
     'messages',
     'directMembers', // PlanetUser (1:1 Planet용)
@@ -59,13 +59,13 @@ import { PlanetService } from '../../planet.service';
         'name',
         'createdAt',
       ],
-      allowedIncludes: ['creator', 'travel'],
+      allowedIncludes: ['admin', 'travel'],
     },
 
     // 단일 조회: 상세 정보 포함
     show: {
       allowedIncludes: [
-        'creator',
+        'admin',
         'travel',
         'directMembers',
         'directMembers.user',

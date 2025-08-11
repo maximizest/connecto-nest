@@ -20,6 +20,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { TRAVEL_CONSTANTS } from '../../common/constants/app.constants';
+import { Admin } from '../admin/admin.entity';
 import { Travel } from '../travel/travel.entity';
 import { User } from '../user/user.entity';
 
@@ -74,7 +75,7 @@ interface TimeRestriction {
 @Index(['travelId', 'isActive']) // Travel 내 활성 Planet 조회
 @Index(['travelId', 'status']) // Travel 내 상태별 조회
 @Index(['type', 'isActive']) // 타입별 활성 Planet 조회
-@Index(['createdBy', 'type']) // 사용자별 타입 필터링
+@Index(['createdByAdminId', 'type']) // 관리자별 타입 필터링
 @Index(['isActive', 'lastMessageAt']) // 활성 Planet의 최근 메시지순
 @Index(['travelId', 'isActive', 'lastMessageAt']) // Travel 내 활성 Planet 최근 메시지순
 export class Planet extends BaseEntity {
@@ -131,14 +132,14 @@ export class Planet extends BaseEntity {
   @JoinColumn({ name: 'travelId' })
   travel: Travel;
 
-  @Column({ comment: 'Planet 생성자 ID' })
+  @Column({ comment: 'Planet 생성 관리자 ID' })
   @IsNumber()
-  @Index() // 생성자별 조회
-  createdBy: number;
+  @Index() // 관리자별 조회
+  createdByAdminId: number;
 
-  @ManyToOne(() => User, { eager: false })
-  @JoinColumn({ name: 'createdBy' })
-  creator: User;
+  @ManyToOne(() => Admin, { eager: false })
+  @JoinColumn({ name: 'createdByAdminId' })
+  admin: Admin;
 
   /**
    * 상태 관리
@@ -332,30 +333,26 @@ export class Planet extends BaseEntity {
   }
 
   /**
-   * 1:1 Planet의 생성자 또는 파트너인지 확인
+   * 1:1 Planet의 파트너인지 확인 (관리자가 생성하므로 partnerId만 확인)
    */
   isDirectPlanetParticipant(userId: number): boolean {
     if (!this.isDirectPlanet()) {
       return false;
     }
-    return this.createdBy === userId || this.partnerId === userId;
+    // 관리자가 생성하므로 partnerId만 확인
+    return this.partnerId === userId;
   }
 
   /**
-   * 1:1 Planet에서 상대방 ID 조회
+   * 1:1 Planet에서 상대방 ID 조회 (관리자 생성이므로 partnerId 반환)
    */
   getDirectPlanetPartner(userId: number): number | null {
-    if (!this.isDirectPlanet()) {
+    if (!this.isDirectPlanet() || !this.partnerId) {
       return null;
     }
 
-    if (this.createdBy === userId) {
-      return this.partnerId || null;
-    } else if (this.partnerId === userId) {
-      return this.createdBy;
-    }
-
-    return null;
+    // 관리자가 생성하므로 partnerId가 상대방
+    return this.partnerId;
   }
 
   /**

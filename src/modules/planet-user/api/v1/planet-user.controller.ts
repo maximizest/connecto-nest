@@ -174,7 +174,7 @@ export class PlanetUserController {
     const newPlanet = await this.planetRepository.save({
       name: planetName,
       type: PlanetType.DIRECT,
-      createdBy: user.id,
+      createdByAdminId: 1, // TODO: 실제 Admin ID로 교체 필요
       isActive: true, // 초대 즉시 활성화
       memberCount: 2, // 두 명의 멤버
       settings: {
@@ -193,7 +193,7 @@ export class PlanetUserController {
     const creatorPlanetUser = this.planetUserRepository.create({
       planetId: savedPlanet.id,
       userId: user.id,
-      role: PlanetUserRole.CREATOR,
+      role: PlanetUserRole.MODERATOR,
       status: PlanetUserStatus.ACTIVE,
       joinedAt: new Date(),
       invitedBy: user.id,
@@ -259,13 +259,11 @@ export class PlanetUserController {
       throw new NotFoundException('Planet 멤버십을 찾을 수 없습니다.');
     }
 
-    // 권한 확인: 본인의 멤버십이거나 생성자여야 함
-    const canModify =
-      existingPlanetUser.userId === user.id || // 본인의 멤버십
-      existingPlanetUser.planet.createdBy === user.id; // Planet 생성자
+    // 권한 확인: 본인의 멤버십만 수정 가능 (Planet은 Admin이 생성하므로 사용자는 생성자가 될 수 없음)
+    const canModify = existingPlanetUser.userId === user.id; // 본인의 멤버십만
 
     if (!canModify) {
-      throw new ForbiddenException('멤버십 관리 권한이 없습니다.');
+      throw new ForbiddenException('본인의 멤버십만 관리할 수 있습니다.');
     }
 
     // 상태 변경 처리
@@ -285,13 +283,8 @@ export class PlanetUserController {
 
       // 초대 수락/거절 처리
       if (existingPlanetUser.userId !== user.id) {
-        // 관리자 권한 확인 (밴이 아닌 다른 상태 변경)
-        const isCreator = existingPlanetUser.planet.createdBy === user.id;
-        if (!isCreator) {
-          throw new ForbiddenException(
-            '본인의 초대만 수락/거절할 수 있습니다.',
-          );
-        }
+        // Planet은 Admin이 생성하므로 일반 사용자는 다른 사용자의 초대를 관리할 수 없음
+        throw new ForbiddenException('본인의 초대만 수락/거절할 수 있습니다.');
       }
 
       if (
@@ -419,12 +412,8 @@ export class PlanetUserController {
     user: User,
     existingPlanetUser: PlanetUser,
   ): Promise<any> {
-    // 밴 권한 확인: Planet 생성자만 가능
-    const isCreator = existingPlanetUser.planet.createdBy === user.id;
-
-    if (!isCreator) {
-      throw new ForbiddenException('Planet 생성자만 멤버를 밴할 수 있습니다.');
-    }
+    // 밴 권한 확인: Planet은 Admin이 생성하므로 일반 사용자는 밴 권한 없음
+    throw new ForbiddenException('관리자만 멤버를 밴할 수 있습니다.');
 
     // 자기 자신을 밴할 수 없음
     if (existingPlanetUser.userId === user.id) {
@@ -460,14 +449,8 @@ export class PlanetUserController {
     user: User,
     existingPlanetUser: PlanetUser,
   ): Promise<any> {
-    // 밴 해제 권한 확인: Planet 생성자만 가능
-    const isCreator = existingPlanetUser.planet.createdBy === user.id;
-
-    if (!isCreator) {
-      throw new ForbiddenException(
-        'Planet 생성자만 멤버 밴을 해제할 수 있습니다.',
-      );
-    }
+    // 밴 해제 권한 확인: Planet은 Admin이 생성하므로 일반 사용자는 밴 해제 권한 없음
+    throw new ForbiddenException('관리자만 멤버 밴을 해제할 수 있습니다.');
 
     // 밴 상태인지 확인
     if (existingPlanetUser.status !== PlanetUserStatus.BANNED) {
@@ -509,12 +492,8 @@ export class PlanetUserController {
       throw new NotFoundException('Planet 멤버를 찾을 수 없습니다.');
     }
 
-    // 권한 확인: Planet 생성자만 가능
-    const isCreator = existingPlanetUser.planet.createdBy === user.id;
-
-    if (!isCreator) {
-      throw new ForbiddenException('Planet 생성자만 멤버를 밴할 수 있습니다.');
-    }
+    // 권한 확인: Planet은 Admin이 생성하므로 일반 사용자는 밴 권한 없음
+    throw new ForbiddenException('관리자만 멤버를 밴할 수 있습니다.');
 
     if (existingPlanetUser.userId === user.id) {
       throw new ForbiddenException('자기 자신을 밴할 수 없습니다.');
@@ -564,13 +543,8 @@ export class PlanetUserController {
     }
 
     // 권한 확인: Planet 생성자만 가능
-    const isCreator = existingPlanetUser.planet.createdBy === user.id;
-
-    if (!isCreator) {
-      throw new ForbiddenException(
-        'Planet 생성자만 멤버 밴을 해제할 수 있습니다.',
-      );
-    }
+    // 권한 확인: Planet은 Admin이 생성하므로 일반 사용자는 밴 해제 권한 없음
+    throw new ForbiddenException('관리자만 멤버 밴을 해제할 수 있습니다.');
 
     if (existingPlanetUser.status !== PlanetUserStatus.BANNED) {
       throw new ForbiddenException('밴 상태가 아닌 사용자입니다.');
@@ -616,12 +590,8 @@ export class PlanetUserController {
       throw new NotFoundException('Planet을 찾을 수 없습니다.');
     }
 
-    // 생성자만 밴 목록 조회 가능
-    if (planet.createdBy !== user.id) {
-      throw new ForbiddenException(
-        'Planet 생성자만 밴 목록을 조회할 수 있습니다.',
-      );
-    }
+    // 권한 확인: Planet은 Admin이 생성하므로 일반 사용자는 밴 목록 조회 권한 없음
+    throw new ForbiddenException('관리자만 밴 목록을 조회할 수 있습니다.');
 
     // 밴된 멤버 목록 조회
     const bannedMembers = await this.planetUserRepository.find({

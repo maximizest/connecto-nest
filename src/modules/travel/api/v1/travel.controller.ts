@@ -32,7 +32,7 @@ import { TravelService } from '../../travel.service';
 
   // 관계 포함 허용 필드
   allowedIncludes: [
-    'creator',
+    'admin',
     'members',
     'members.user', // TravelUser -> User
     'planets',
@@ -49,12 +49,12 @@ import { TravelService } from '../../travel.service';
         'expiryDate',
         'createdAt',
       ],
-      allowedIncludes: ['creator', 'members'],
+      allowedIncludes: ['admin', 'members'],
     },
 
     // 단일 조회: 상세 정보 포함
     show: {
-      allowedIncludes: ['creator', 'members', 'members.user', 'planets'],
+      allowedIncludes: ['admin', 'members', 'members.user', 'planets'],
     },
   },
 })

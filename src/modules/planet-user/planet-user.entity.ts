@@ -22,12 +22,12 @@ import { Planet } from '../planet/planet.entity';
 import { User } from '../user/user.entity';
 
 /**
- * Planet 내 사용자 역할 (주로 1:1 Planet용)
+ * Planet 내 사용자 역할
+ * 주의: Planet은 관리자(Admin)만 생성하므로 CREATOR 역할 없음
  */
 export enum PlanetUserRole {
-  PARTICIPANT = 'participant', // 참여자 (1:1의 경우)
-  CREATOR = 'creator', // 생성자
-  ADMIN = 'admin', // 관리자 (그룹 Planet에서 사용)
+  PARTICIPANT = 'participant', // 참여자 (기본 역할)
+  MODERATOR = 'moderator', // 중재자 (그룹 Planet에서 사용)
 }
 
 /**
@@ -382,19 +382,17 @@ export class PlanetUser extends BaseEntity {
    */
 
   /**
-   * 생성자인지 확인
+   * 중재자인지 확인
    */
-  isCreator(): boolean {
-    return this.role === PlanetUserRole.CREATOR;
+  isModerator(): boolean {
+    return this.role === PlanetUserRole.MODERATOR;
   }
 
   /**
-   * 관리자인지 확인 (생성자 포함)
+   * 관리 권한이 있는지 확인 (중재자만)
    */
-  isAdmin(): boolean {
-    return (
-      this.role === PlanetUserRole.ADMIN || this.role === PlanetUserRole.CREATOR
-    );
+  hasModeratorPrivileges(): boolean {
+    return this.role === PlanetUserRole.MODERATOR;
   }
 
   /**
@@ -578,19 +576,17 @@ export class PlanetUser extends BaseEntity {
    * 특정 권한 확인
    */
   hasPermission(permission: string): boolean {
-    // 생성자는 모든 권한 보유
-    if (this.isCreator()) return true;
-
-    // 관리자는 대부분 권한 보유
-    if (this.isAdmin()) {
+    // 중재자는 대부분 권한 보유
+    if (this.isModerator()) {
       switch (permission) {
         case 'canSendMessages':
         case 'canUploadFiles':
         case 'canDeleteMessages':
         case 'canInviteMembers':
         case 'canManageMembers':
-        case 'canEditPlanetInfo':
           return true;
+        case 'canEditPlanetInfo':
+          return false; // Planet 정보 수정은 Admin만 가능
         default:
           return this.permissions?.[permission] === true;
       }
