@@ -23,6 +23,8 @@ import { Repository } from 'typeorm';
 import { OnlinePresenceService } from '../cache/services/online-presence.service';
 import { PlanetCacheService } from '../cache/services/planet-cache.service';
 import { Message } from '../message/message.entity';
+import { MessageReadReceipt } from '../message/read-receipt.entity';
+import { ReadReceiptService } from '../message/read-receipt.service';
 import { Planet } from '../planet/planet.entity';
 import { User } from '../user/user.entity';
 import {
@@ -86,6 +88,26 @@ interface RestoreMessageDto {
   messageId: number;
 }
 
+interface MarkMessageReadDto {
+  messageId: number;
+  deviceType?: string;
+  readSource?: 'auto' | 'manual' | 'scroll';
+  sessionId?: string;
+}
+
+interface MarkMultipleReadDto {
+  messageIds: number[];
+  deviceType?: string;
+  readSource?: 'auto' | 'manual' | 'scroll';
+  sessionId?: string;
+}
+
+interface MarkAllReadDto {
+  planetId: number;
+  deviceType?: string;
+  sessionId?: string;
+}
+
 // WebSocket 예외 필터
 @Injectable()
 class WebSocketExceptionFilter {
@@ -129,10 +151,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly planetCacheService: PlanetCacheService,
     private readonly rateLimitService: RateLimitService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly readReceiptService: ReadReceiptService,
     @InjectRepository(Planet)
     private readonly planetRepository: Repository<Planet>,
     @InjectRepository(Message)
     private readonly messageRepository: Repository<Message>,
+    @InjectRepository(MessageReadReceipt)
+    private readonly readReceiptRepository: Repository<MessageReadReceipt>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
   ) {}
@@ -808,6 +833,275 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (error) {
       this.logger.error('Message restore failed:', error);
       client.emit('error', { message: '메시지 복구에 실패했습니다.' });
+    }
+  }
+
+  /**
+   * 메시지 읽음 표시 이벤트 핸들러
+   */
+  @SubscribeMessage('message:read')
+  @UseGuards(WebSocketAuthGuard)
+  async handleMarkMessageRead(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: MarkMessageReadDto,
+  ) {
+    try {
+      const { messageId, deviceType, readSource, sessionId } = payload;
+
+      this.logger.debug(
+        `Message read request: messageId=${messageId}, userId=${client.user.id}`,
+      );
+
+      // 메시지 조회 및 접근 권한 확인
+      const message = await this.messageRepository.findOne({
+        where: { id: messageId },
+        relations: ['planet'],
+      });
+
+      if (!message) {
+        client.emit('error', { message: '메시지를 찾을 수 없습니다.' });
+        return;
+      }
+
+      // 읽음 처리
+      const receipt = await this.readReceiptService.markMessageAsRead(
+        messageId,
+        client.user.id,
+        {
+          deviceType,
+          userAgent: client.handshake.headers['user-agent'],
+          readSource,
+          sessionId,
+        },
+      );
+
+      // Planet 방에 읽음 상태 브로드캐스트
+      const roomId = `planet_${message.planetId}`;
+      this.server.to(roomId).emit('message:read_status', {
+        messageId: receipt.messageId,
+        userId: client.user.id,
+        userName: client.user.name,
+        readAt: receipt.readAt,
+        deviceType: receipt.deviceType,
+        timestamp: new Date().toISOString(),
+      });
+
+      // 클라이언트에 성공 응답
+      client.emit('message:read_success', {
+        messageId: receipt.messageId,
+        readAt: receipt.readAt,
+        success: true,
+      });
+
+      this.logger.log(
+        `Message read processed: messageId=${messageId}, userId=${client.user.id}`,
+      );
+    } catch (error) {
+      this.logger.error('Message read failed:', error);
+      client.emit('error', { message: '메시지 읽음 처리에 실패했습니다.' });
+    }
+  }
+
+  /**
+   * 여러 메시지 일괄 읽음 표시 이벤트 핸들러
+   */
+  @SubscribeMessage('messages:read_multiple')
+  @UseGuards(WebSocketAuthGuard)
+  async handleMarkMultipleMessagesRead(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: MarkMultipleReadDto,
+  ) {
+    try {
+      const { messageIds, deviceType, readSource, sessionId } = payload;
+
+      this.logger.debug(
+        `Multiple messages read request: count=${messageIds.length}, userId=${client.user.id}`,
+      );
+
+      if (!messageIds || messageIds.length === 0) {
+        client.emit('error', { message: 'messageIds가 필요합니다.' });
+        return;
+      }
+
+      // 일괄 읽음 처리
+      const receipts = await this.readReceiptService.markMultipleMessagesAsRead(
+        messageIds,
+        client.user.id,
+        {
+          deviceType,
+          userAgent: client.handshake.headers['user-agent'],
+          readSource,
+          sessionId,
+        },
+      );
+
+      // Planet별로 그룹핑하여 브로드캐스트
+      const planetGroups = receipts.reduce(
+        (acc, receipt) => {
+          if (!acc[receipt.planetId]) {
+            acc[receipt.planetId] = [];
+          }
+          acc[receipt.planetId].push(receipt);
+          return acc;
+        },
+        {} as Record<number, MessageReadReceipt[]>,
+      );
+
+      Object.entries(planetGroups).forEach(([planetId, planetReceipts]) => {
+        const roomId = `planet_${planetId}`;
+        this.server.to(roomId).emit('messages:batch_read_status', {
+          planetId: parseInt(planetId),
+          messageIds: planetReceipts.map((r) => r.messageId),
+          userId: client.user.id,
+          userName: client.user.name,
+          count: planetReceipts.length,
+          readAt: new Date(),
+          timestamp: new Date().toISOString(),
+        });
+      });
+
+      // 클라이언트에 성공 응답
+      client.emit('messages:read_multiple_success', {
+        processedCount: receipts.length,
+        messageIds: receipts.map((r) => r.messageId),
+        success: true,
+      });
+
+      this.logger.log(
+        `Multiple messages read processed: count=${receipts.length}, userId=${client.user.id}`,
+      );
+    } catch (error) {
+      this.logger.error('Multiple messages read failed:', error);
+      client.emit('error', { message: '일괄 읽음 처리에 실패했습니다.' });
+    }
+  }
+
+  /**
+   * Planet의 모든 메시지 읽음 표시 이벤트 핸들러
+   */
+  @SubscribeMessage('planet:read_all')
+  @UseGuards(WebSocketAuthGuard)
+  async handleMarkAllMessagesRead(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: MarkAllReadDto,
+  ) {
+    try {
+      const { planetId, deviceType, sessionId } = payload;
+
+      this.logger.debug(
+        `Planet read all request: planetId=${planetId}, userId=${client.user.id}`,
+      );
+
+      // Planet 모든 메시지 읽음 처리
+      const result =
+        await this.readReceiptService.markAllMessagesAsReadInPlanet(
+          planetId,
+          client.user.id,
+          {
+            deviceType,
+            userAgent: client.handshake.headers['user-agent'],
+            sessionId,
+          },
+        );
+
+      // Planet 방에 전체 읽음 브로드캐스트
+      const roomId = `planet_${planetId}`;
+      this.server.to(roomId).emit('planet:all_messages_read', {
+        planetId,
+        userId: client.user.id,
+        userName: client.user.name,
+        processedCount: result.processedCount,
+        readAt: new Date(),
+        timestamp: new Date().toISOString(),
+      });
+
+      // 클라이언트에 성공 응답
+      client.emit('planet:read_all_success', {
+        planetId,
+        processedCount: result.processedCount,
+        success: true,
+      });
+
+      this.logger.log(
+        `Planet all messages read processed: planetId=${planetId}, count=${result.processedCount}, userId=${client.user.id}`,
+      );
+    } catch (error) {
+      this.logger.error('Planet read all failed:', error);
+      client.emit('error', {
+        message: 'Planet 전체 읽음 처리에 실패했습니다.',
+      });
+    }
+  }
+
+  /**
+   * 읽지 않은 메시지 카운트 조회 이벤트 핸들러
+   */
+  @SubscribeMessage('planet:get_unread_count')
+  @UseGuards(WebSocketAuthGuard)
+  async handleGetUnreadCount(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: { planetId: number },
+  ) {
+    try {
+      const { planetId } = payload;
+
+      const unreadCount = await this.readReceiptService.getUnreadCountInPlanet(
+        planetId,
+        client.user.id,
+      );
+
+      client.emit('planet:unread_count', {
+        planetId,
+        unreadCount,
+        userId: client.user.id,
+        timestamp: new Date().toISOString(),
+      });
+
+      this.logger.debug(
+        `Unread count retrieved: planetId=${planetId}, count=${unreadCount}, userId=${client.user.id}`,
+      );
+    } catch (error) {
+      this.logger.error('Get unread count failed:', error);
+      client.emit('error', {
+        message: '읽지 않은 메시지 카운트 조회에 실패했습니다.',
+      });
+    }
+  }
+
+  /**
+   * 사용자 모든 Planet 읽지 않은 카운트 조회 이벤트 핸들러
+   */
+  @SubscribeMessage('user:get_all_unread_counts')
+  @UseGuards(WebSocketAuthGuard)
+  async handleGetAllUnreadCounts(
+    @ConnectedSocket() client: AuthenticatedSocket,
+  ) {
+    try {
+      const unreadCounts = await this.readReceiptService.getUnreadCountsByUser(
+        client.user.id,
+      );
+
+      const totalUnreadCount = unreadCounts.reduce(
+        (sum, planet) => sum + planet.unreadCount,
+        0,
+      );
+
+      client.emit('user:all_unread_counts', {
+        userId: client.user.id,
+        totalPlanets: unreadCounts.length,
+        totalUnreadCount,
+        planets: unreadCounts,
+        timestamp: new Date().toISOString(),
+      });
+
+      this.logger.debug(
+        `All unread counts retrieved: totalCount=${totalUnreadCount}, userId=${client.user.id}`,
+      );
+    } catch (error) {
+      this.logger.error('Get all unread counts failed:', error);
+      client.emit('error', {
+        message: '전체 읽지 않은 카운트 조회에 실패했습니다.',
+      });
     }
   }
 

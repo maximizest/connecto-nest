@@ -6,6 +6,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ENV_KEYS } from '../../common/constants/app.constants';
 import { RedisModule } from '../cache/redis.module';
 import { Message } from '../message/message.entity';
+import { MessageReadReceipt } from '../message/read-receipt.entity';
+import { ReadReceiptService } from '../message/read-receipt.service';
 import { PlanetUser } from '../planet-user/planet-user.entity';
 import { Planet } from '../planet/planet.entity';
 import { TravelUser } from '../travel-user/travel-user.entity';
@@ -26,6 +28,7 @@ import { WebSocketRoomService } from './services/websocket-room.service';
       Travel,
       Planet,
       Message,
+      MessageReadReceipt,
       TravelUser,
       PlanetUser,
     ]),
@@ -49,6 +52,7 @@ import { WebSocketRoomService } from './services/websocket-room.service';
     WebSocketRoomService,
     WebSocketBroadcastService,
     RateLimitService,
+    ReadReceiptService,
     Reflector,
   ],
   exports: [

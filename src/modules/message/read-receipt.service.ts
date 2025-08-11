@@ -1,0 +1,563 @@
+import { CrudService } from '@foryourdev/nestjs-crud';
+import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import {
+  PlanetUser,
+  PlanetUserStatus,
+} from '../planet-user/planet-user.entity';
+import { Planet, PlanetType } from '../planet/planet.entity';
+import {
+  TravelUser,
+  TravelUserStatus,
+} from '../travel-user/travel-user.entity';
+import { Message } from './message.entity';
+import { MessageReadReceipt } from './read-receipt.entity';
+
+/**
+ * 메시지 읽음 상태 관리 인터페이스
+ */
+export interface ReadReceiptStats {
+  totalMessages: number;
+  readMessages: number;
+  unreadMessages: number;
+  readPercentage: number;
+}
+
+export interface PlanetReadStatus {
+  planetId: number;
+  planetName: string;
+  lastReadMessageId: number | null;
+  lastReadAt: Date | null;
+  unreadCount: number;
+  totalMessages: number;
+}
+
+export interface UserReadStatus {
+  userId: number;
+  userName: string;
+  lastReadMessageId: number | null;
+  lastReadAt: Date | null;
+  unreadCount: number;
+  isOnline?: boolean;
+}
+
+@Injectable()
+export class ReadReceiptService extends CrudService<MessageReadReceipt> {
+  private readonly logger = new Logger(ReadReceiptService.name);
+
+  constructor(
+    @InjectRepository(MessageReadReceipt)
+    repository: Repository<MessageReadReceipt>,
+    @InjectRepository(Message)
+    private readonly messageRepository: Repository<Message>,
+  ) {
+    super(repository);
+  }
+
+  /**
+   * 메시지 읽음 처리
+   */
+  async markMessageAsRead(
+    messageId: number,
+    userId: number,
+    options?: {
+      deviceType?: string;
+      userAgent?: string;
+      readSource?: 'auto' | 'manual' | 'scroll';
+      readDuration?: number;
+      sessionId?: string;
+    },
+  ): Promise<MessageReadReceipt> {
+    try {
+      // 메시지 정보 조회
+      const message = await this.messageRepository.findOne({
+        where: { id: messageId },
+        relations: ['planet'],
+      });
+
+      if (!message) {
+        throw new Error(`Message not found: ${messageId}`);
+      }
+
+      // 이미 읽음 처리된 경우 기존 레코드 반환
+      const existingReceipt = await this.repository.findOne({
+        where: {
+          messageId,
+          userId,
+        },
+      });
+
+      if (existingReceipt) {
+        this.logger.debug(
+          `Message already read: messageId=${messageId}, userId=${userId}`,
+        );
+        return existingReceipt;
+      }
+
+      // 새로운 읽음 영수증 생성
+      const receipt = this.repository.create({
+        messageId,
+        userId,
+        planetId: message.planetId,
+        isRead: true,
+        readAt: new Date(),
+        deviceType: options?.deviceType,
+        userAgent: options?.userAgent,
+        metadata: {
+          readSource: options?.readSource || 'manual',
+          readDuration: options?.readDuration,
+          sessionId: options?.sessionId,
+        },
+      });
+
+      const savedReceipt = await this.repository.save(receipt);
+
+      // 메시지의 읽음 카운트 업데이트
+      await this.updateMessageReadCount(messageId);
+
+      this.logger.log(
+        `Message marked as read: messageId=${messageId}, userId=${userId}`,
+      );
+
+      return savedReceipt;
+    } catch (error) {
+      this.logger.error(
+        `Failed to mark message as read: messageId=${messageId}, userId=${userId}`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 여러 메시지를 일괄 읽음 처리
+   */
+  async markMultipleMessagesAsRead(
+    messageIds: number[],
+    userId: number,
+    options?: {
+      deviceType?: string;
+      userAgent?: string;
+      readSource?: 'auto' | 'manual' | 'scroll';
+      sessionId?: string;
+    },
+  ): Promise<MessageReadReceipt[]> {
+    try {
+      const receipts: MessageReadReceipt[] = [];
+
+      // 이미 읽은 메시지들 확인
+      const existingReceipts = await this.repository.find({
+        where: {
+          messageId: messageIds.length > 0 ? (messageIds as any) : undefined,
+          userId,
+        },
+      });
+
+      const existingMessageIds = existingReceipts.map((r) => r.messageId);
+      const newMessageIds = messageIds.filter(
+        (id) => !existingMessageIds.includes(id),
+      );
+
+      if (newMessageIds.length === 0) {
+        this.logger.debug(
+          `All messages already read by user: userId=${userId}`,
+        );
+        return existingReceipts;
+      }
+
+      // 새로운 메시지들 정보 조회
+      const messages = await this.messageRepository.find({
+        where: {
+          id: newMessageIds.length > 0 ? (newMessageIds as any) : undefined,
+        },
+        relations: ['planet'],
+      });
+
+      // 일괄 읽음 영수증 생성
+      const newReceipts = messages.map((message) =>
+        this.repository.create({
+          messageId: message.id,
+          userId,
+          planetId: message.planetId,
+          isRead: true,
+          readAt: new Date(),
+          deviceType: options?.deviceType,
+          userAgent: options?.userAgent,
+          metadata: {
+            readSource: options?.readSource || 'auto',
+            sessionId: options?.sessionId,
+            batchReadCount: newMessageIds.length,
+          },
+        }),
+      );
+
+      const savedReceipts = await this.repository.save(newReceipts);
+      receipts.push(...existingReceipts, ...savedReceipts);
+
+      // 각 메시지의 읽음 카운트 업데이트
+      await Promise.all(
+        newMessageIds.map((messageId) =>
+          this.updateMessageReadCount(messageId),
+        ),
+      );
+
+      this.logger.log(
+        `Batch read processing completed: ${newMessageIds.length} messages, userId=${userId}`,
+      );
+
+      return receipts;
+    } catch (error) {
+      this.logger.error(
+        `Failed to batch mark messages as read: userId=${userId}`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Planet의 마지막 읽은 메시지 이후의 모든 메시지를 읽음 처리
+   */
+  async markAllMessagesAsReadInPlanet(
+    planetId: number,
+    userId: number,
+    options?: {
+      deviceType?: string;
+      userAgent?: string;
+      sessionId?: string;
+    },
+  ): Promise<{ processedCount: number; receipts: MessageReadReceipt[] }> {
+    try {
+      // Planet의 마지막 읽은 메시지 찾기
+      const lastReadReceipt = await this.repository.findOne({
+        where: { planetId, userId },
+        order: { readAt: 'DESC' },
+      });
+
+      // 마지막 읽은 메시지 이후의 모든 메시지 조회
+      const queryBuilder = this.messageRepository
+        .createQueryBuilder('message')
+        .where('message.planetId = :planetId', { planetId })
+        .andWhere('message.isDeleted = :isDeleted', { isDeleted: false });
+
+      if (lastReadReceipt) {
+        queryBuilder.andWhere('message.createdAt > :lastReadAt', {
+          lastReadAt: lastReadReceipt.readAt,
+        });
+      }
+
+      const unreadMessages = await queryBuilder.getMany();
+
+      if (unreadMessages.length === 0) {
+        return { processedCount: 0, receipts: [] };
+      }
+
+      const messageIds = unreadMessages.map((m) => m.id);
+      const receipts = await this.markMultipleMessagesAsRead(
+        messageIds,
+        userId,
+        {
+          ...options,
+          readSource: 'auto',
+        },
+      );
+
+      this.logger.log(
+        `All messages in planet marked as read: planetId=${planetId}, userId=${userId}, count=${receipts.length}`,
+      );
+
+      return { processedCount: receipts.length, receipts };
+    } catch (error) {
+      this.logger.error(
+        `Failed to mark all messages as read in planet: planetId=${planetId}, userId=${userId}`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Planet의 읽지 않은 메시지 카운트 조회
+   */
+  async getUnreadCountInPlanet(
+    planetId: number,
+    userId: number,
+  ): Promise<number> {
+    try {
+      // Planet의 모든 메시지 조회 (삭제되지 않은 것만)
+      const totalMessagesQuery = this.messageRepository
+        .createQueryBuilder('message')
+        .where('message.planetId = :planetId', { planetId })
+        .andWhere('message.isDeleted = :isDeleted', { isDeleted: false })
+        .getCount();
+
+      // 사용자가 읽은 메시지 조회
+      const readMessagesQuery = this.repository
+        .createQueryBuilder('receipt')
+        .where('receipt.planetId = :planetId', { planetId })
+        .andWhere('receipt.userId = :userId', { userId })
+        .andWhere('receipt.isRead = :isRead', { isRead: true })
+        .getCount();
+
+      const [totalMessages, readMessages] = await Promise.all([
+        totalMessagesQuery,
+        readMessagesQuery,
+      ]);
+
+      return Math.max(0, totalMessages - readMessages);
+    } catch (error) {
+      this.logger.error(
+        `Failed to get unread count: planetId=${planetId}, userId=${userId}`,
+        error,
+      );
+      return 0;
+    }
+  }
+
+  /**
+   * 사용자의 모든 Planet별 읽지 않은 메시지 카운트 조회
+   */
+  async getUnreadCountsByUser(userId: number): Promise<PlanetReadStatus[]> {
+    try {
+      // 사용자가 접근할 수 있는 Planet 조회
+      const accessiblePlanets = await this.getAccessiblePlanets(userId);
+
+      const results: PlanetReadStatus[] = [];
+
+      for (const planet of accessiblePlanets) {
+        // 각 Planet별 읽지 않은 카운트 계산
+        const unreadCount = await this.getUnreadCountInPlanet(
+          planet.id,
+          userId,
+        );
+
+        // 마지막 읽은 메시지 정보
+        const lastReadReceipt = await this.repository.findOne({
+          where: { planetId: planet.id, userId },
+          order: { readAt: 'DESC' },
+        });
+
+        // Planet의 총 메시지 수
+        const totalMessages = await this.messageRepository.count({
+          where: {
+            planetId: planet.id,
+            isDeleted: false,
+          },
+        });
+
+        results.push({
+          planetId: planet.id,
+          planetName: planet.name,
+          lastReadMessageId: lastReadReceipt?.messageId || null,
+          lastReadAt: lastReadReceipt?.readAt || null,
+          unreadCount,
+          totalMessages,
+        });
+      }
+
+      return results;
+    } catch (error) {
+      this.logger.error(
+        `Failed to get unread counts by user: userId=${userId}`,
+        error,
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Planet의 메시지별 읽음 상태 통계
+   */
+  async getReadStatsByMessage(messageId: number): Promise<{
+    messageId: number;
+    totalReaders: number;
+    readCount: number;
+    unreadCount: number;
+    readPercentage: number;
+    readers: UserReadStatus[];
+  }> {
+    try {
+      // 메시지 정보 조회
+      const message = await this.messageRepository.findOne({
+        where: { id: messageId },
+        relations: ['planet', 'planet.travel'],
+      });
+
+      if (!message) {
+        throw new Error(`Message not found: ${messageId}`);
+      }
+
+      // Planet의 모든 사용자 조회
+      const planetUsers = await this.getPlanetUsers(message.planetId);
+      const totalReaders = planetUsers.length;
+
+      // 메시지를 읽은 사용자들 조회
+      const readReceipts = await this.repository.find({
+        where: { messageId, isRead: true },
+        relations: ['user'],
+      });
+
+      const readCount = readReceipts.length;
+      const unreadCount = Math.max(0, totalReaders - readCount);
+      const readPercentage =
+        totalReaders > 0 ? Math.round((readCount / totalReaders) * 100) : 0;
+
+      // 읽은 사용자들 정보
+      const readers: UserReadStatus[] = readReceipts.map((receipt) => ({
+        userId: receipt.userId,
+        userName: receipt.user?.name || 'Unknown User',
+        lastReadMessageId: messageId,
+        lastReadAt: receipt.readAt,
+        unreadCount: 0, // 이 메시지는 읽었으므로
+      }));
+
+      return {
+        messageId,
+        totalReaders,
+        readCount,
+        unreadCount,
+        readPercentage,
+        readers,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to get read stats by message: messageId=${messageId}`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Planet의 읽음 상태 통계
+   */
+  async getReadStatsByPlanet(planetId: number): Promise<ReadReceiptStats> {
+    try {
+      const [totalMessages, readMessages] = await Promise.all([
+        this.messageRepository.count({
+          where: { planetId, isDeleted: false },
+        }),
+        this.repository.count({
+          where: { planetId, isRead: true },
+        }),
+      ]);
+
+      const unreadMessages = Math.max(0, totalMessages - readMessages);
+      const readPercentage =
+        totalMessages > 0
+          ? Math.round((readMessages / totalMessages) * 100)
+          : 0;
+
+      return {
+        totalMessages,
+        readMessages,
+        unreadMessages,
+        readPercentage,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to get read stats by planet: planetId=${planetId}`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 메시지의 읽음 카운트 업데이트 (Message 엔티티)
+   */
+  private async updateMessageReadCount(messageId: number): Promise<void> {
+    try {
+      const readCount = await this.repository.count({
+        where: { messageId, isRead: true },
+      });
+
+      await this.messageRepository.update(messageId, {
+        readCount,
+        firstReadAt: readCount === 1 ? new Date() : undefined,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to update message read count: messageId=${messageId}`,
+        error,
+      );
+    }
+  }
+
+  /**
+   * 사용자가 접근할 수 있는 Planet 목록 조회
+   */
+  private async getAccessiblePlanets(userId: number): Promise<any[]> {
+    // GROUP Planet들 (Travel 멤버)
+    const groupPlanets = await this.repository.manager
+      .createQueryBuilder()
+      .select('planet')
+      .from('planets', 'planet')
+      .innerJoin('travels', 'travel', 'planet.travelId = travel.id')
+      .innerJoin(
+        'travel_users',
+        'travelUser',
+        'travel.id = travelUser.travelId',
+      )
+      .where('planet.type = :groupType', { groupType: PlanetType.GROUP })
+      .andWhere('planet.isActive = :isActive', { isActive: true })
+      .andWhere('travelUser.userId = :userId', { userId })
+      .andWhere('travelUser.status = :status', {
+        status: TravelUserStatus.ACTIVE,
+      })
+      .getMany();
+
+    // DIRECT Planet들 (직접 참여)
+    const directPlanets = await this.repository.manager
+      .createQueryBuilder()
+      .select('planet')
+      .from('planets', 'planet')
+      .innerJoin(
+        'planet_users',
+        'planetUser',
+        'planet.id = planetUser.planetId',
+      )
+      .where('planet.type = :directType', { directType: PlanetType.DIRECT })
+      .andWhere('planet.isActive = :isActive', { isActive: true })
+      .andWhere('planetUser.userId = :userId', { userId })
+      .andWhere('planetUser.status = :status', {
+        status: PlanetUserStatus.ACTIVE,
+      })
+      .getMany();
+
+    return [...groupPlanets, ...directPlanets];
+  }
+
+  /**
+   * Planet의 모든 사용자 조회
+   */
+  private async getPlanetUsers(planetId: number): Promise<any[]> {
+    const planet = await this.repository.manager.findOne(Planet, {
+      where: { id: planetId },
+      relations: ['travel'],
+    });
+
+    if (!planet) return [];
+
+    if (planet.type === PlanetType.GROUP) {
+      // GROUP Planet: Travel의 모든 멤버
+      return await this.repository.manager.find(TravelUser, {
+        where: {
+          travelId: planet.travelId,
+          status: TravelUserStatus.ACTIVE,
+        },
+        relations: ['user'],
+      });
+    } else {
+      // DIRECT Planet: Planet의 직접 멤버
+      return await this.repository.manager.find(PlanetUser, {
+        where: {
+          planetId: planet.id,
+          status: PlanetUserStatus.ACTIVE,
+        },
+        relations: ['user'],
+      });
+    }
+  }
+}
