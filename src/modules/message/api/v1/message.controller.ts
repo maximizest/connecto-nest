@@ -6,15 +6,21 @@ import {
   Crud,
 } from '@foryourdev/nestjs-crud';
 import {
+  Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Logger,
   NotFoundException,
+  Param,
+  Post,
+  Put,
   Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { AuthGuard } from '../../../../guards/auth.guard';
@@ -147,6 +153,7 @@ export class MessageController {
     private readonly travelUserRepository: Repository<TravelUser>,
     @InjectRepository(PlanetUser)
     private readonly planetUserRepository: Repository<PlanetUser>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -862,5 +869,379 @@ export class MessageController {
       .getMany();
 
     return [...groupPlanets, ...directPlanets];
+  }
+
+  /**
+   * 메시지 편집 전용 API
+   * PUT /api/v1/messages/:id/edit
+   */
+  @Put(':id/edit')
+  @UseGuards(AuthGuard)
+  async editMessage(
+    @Param('id') messageId: number,
+    @Body() editData: { content: string },
+    @Request() req: any,
+  ) {
+    const user: User = req.user;
+
+    try {
+      // 메시지 조회 및 권한 확인
+      const message = await this.messageRepository.findOne({
+        where: { id: messageId },
+        relations: ['sender', 'planet', 'planet.travel'],
+      });
+
+      if (!message) {
+        throw new NotFoundException('메시지를 찾을 수 없습니다.');
+      }
+
+      // Planet 접근 권한 확인
+      await this.validatePlanetAccess(message.planetId, user.id);
+
+      // 편집 권한 확인
+      if (message.senderId !== user.id) {
+        throw new ForbiddenException('메시지 편집 권한이 없습니다.');
+      }
+
+      if (message.isDeleted) {
+        throw new ForbiddenException('삭제된 메시지는 편집할 수 없습니다.');
+      }
+
+      if (!message.isTextMessage()) {
+        throw new ForbiddenException('텍스트 메시지만 편집 가능합니다.');
+      }
+
+      if (!message.canEdit(user.id)) {
+        throw new ForbiddenException('메시지 편집 시간이 만료되었습니다.');
+      }
+
+      // 내용이 동일하면 수정하지 않음
+      if (editData.content === message.content) {
+        return {
+          success: true,
+          message: '메시지가 이미 동일한 내용입니다.',
+          data: message,
+        };
+      }
+
+      // 편집 처리
+      if (!message.isEdited) {
+        message.originalContent = message.content; // 원본 보존
+      }
+
+      message.content = editData.content;
+      message.isEdited = true;
+      message.editedAt = new Date();
+      message.updateSearchableText();
+
+      // 메시지 저장
+      const updatedMessage = await this.messageRepository.save(message);
+
+      // 실시간 편집 알림 이벤트 발생
+      this.eventEmitter.emit('message.edited', {
+        messageId: updatedMessage.id,
+        planetId: updatedMessage.planetId,
+        content: updatedMessage.content,
+        originalContent: updatedMessage.originalContent,
+        isEdited: updatedMessage.isEdited,
+        editedAt: updatedMessage.editedAt,
+        editedBy: { id: user.id, name: user.name },
+      });
+
+      this.logger.log(`Message edited: id=${messageId}, senderId=${user.id}`);
+
+      return {
+        success: true,
+        message: '메시지가 성공적으로 편집되었습니다.',
+        data: {
+          id: updatedMessage.id,
+          content: updatedMessage.content,
+          originalContent: updatedMessage.originalContent,
+          isEdited: updatedMessage.isEdited,
+          editedAt: updatedMessage.editedAt,
+          searchableText: updatedMessage.searchableText,
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        `Message edit failed: id=${messageId}, user=${user.id}, error=${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 메시지 삭제 전용 API
+   * DELETE /api/v1/messages/:id
+   */
+  @Delete(':id')
+  @UseGuards(AuthGuard)
+  async deleteMessage(@Param('id') messageId: number, @Request() req: any) {
+    const user: User = req.user;
+
+    try {
+      // 메시지 조회 및 권한 확인
+      const message = await this.messageRepository.findOne({
+        where: { id: messageId },
+        relations: ['sender', 'planet', 'planet.travel'],
+      });
+
+      if (!message) {
+        throw new NotFoundException('메시지를 찾을 수 없습니다.');
+      }
+
+      // Planet 접근 권한 확인
+      await this.validatePlanetAccess(message.planetId, user.id);
+
+      // 이미 삭제된 메시지 확인
+      if (message.isDeleted) {
+        return {
+          success: true,
+          message: '이미 삭제된 메시지입니다.',
+          data: { id: messageId, isDeleted: true },
+        };
+      }
+
+      // 삭제 권한 확인 (발신자 또는 Planet 관리자)
+      const hasDeletePermission = await this.checkDeletePermission(
+        message,
+        user.id,
+      );
+
+      if (!hasDeletePermission) {
+        throw new ForbiddenException('메시지 삭제 권한이 없습니다.');
+      }
+
+      // 소프트 삭제 처리
+      message.softDelete(user.id);
+
+      // 메시지 저장
+      const deletedMessage = await this.messageRepository.save(message);
+
+      // 실시간 삭제 알림 이벤트 발생
+      this.eventEmitter.emit('message.deleted', {
+        messageId: deletedMessage.id,
+        planetId: deletedMessage.planetId,
+        isDeleted: deletedMessage.isDeleted,
+        deletedAt: deletedMessage.deletedAt,
+        deletedBy: { id: user.id, name: user.name },
+      });
+
+      this.logger.log(`Message deleted: id=${messageId}, deletedBy=${user.id}`);
+
+      return {
+        success: true,
+        message: '메시지가 성공적으로 삭제되었습니다.',
+        data: {
+          id: deletedMessage.id,
+          isDeleted: deletedMessage.isDeleted,
+          deletedAt: deletedMessage.deletedAt,
+          deletedBy: deletedMessage.deletedBy,
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        `Message delete failed: id=${messageId}, user=${user.id}, error=${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 메시지 편집 기록 조회 API
+   * GET /api/v1/messages/:id/edit-history
+   */
+  @Get(':id/edit-history')
+  @UseGuards(AuthGuard)
+  async getEditHistory(@Param('id') messageId: number, @Request() req: any) {
+    const user: User = req.user;
+
+    try {
+      const message = await this.messageRepository.findOne({
+        where: { id: messageId },
+        relations: ['sender', 'planet'],
+      });
+
+      if (!message) {
+        throw new NotFoundException('메시지를 찾을 수 없습니다.');
+      }
+
+      // Planet 접근 권한 확인
+      await this.validatePlanetAccess(message.planetId, user.id);
+
+      if (!message.isEdited) {
+        return {
+          success: true,
+          message: '편집 기록이 없습니다.',
+          data: {
+            id: messageId,
+            isEdited: false,
+            editHistory: [],
+          },
+        };
+      }
+
+      return {
+        success: true,
+        message: '편집 기록을 가져왔습니다.',
+        data: {
+          id: messageId,
+          isEdited: message.isEdited,
+          editedAt: message.editedAt,
+          editHistory: [
+            {
+              version: 1,
+              content: message.originalContent,
+              timestamp: message.createdAt,
+              isOriginal: true,
+            },
+            {
+              version: 2,
+              content: message.content,
+              timestamp: message.editedAt,
+              isOriginal: false,
+            },
+          ],
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        `Edit history retrieval failed: id=${messageId}, user=${user.id}, error=${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 메시지 복구 API (소프트 삭제된 메시지 복구)
+   * POST /api/v1/messages/:id/restore
+   */
+  @Post(':id/restore')
+  @UseGuards(AuthGuard)
+  async restoreMessage(@Param('id') messageId: number, @Request() req: any) {
+    const user: User = req.user;
+
+    try {
+      const message = await this.messageRepository.findOne({
+        where: { id: messageId },
+        relations: ['sender', 'planet', 'planet.travel'],
+      });
+
+      if (!message) {
+        throw new NotFoundException('메시지를 찾을 수 없습니다.');
+      }
+
+      // Planet 접근 권한 확인
+      await this.validatePlanetAccess(message.planetId, user.id);
+
+      if (!message.isDeleted) {
+        return {
+          success: true,
+          message: '이미 활성화된 메시지입니다.',
+          data: { id: messageId, isDeleted: false },
+        };
+      }
+
+      // 복구 권한 확인 (원래 발신자 또는 Planet 관리자)
+      const hasRestorePermission = await this.checkDeletePermission(
+        message,
+        user.id,
+      );
+
+      if (!hasRestorePermission) {
+        throw new ForbiddenException('메시지 복구 권한이 없습니다.');
+      }
+
+      // 복구 처리 (24시간 내에만 가능)
+      const deletedHoursAgo =
+        (Date.now() - (message.deletedAt?.getTime() || 0)) / (1000 * 60 * 60);
+
+      if (deletedHoursAgo > 24) {
+        throw new ForbiddenException(
+          '삭제된 지 24시간이 넘은 메시지는 복구할 수 없습니다.',
+        );
+      }
+
+      // 복구 처리
+      message.isDeleted = false;
+      message.deletedAt = undefined;
+      message.deletedBy = undefined;
+
+      const restoredMessage = await this.messageRepository.save(message);
+
+      // 실시간 복구 알림 이벤트 발생
+      this.eventEmitter.emit('message.restored', {
+        messageId: restoredMessage.id,
+        planetId: restoredMessage.planetId,
+        content: restoredMessage.content,
+        isDeleted: restoredMessage.isDeleted,
+        restoredBy: { id: user.id, name: user.name },
+        restoredAt: new Date(),
+      });
+
+      this.logger.log(
+        `Message restored: id=${messageId}, restoredBy=${user.id}`,
+      );
+
+      return {
+        success: true,
+        message: '메시지가 성공적으로 복구되었습니다.',
+        data: {
+          id: restoredMessage.id,
+          isDeleted: restoredMessage.isDeleted,
+          content: restoredMessage.content,
+          restoredBy: user.id,
+          restoredAt: new Date(),
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        `Message restore failed: id=${messageId}, user=${user.id}, error=${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 삭제 권한 확인 (발신자 또는 Planet 관리자)
+   */
+  private async checkDeletePermission(
+    message: Message,
+    userId: number,
+  ): Promise<boolean> {
+    // 발신자는 항상 삭제 가능
+    if (message.senderId === userId) {
+      return true;
+    }
+
+    // Planet 관리자 권한 확인
+    if (message.planet.type === PlanetType.GROUP) {
+      // GROUP Planet: Travel 관리자 확인
+      const travelUser = await this.travelUserRepository.findOne({
+        where: {
+          userId,
+          travelId: message.planet.travelId,
+          status: TravelUserStatus.ACTIVE,
+        },
+      });
+
+      return !!(
+        travelUser &&
+        (travelUser.role === 'owner' || travelUser.role === 'admin')
+      );
+    } else if (message.planet.type === PlanetType.DIRECT) {
+      // DIRECT Planet: Planet 생성자만 관리자 권한
+      const planetUser = await this.planetUserRepository.findOne({
+        where: {
+          userId,
+          planetId: message.planetId,
+          status: PlanetUserStatus.ACTIVE,
+        },
+      });
+
+      return !!(planetUser && planetUser.role === 'creator');
+    }
+
+    return false;
   }
 }

@@ -73,6 +73,19 @@ interface UpdateLocationDto {
   planetId?: number;
 }
 
+interface EditMessageDto {
+  messageId: number;
+  content: string;
+}
+
+interface DeleteMessageDto {
+  messageId: number;
+}
+
+interface RestoreMessageDto {
+  messageId: number;
+}
+
 // WebSocket 예외 필터
 @Injectable()
 class WebSocketExceptionFilter {
@@ -561,8 +574,263 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /**
+   * 메시지 편집 이벤트 핸들러
+   */
+  @SubscribeMessage('message:edit')
+  @MessageSendRateLimit()
+  @UseGuards(WebSocketAuthGuard, WebSocketRateLimitGuard)
+  async handleEditMessage(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: EditMessageDto,
+  ) {
+    try {
+      const { messageId, content } = payload;
+
+      this.logger.debug(
+        `Message edit request: messageId=${messageId}, userId=${client.user.id}`,
+      );
+
+      // 메시지 조회
+      const message = await this.messageRepository.findOne({
+        where: { id: messageId },
+        relations: ['sender', 'planet', 'planet.travel'],
+      });
+
+      if (!message) {
+        client.emit('error', { message: '메시지를 찾을 수 없습니다.' });
+        return;
+      }
+
+      // 편집 권한 확인
+      if (message.senderId !== client.user.id) {
+        client.emit('error', { message: '메시지 편집 권한이 없습니다.' });
+        return;
+      }
+
+      if (message.isDeleted) {
+        client.emit('error', {
+          message: '삭제된 메시지는 편집할 수 없습니다.',
+        });
+        return;
+      }
+
+      if (!message.canEdit(client.user.id)) {
+        client.emit('error', { message: '메시지 편집 시간이 만료되었습니다.' });
+        return;
+      }
+
+      // 편집 처리
+      if (!message.isEdited) {
+        message.originalContent = message.content;
+      }
+
+      message.content = content;
+      message.isEdited = true;
+      message.editedAt = new Date();
+      message.updateSearchableText();
+
+      // 메시지 저장
+      const updatedMessage = await this.messageRepository.save(message);
+
+      // Planet 방에 브로드캐스트
+      const roomId = `planet_${message.planetId}`;
+      this.server.to(roomId).emit('message:edited', {
+        messageId: updatedMessage.id,
+        content: updatedMessage.content,
+        originalContent: updatedMessage.originalContent,
+        isEdited: updatedMessage.isEdited,
+        editedAt: updatedMessage.editedAt,
+        editedBy: {
+          id: client.user.id,
+          name: client.user.name,
+        },
+        timestamp: new Date().toISOString(),
+      });
+
+      this.logger.log(
+        `Message edited: id=${messageId}, userId=${client.user.id}`,
+      );
+    } catch (error) {
+      this.logger.error('Message edit failed:', error);
+      client.emit('error', { message: '메시지 편집에 실패했습니다.' });
+    }
+  }
+
+  /**
+   * 메시지 삭제 이벤트 핸들러
+   */
+  @SubscribeMessage('message:delete')
+  @MessageSendRateLimit()
+  @UseGuards(WebSocketAuthGuard, WebSocketRateLimitGuard)
+  async handleDeleteMessage(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: DeleteMessageDto,
+  ) {
+    try {
+      const { messageId } = payload;
+
+      this.logger.debug(
+        `Message delete request: messageId=${messageId}, userId=${client.user.id}`,
+      );
+
+      // 메시지 조회
+      const message = await this.messageRepository.findOne({
+        where: { id: messageId },
+        relations: ['sender', 'planet', 'planet.travel'],
+      });
+
+      if (!message) {
+        client.emit('error', { message: '메시지를 찾을 수 없습니다.' });
+        return;
+      }
+
+      if (message.isDeleted) {
+        client.emit('error', { message: '이미 삭제된 메시지입니다.' });
+        return;
+      }
+
+      // 삭제 권한 확인 (발신자 또는 관리자)
+      const hasDeletePermission = await this.checkDeletePermission(
+        message,
+        client.user.id,
+      );
+
+      if (!hasDeletePermission) {
+        client.emit('error', { message: '메시지 삭제 권한이 없습니다.' });
+        return;
+      }
+
+      // 소프트 삭제 처리
+      message.softDelete(client.user.id);
+      const deletedMessage = await this.messageRepository.save(message);
+
+      // Planet 방에 브로드캐스트
+      const roomId = `planet_${message.planetId}`;
+      this.server.to(roomId).emit('message:deleted', {
+        messageId: deletedMessage.id,
+        isDeleted: deletedMessage.isDeleted,
+        deletedAt: deletedMessage.deletedAt,
+        deletedBy: {
+          id: client.user.id,
+          name: client.user.name,
+        },
+        timestamp: new Date().toISOString(),
+      });
+
+      this.logger.log(
+        `Message deleted: id=${messageId}, userId=${client.user.id}`,
+      );
+    } catch (error) {
+      this.logger.error('Message delete failed:', error);
+      client.emit('error', { message: '메시지 삭제에 실패했습니다.' });
+    }
+  }
+
+  /**
+   * 메시지 복구 이벤트 핸들러
+   */
+  @SubscribeMessage('message:restore')
+  @MessageSendRateLimit()
+  @UseGuards(WebSocketAuthGuard, WebSocketRateLimitGuard)
+  async handleRestoreMessage(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: RestoreMessageDto,
+  ) {
+    try {
+      const { messageId } = payload;
+
+      this.logger.debug(
+        `Message restore request: messageId=${messageId}, userId=${client.user.id}`,
+      );
+
+      // 메시지 조회
+      const message = await this.messageRepository.findOne({
+        where: { id: messageId },
+        relations: ['sender', 'planet', 'planet.travel'],
+      });
+
+      if (!message) {
+        client.emit('error', { message: '메시지를 찾을 수 없습니다.' });
+        return;
+      }
+
+      if (!message.isDeleted) {
+        client.emit('error', { message: '이미 활성화된 메시지입니다.' });
+        return;
+      }
+
+      // 복구 권한 확인
+      const hasRestorePermission = await this.checkDeletePermission(
+        message,
+        client.user.id,
+      );
+
+      if (!hasRestorePermission) {
+        client.emit('error', { message: '메시지 복구 권한이 없습니다.' });
+        return;
+      }
+
+      // 복구 시간 제한 확인 (24시간)
+      const deletedHoursAgo =
+        (Date.now() - (message.deletedAt?.getTime() || 0)) / (1000 * 60 * 60);
+
+      if (deletedHoursAgo > 24) {
+        client.emit('error', {
+          message: '삭제된 지 24시간이 넘은 메시지는 복구할 수 없습니다.',
+        });
+        return;
+      }
+
+      // 복구 처리
+      message.isDeleted = false;
+      message.deletedAt = undefined;
+      message.deletedBy = undefined;
+
+      const restoredMessage = await this.messageRepository.save(message);
+
+      // Planet 방에 브로드캐스트
+      const roomId = `planet_${message.planetId}`;
+      this.server.to(roomId).emit('message:restored', {
+        messageId: restoredMessage.id,
+        content: restoredMessage.content,
+        isDeleted: restoredMessage.isDeleted,
+        restoredBy: {
+          id: client.user.id,
+          name: client.user.name,
+        },
+        restoredAt: new Date(),
+        timestamp: new Date().toISOString(),
+      });
+
+      this.logger.log(
+        `Message restored: id=${messageId}, userId=${client.user.id}`,
+      );
+    } catch (error) {
+      this.logger.error('Message restore failed:', error);
+      client.emit('error', { message: '메시지 복구에 실패했습니다.' });
+    }
+  }
+
+  /**
    * 헬퍼 메서드들
    */
+
+  /**
+   * 삭제/복구 권한 확인 (발신자 또는 Planet 관리자)
+   */
+  private async checkDeletePermission(
+    message: Message,
+    userId: number,
+  ): Promise<boolean> {
+    // 발신자는 항상 삭제 가능
+    if (message.senderId === userId) {
+      return true;
+    }
+
+    // 현재는 발신자만 삭제 가능하도록 제한
+    // TODO: 향후 Planet 관리자 권한 추가 시 구현
+    return false;
+  }
 
   /**
    * 파일 확장자에서 MIME 타입 추출
