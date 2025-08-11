@@ -1,28 +1,22 @@
 import { CrudExceptionFilter } from '@foryourdev/nestjs-crud';
-import {
-  INestApplication,
-  ValidationPipe,
-  VersioningType,
-} from '@nestjs/common';
+import { INestApplication, VersioningType } from '@nestjs/common';
 import { ENV_KEYS, HTTP_CONSTANTS } from '../constants/app.constants';
+import { GlobalExceptionFilter } from '../filters/global-exception.filter';
 import { LoggingInterceptor } from '../interceptors/logging.interceptor';
+import { globalValidationPipe } from '../pipes/validation.pipe';
 
 /**
  * NestJS 애플리케이션의 공통 설정을 적용하는 함수
  */
 export function setupGlobalConfiguration(app: INestApplication): void {
-  // 전역 파이프 설정
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: false,
-      forbidNonWhitelisted: false,
-      transform: true,
-      stopAtFirstError: true,
-    }),
-  );
+  // 전역 파이프 설정 (강화된 검증)
+  app.useGlobalPipes(globalValidationPipe);
 
-  // 전역 필터 설정
-  app.useGlobalFilters(new CrudExceptionFilter());
+  // 전역 필터 설정 (순서 중요: 구체적인 필터부터)
+  app.useGlobalFilters(
+    new GlobalExceptionFilter(), // 가장 일반적인 필터 (최우선)
+    new CrudExceptionFilter(), // CRUD 전용 필터
+  );
 
   // 전역 인터셉터 설정 (로깅)
   app.useGlobalInterceptors(new LoggingInterceptor());

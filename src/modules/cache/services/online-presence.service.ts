@@ -12,6 +12,30 @@ export interface OnlineUserInfo {
   socketIds: string[];
   currentTravelId?: number;
   currentPlanetId?: number;
+  deviceType?: string;
+  userAgent?: string;
+  isTyping?: boolean;
+  lastActivity?: Date;
+}
+
+export interface TravelOnlineStatus {
+  travelId: number;
+  travelName: string;
+  onlineCount: number;
+  totalMembers: number;
+  onlineUsers: OnlineUserInfo[];
+  planetStatuses: PlanetOnlineStatus[];
+  lastUpdated: Date;
+}
+
+export interface PlanetOnlineStatus {
+  planetId: number;
+  planetName: string;
+  travelId?: number;
+  onlineCount: number;
+  totalMembers: number;
+  onlineUsers: OnlineUserInfo[];
+  lastUpdated: Date;
 }
 
 export interface UserActivity {
@@ -42,6 +66,10 @@ export class OnlinePresenceService {
   private readonly GLOBAL_STATS_KEY = 'global:stats';
   private readonly TRAVEL_ONLINE_COUNT_KEY = 'travel:online:count';
   private readonly PLANET_ONLINE_COUNT_KEY = 'planet:online:count';
+  private readonly TRAVEL_ONLINE_USERS_KEY = 'travel:online:users';
+  private readonly PLANET_ONLINE_USERS_KEY = 'planet:online:users';
+  private readonly TRAVEL_STATUS_KEY = 'travel:status';
+  private readonly PLANET_STATUS_KEY = 'planet:status';
 
   // 캐시 만료 시간 (초)
   private readonly ONLINE_USER_TTL = 300; // 5분
@@ -491,6 +519,442 @@ export class OnlinePresenceService {
       lastSeenAt: user.lastSeenAt || new Date(),
       connectedAt: new Date(),
       socketIds,
+      lastActivity: new Date(),
     };
+  }
+
+  // ==============================
+  // Travel/Planet 온라인 상태 관리
+  // ==============================
+
+  /**
+   * Travel에 온라인 사용자 추가
+   */
+  async addUserToTravel(travelId: number, userId: number): Promise<void> {
+    try {
+      const key = `${this.TRAVEL_ONLINE_USERS_KEY}:${travelId}`;
+      const onlineUsers =
+        ((await this.redisService.getJson(key)) as number[]) || [];
+
+      if (!onlineUsers.includes(userId)) {
+        onlineUsers.push(userId);
+        await this.redisService.setJson(
+          key,
+          onlineUsers,
+          this.ONLINE_USERS_TTL,
+        );
+
+        // Travel 온라인 카운트 업데이트
+        await this.updateTravelOnlineCount(travelId, onlineUsers.length);
+      }
+
+      this.logger.debug(
+        `User ${userId} added to travel ${travelId} online list`,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to add user to travel ${travelId}: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * Travel에서 온라인 사용자 제거
+   */
+  async removeUserFromTravel(travelId: number, userId: number): Promise<void> {
+    try {
+      const key = `${this.TRAVEL_ONLINE_USERS_KEY}:${travelId}`;
+      const onlineUsers =
+        ((await this.redisService.getJson(key)) as number[]) || [];
+      const updatedUsers = onlineUsers.filter((id) => id !== userId);
+
+      await this.redisService.setJson(key, updatedUsers, this.ONLINE_USERS_TTL);
+
+      // Travel 온라인 카운트 업데이트
+      await this.updateTravelOnlineCount(travelId, updatedUsers.length);
+
+      this.logger.debug(
+        `User ${userId} removed from travel ${travelId} online list`,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to remove user from travel ${travelId}: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * Planet에 온라인 사용자 추가
+   */
+  async addUserToPlanet(planetId: number, userId: number): Promise<void> {
+    try {
+      const key = `${this.PLANET_ONLINE_USERS_KEY}:${planetId}`;
+      const onlineUsers =
+        ((await this.redisService.getJson(key)) as number[]) || [];
+
+      if (!onlineUsers.includes(userId)) {
+        onlineUsers.push(userId);
+        await this.redisService.setJson(
+          key,
+          onlineUsers,
+          this.ONLINE_USERS_TTL,
+        );
+
+        // Planet 온라인 카운트 업데이트
+        await this.updatePlanetOnlineCount(planetId, onlineUsers.length);
+      }
+
+      this.logger.debug(
+        `User ${userId} added to planet ${planetId} online list`,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to add user to planet ${planetId}: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * Planet에서 온라인 사용자 제거
+   */
+  async removeUserFromPlanet(planetId: number, userId: number): Promise<void> {
+    try {
+      const key = `${this.PLANET_ONLINE_USERS_KEY}:${planetId}`;
+      const onlineUsers =
+        ((await this.redisService.getJson(key)) as number[]) || [];
+      const updatedUsers = onlineUsers.filter((id) => id !== userId);
+
+      await this.redisService.setJson(key, updatedUsers, this.ONLINE_USERS_TTL);
+
+      // Planet 온라인 카운트 업데이트
+      await this.updatePlanetOnlineCount(planetId, updatedUsers.length);
+
+      this.logger.debug(
+        `User ${userId} removed from planet ${planetId} online list`,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to remove user from planet ${planetId}: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * Travel의 온라인 사용자 목록 조회
+   */
+  async getTravelOnlineUsers(travelId: number): Promise<number[]> {
+    try {
+      const key = `${this.TRAVEL_ONLINE_USERS_KEY}:${travelId}`;
+      return ((await this.redisService.getJson(key)) as number[]) || [];
+    } catch (error) {
+      this.logger.warn(
+        `Failed to get travel online users ${travelId}: ${error.message}`,
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Planet의 온라인 사용자 목록 조회
+   */
+  async getPlanetOnlineUsers(planetId: number): Promise<number[]> {
+    try {
+      const key = `${this.PLANET_ONLINE_USERS_KEY}:${planetId}`;
+      return ((await this.redisService.getJson(key)) as number[]) || [];
+    } catch (error) {
+      this.logger.warn(
+        `Failed to get planet online users ${planetId}: ${error.message}`,
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Travel 온라인 상태 조회 (상세 정보 포함)
+   */
+  async getTravelOnlineStatus(
+    travelId: number,
+    travelName: string,
+    totalMembers: number,
+  ): Promise<TravelOnlineStatus> {
+    try {
+      const onlineUserIds = await this.getTravelOnlineUsers(travelId);
+      const onlineUsers: OnlineUserInfo[] = [];
+
+      // 온라인 사용자 상세 정보 수집
+      for (const userId of onlineUserIds) {
+        const userInfo = await this.getUserOnlineInfo(userId);
+        if (userInfo && userInfo.currentTravelId === travelId) {
+          onlineUsers.push(userInfo);
+        }
+      }
+
+      return {
+        travelId,
+        travelName,
+        onlineCount: onlineUsers.length,
+        totalMembers,
+        onlineUsers,
+        planetStatuses: [], // 별도로 추가할 예정
+        lastUpdated: new Date(),
+      };
+    } catch (error) {
+      this.logger.warn(
+        `Failed to get travel online status ${travelId}: ${error.message}`,
+      );
+      return {
+        travelId,
+        travelName,
+        onlineCount: 0,
+        totalMembers,
+        onlineUsers: [],
+        planetStatuses: [],
+        lastUpdated: new Date(),
+      };
+    }
+  }
+
+  /**
+   * Planet 온라인 상태 조회 (상세 정보 포함)
+   */
+  async getPlanetOnlineStatus(
+    planetId: number,
+    planetName: string,
+    totalMembers: number,
+    travelId?: number,
+  ): Promise<PlanetOnlineStatus> {
+    try {
+      const onlineUserIds = await this.getPlanetOnlineUsers(planetId);
+      const onlineUsers: OnlineUserInfo[] = [];
+
+      // 온라인 사용자 상세 정보 수집
+      for (const userId of onlineUserIds) {
+        const userInfo = await this.getUserOnlineInfo(userId);
+        if (userInfo && userInfo.currentPlanetId === planetId) {
+          onlineUsers.push(userInfo);
+        }
+      }
+
+      return {
+        planetId,
+        planetName,
+        travelId,
+        onlineCount: onlineUsers.length,
+        totalMembers,
+        onlineUsers,
+        lastUpdated: new Date(),
+      };
+    } catch (error) {
+      this.logger.warn(
+        `Failed to get planet online status ${planetId}: ${error.message}`,
+      );
+      return {
+        planetId,
+        planetName,
+        travelId,
+        onlineCount: 0,
+        totalMembers,
+        onlineUsers: [],
+        lastUpdated: new Date(),
+      };
+    }
+  }
+
+  /**
+   * Travel의 모든 Planet 온라인 상태 조회
+   */
+  async getTravelWithPlanetsOnlineStatus(
+    travelId: number,
+    travelName: string,
+    totalMembers: number,
+    planets: { planetId: number; planetName: string; totalMembers: number }[],
+  ): Promise<TravelOnlineStatus> {
+    try {
+      const travelStatus = await this.getTravelOnlineStatus(
+        travelId,
+        travelName,
+        totalMembers,
+      );
+
+      // 각 Planet의 온라인 상태 조회
+      const planetStatuses: PlanetOnlineStatus[] = [];
+      for (const planet of planets) {
+        const planetStatus = await this.getPlanetOnlineStatus(
+          planet.planetId,
+          planet.planetName,
+          planet.totalMembers,
+          travelId,
+        );
+        planetStatuses.push(planetStatus);
+      }
+
+      travelStatus.planetStatuses = planetStatuses;
+      return travelStatus;
+    } catch (error) {
+      this.logger.warn(
+        `Failed to get travel with planets online status ${travelId}: ${error.message}`,
+      );
+      return {
+        travelId,
+        travelName,
+        onlineCount: 0,
+        totalMembers,
+        onlineUsers: [],
+        planetStatuses: [],
+        lastUpdated: new Date(),
+      };
+    }
+  }
+
+  /**
+   * 사용자 온라인 상태 업데이트 (확장된 정보 포함)
+   */
+  async updateUserOnlineStatus(
+    userId: number,
+    updates: Partial<OnlineUserInfo>,
+  ): Promise<void> {
+    try {
+      const currentInfo = await this.getUserOnlineInfo(userId);
+      if (currentInfo) {
+        const updatedInfo = {
+          ...currentInfo,
+          ...updates,
+          lastActivity: new Date(),
+        };
+        await this.setUserOnline(userId, updatedInfo);
+
+        this.logger.debug(`User ${userId} online status updated`);
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Failed to update user online status ${userId}: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * 사용자 타이핑 상태 설정
+   */
+  async setUserTyping(
+    userId: number,
+    planetId: number,
+    isTyping: boolean,
+  ): Promise<void> {
+    try {
+      await this.updateUserOnlineStatus(userId, {
+        isTyping,
+        currentPlanetId: planetId,
+        lastActivity: new Date(),
+      });
+
+      this.logger.debug(
+        `User ${userId} typing status set to ${isTyping} in planet ${planetId}`,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to set user typing status ${userId}: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * Planet의 타이핑 중인 사용자 목록 조회
+   */
+  async getPlanetTypingUsers(planetId: number): Promise<OnlineUserInfo[]> {
+    try {
+      const onlineUserIds = await this.getPlanetOnlineUsers(planetId);
+      const typingUsers: OnlineUserInfo[] = [];
+
+      for (const userId of onlineUserIds) {
+        const userInfo = await this.getUserOnlineInfo(userId);
+        if (
+          userInfo &&
+          userInfo.currentPlanetId === planetId &&
+          userInfo.isTyping
+        ) {
+          typingUsers.push(userInfo);
+        }
+      }
+
+      return typingUsers;
+    } catch (error) {
+      this.logger.warn(
+        `Failed to get planet typing users ${planetId}: ${error.message}`,
+      );
+      return [];
+    }
+  }
+
+  /**
+   * 온라인 상태 통계 수집
+   */
+  async collectOnlineStatistics(): Promise<{
+    globalOnlineCount: number;
+    activeTravelCount: number;
+    activePlanetCount: number;
+    averageUsersPerTravel: number;
+    averageUsersPerPlanet: number;
+  }> {
+    try {
+      const globalOnlineCount = await this.getOnlineUserCount();
+
+      // Redis에서 활성 Travel과 Planet 수 조회 (예시 구현)
+      const activeTravelKeys = await this.redisService.getKeys(
+        `${this.TRAVEL_ONLINE_USERS_KEY}:*`,
+      );
+      const activePlanetKeys = await this.redisService.getKeys(
+        `${this.PLANET_ONLINE_USERS_KEY}:*`,
+      );
+
+      const activeTravelCount = activeTravelKeys.length;
+      const activePlanetCount = activePlanetKeys.length;
+
+      return {
+        globalOnlineCount,
+        activeTravelCount,
+        activePlanetCount,
+        averageUsersPerTravel:
+          activeTravelCount > 0
+            ? Math.round(globalOnlineCount / activeTravelCount)
+            : 0,
+        averageUsersPerPlanet:
+          activePlanetCount > 0
+            ? Math.round(globalOnlineCount / activePlanetCount)
+            : 0,
+      };
+    } catch (error) {
+      this.logger.warn(`Failed to collect online statistics: ${error.message}`);
+      return {
+        globalOnlineCount: 0,
+        activeTravelCount: 0,
+        activePlanetCount: 0,
+        averageUsersPerTravel: 0,
+        averageUsersPerPlanet: 0,
+      };
+    }
+  }
+
+  /**
+   * 사용자의 모든 Travel/Planet에서 온라인 상태 제거
+   */
+  async removeUserFromAllTravelsAndPlanets(userId: number): Promise<void> {
+    try {
+      // 현재 위치 정보 조회
+      const userInfo = await this.getUserOnlineInfo(userId);
+
+      if (userInfo?.currentTravelId) {
+        await this.removeUserFromTravel(userInfo.currentTravelId, userId);
+      }
+
+      if (userInfo?.currentPlanetId) {
+        await this.removeUserFromPlanet(userInfo.currentPlanetId, userId);
+      }
+
+      this.logger.debug(`User ${userId} removed from all travels and planets`);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to remove user from all travels and planets ${userId}: ${error.message}`,
+      );
+    }
   }
 }

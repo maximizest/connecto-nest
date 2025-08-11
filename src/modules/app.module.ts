@@ -13,11 +13,17 @@ import { JWT_CONFIG, validateJwtConfig } from '../config/jwt.config';
 import { validateRedisConfig } from '../config/redis.config';
 import { validateStorageConfig } from '../config/storage.config';
 import { AdminModule } from './admin/admin.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { CacheModule } from './cache/cache.module';
 import { RedisModule } from './cache/redis.module';
 import { MessageModule } from './message/message.module';
+import { NotificationModule } from './notification/notification.module';
+import { PerformanceModule } from './performance/performance.module';
 import { PlanetUserModule } from './planet-user/planet-user.module';
 import { PlanetModule } from './planet/planet.module';
+import { SchedulerModule } from './scheduler/scheduler.module';
 import { SchemaModule } from './schema/schema.module';
+import { SecurityModule } from './security/security.module';
 import { StorageModule } from './storage/storage.module';
 import { TravelUserModule } from './travel-user/travel-user.module';
 import { TravelModule } from './travel/travel.module';
@@ -53,7 +59,13 @@ if (NODE_ENV !== 'production') {
 
 // 모듈 추가
 modules.push(RedisModule);
+modules.push(CacheModule);
 modules.push(StorageModule);
+modules.push(NotificationModule);
+modules.push(AnalyticsModule);
+modules.push(PerformanceModule);
+modules.push(SecurityModule);
+modules.push(SchedulerModule);
 modules.push(AdminModule);
 modules.push(UserModule);
 modules.push(TravelModule);

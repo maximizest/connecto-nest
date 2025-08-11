@@ -6,6 +6,7 @@ import {
   Crud,
 } from '@foryourdev/nestjs-crud';
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -23,6 +24,12 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
+import {
+  CursorPaginationResponseDto,
+  MessagePaginationMeta,
+  MessagePaginationQueryDto,
+  SearchPaginationResponseDto,
+} from '../../../../common/dto/pagination.dto';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import {
   PlanetUser,
@@ -38,6 +45,7 @@ import { User } from '../../../user/user.entity';
 import { PlanetAccessGuard } from '../../guards/planet-access.guard';
 import { Message, MessageStatus, MessageType } from '../../message.entity';
 import { MessageService } from '../../message.service';
+import { MessagePaginationService } from '../../services/message-pagination.service';
 
 /**
  * Message API Controller (v1)
@@ -143,6 +151,7 @@ export class MessageController {
 
   constructor(
     public readonly crudService: MessageService,
+    private readonly messagePaginationService: MessagePaginationService,
     @InjectRepository(Message)
     private readonly messageRepository: Repository<Message>,
     @InjectRepository(Planet)
@@ -1243,5 +1252,176 @@ export class MessageController {
     }
 
     return false;
+  }
+
+  /**
+   * ============================================
+   * 최적화된 페이지네이션 엔드포인트들
+   * ============================================
+   */
+
+  /**
+   * Planet 메시지 목록 조회 (커서 기반 페이지네이션)
+   * GET /api/v1/messages/planet/:planetId/paginated
+   */
+  @Get('planet/:planetId/paginated')
+  async getPaginatedMessages(
+    @Param('planetId') planetId: number,
+    @Query() query: MessagePaginationQueryDto,
+    @Request() req: any,
+  ): Promise<CursorPaginationResponseDto<any>> {
+    try {
+      const user = req.user;
+      this.logger.log(
+        `Getting paginated messages for planet ${planetId} by user ${user.id}`,
+      );
+
+      return await this.messagePaginationService.getPlanetMessages(
+        planetId,
+        query,
+        user.id,
+      );
+    } catch (error) {
+      const user = req.user;
+      this.logger.error(
+        `Failed to get paginated messages: planetId=${planetId}, user=${user.id}, error=${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Planet 메시지 검색 (최적화된 페이지네이션)
+   * GET /api/v1/messages/planet/:planetId/search
+   */
+  @Get('planet/:planetId/search')
+  async searchPaginatedMessages(
+    @Param('planetId') planetId: number,
+    @Query('q') searchQuery: string,
+    @Query() query: MessagePaginationQueryDto,
+    @Request() req: any,
+  ): Promise<SearchPaginationResponseDto<any>> {
+    try {
+      const user = req.user;
+      this.logger.log(
+        `Searching messages in planet ${planetId}: "${searchQuery}" by user ${user.id}`,
+      );
+
+      if (!searchQuery || searchQuery.trim().length === 0) {
+        throw new BadRequestException('검색어를 입력해주세요.');
+      }
+
+      return await this.messagePaginationService.searchMessages(
+        planetId,
+        searchQuery.trim(),
+        query,
+        user.id,
+      );
+    } catch (error) {
+      const user = req.user;
+      this.logger.error(
+        `Failed to search messages: planetId=${planetId}, query="${searchQuery}", user=${user.id}, error=${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 특정 메시지 주변 컨텍스트 조회
+   * GET /api/v1/messages/:messageId/context
+   */
+  @Get(':messageId/context')
+  async getMessageContext(
+    @Param('messageId') messageId: number,
+    @Query('contextSize') contextSize: number = 10,
+    @Request() req: any,
+  ): Promise<CursorPaginationResponseDto<any>> {
+    try {
+      const user = req.user;
+      this.logger.log(
+        `Getting message context: messageId=${messageId}, contextSize=${contextSize}, user=${user.id}`,
+      );
+
+      // 메시지 정보 조회하여 planetId 확인
+      const message = await this.messageRepository.findOne({
+        where: { id: messageId },
+        relations: ['planet'],
+      });
+
+      if (!message) {
+        throw new NotFoundException('메시지를 찾을 수 없습니다.');
+      }
+
+      return await this.messagePaginationService.getMessageContext(
+        messageId,
+        message.planetId,
+        Math.min(Math.max(contextSize, 5), 50), // 5-50 범위로 제한
+        user.id,
+      );
+    } catch (error) {
+      const user = req.user;
+      this.logger.error(
+        `Failed to get message context: messageId=${messageId}, user=${user.id}, error=${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Planet 메시지 통계 조회
+   * GET /api/v1/messages/planet/:planetId/stats
+   */
+  @Get('planet/:planetId/stats')
+  async getPlanetMessageStats(
+    @Param('planetId') planetId: number,
+    @Request() req: any,
+  ): Promise<MessagePaginationMeta> {
+    try {
+      const user = req.user;
+      this.logger.log(
+        `Getting message stats for planet ${planetId} by user ${user.id}`,
+      );
+
+      return await this.messagePaginationService.getPlanetMessageStats(
+        planetId,
+        user.id,
+      );
+    } catch (error) {
+      const user = req.user;
+      this.logger.error(
+        `Failed to get message stats: planetId=${planetId}, user=${user.id}, error=${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Planet 메시지 캐시 무효화 (관리자용)
+   * DELETE /api/v1/messages/planet/:planetId/cache
+   */
+  @Delete('planet/:planetId/cache')
+  async invalidatePlanetMessageCache(
+    @Param('planetId') planetId: number,
+    @Request() req: any,
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const user = req.user;
+      this.logger.log(
+        `Invalidating message cache for planet ${planetId} by user ${user.id}`,
+      );
+
+      await this.messagePaginationService.invalidatePlanetCache(planetId);
+
+      return {
+        success: true,
+        message: `Planet ${planetId}의 메시지 캐시가 무효화되었습니다.`,
+      };
+    } catch (error) {
+      const user = req.user;
+      this.logger.error(
+        `Failed to invalidate cache: planetId=${planetId}, user=${user.id}, error=${error.message}`,
+      );
+      throw error;
+    }
   }
 }

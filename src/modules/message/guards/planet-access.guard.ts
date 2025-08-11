@@ -1,13 +1,18 @@
 import {
   CanActivate,
   ExecutionContext,
-  ForbiddenException,
   Injectable,
   Logger,
-  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import {
+  PlanetAccessDeniedException,
+  PlanetInactiveException,
+  PlanetNotFoundException,
+  TravelExpiredException,
+  UserNotMemberException,
+} from '../../../common/exceptions/business.exception';
 import {
   PlanetUser,
   PlanetUserStatus,
@@ -51,14 +56,14 @@ export class PlanetAccessGuard implements CanActivate {
     const user: User = request.user;
 
     if (!user) {
-      throw new ForbiddenException('인증이 필요합니다.');
+      throw new PlanetAccessDeniedException('인증이 필요합니다.');
     }
 
     // Planet ID 추출 (body, params, query에서 확인)
     const planetId = this.extractPlanetId(request);
 
     if (!planetId) {
-      throw new ForbiddenException('Planet ID가 필요합니다.');
+      throw new PlanetAccessDeniedException('Planet ID가 필요합니다.');
     }
 
     // Planet 정보 조회
@@ -68,16 +73,19 @@ export class PlanetAccessGuard implements CanActivate {
     });
 
     if (!planet) {
-      throw new NotFoundException('존재하지 않는 Planet입니다.');
+      throw new PlanetNotFoundException(planetId);
     }
 
     if (!planet.isActive) {
-      throw new ForbiddenException('비활성화된 Planet입니다.');
+      throw new PlanetInactiveException(planetId);
     }
 
     // Travel 만료 확인
     if (planet.travel.isExpired()) {
-      throw new ForbiddenException('만료된 Travel의 Planet입니다.');
+      throw new TravelExpiredException(
+        planet.travel.id,
+        planet.travel.expiryDate,
+      );
     }
 
     // Planet 타입별 접근 권한 확인
@@ -137,9 +145,7 @@ export class PlanetAccessGuard implements CanActivate {
     });
 
     if (!travelUser) {
-      throw new ForbiddenException(
-        'Travel 멤버만 이 Planet에 접근할 수 있습니다.',
-      );
+      throw new UserNotMemberException('travel');
     }
 
     return true;
@@ -161,7 +167,7 @@ export class PlanetAccessGuard implements CanActivate {
     });
 
     if (!planetUser) {
-      throw new ForbiddenException('이 1:1 Planet에 접근할 권한이 없습니다.');
+      throw new UserNotMemberException('planet');
     }
 
     return true;

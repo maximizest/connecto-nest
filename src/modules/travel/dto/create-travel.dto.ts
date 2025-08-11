@@ -9,6 +9,10 @@ import {
   IsUrl,
   MaxLength,
 } from 'class-validator';
+import {
+  IsValidDateOrder,
+  IsValidTravelSettings,
+} from '../../../common/validators/business-validation.decorator';
 import { TravelVisibility } from '../travel.entity';
 
 /**
@@ -37,6 +41,7 @@ export class CreateTravelDto {
   endDate?: string;
 
   @IsDateString()
+  @IsValidDateOrder()
   expiryDate: string;
 
   @IsOptional()
@@ -58,5 +63,6 @@ export class CreateTravelDto {
   inviteCodeEnabled?: boolean;
 
   @IsOptional()
+  @IsValidTravelSettings()
   settings?: any;
 }

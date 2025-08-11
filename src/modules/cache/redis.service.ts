@@ -433,4 +433,22 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       return 'N/A';
     }
   }
+
+  /**
+   * 패턴에 맞는 키 목록 조회
+   */
+  async getKeys(pattern: string): Promise<string[]> {
+    if (!this.checkConnection()) {
+      return [];
+    }
+
+    try {
+      return await this.redis.keys(pattern);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to get keys with pattern ${pattern}: ${error.message}`,
+      );
+      return [];
+    }
+  }
 }

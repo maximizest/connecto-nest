@@ -32,6 +32,9 @@ export interface OnlineStatusData {
   userName: string;
   isOnline: boolean;
   lastSeenAt?: Date;
+  deviceType?: string;
+  connectedAt?: Date;
+  disconnectedAt?: Date;
 }
 
 export interface NotificationData {

@@ -15,6 +15,7 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -302,7 +303,11 @@ export class Planet extends BaseEntity {
   @IsDateString()
   updatedAt: Date;
 
-  // 관계 설정은 Message, PlanetUser 엔티티와 함께 구현
+  /**
+   * 관계 설정
+   */
+  @OneToMany('PlanetUser', 'planet')
+  planetUsers: any[];
 
   /**
    * 비즈니스 로직 메서드

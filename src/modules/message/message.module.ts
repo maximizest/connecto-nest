@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CacheModule } from '../cache/cache.module';
 import { PlanetUser } from '../planet-user/planet-user.entity';
 import { Planet } from '../planet/planet.entity';
 import { TravelUser } from '../travel-user/travel-user.entity';
@@ -12,6 +13,7 @@ import { Message } from './message.entity';
 import { MessageService } from './message.service';
 import { MessageReadReceipt } from './read-receipt.entity';
 import { ReadReceiptService } from './read-receipt.service';
+import { MessagePaginationService } from './services/message-pagination.service';
 
 @Module({
   imports: [
@@ -24,9 +26,20 @@ import { ReadReceiptService } from './read-receipt.service';
       TravelUser,
       PlanetUser,
     ]),
+    CacheModule,
   ],
-  providers: [MessageService, ReadReceiptService, PlanetAccessGuard],
+  providers: [
+    MessageService,
+    MessagePaginationService,
+    ReadReceiptService,
+    PlanetAccessGuard,
+  ],
   controllers: [MessageController, ReadReceiptController],
-  exports: [MessageService, ReadReceiptService, PlanetAccessGuard],
+  exports: [
+    MessageService,
+    MessagePaginationService,
+    ReadReceiptService,
+    PlanetAccessGuard,
+  ],
 })
 export class MessageModule {}

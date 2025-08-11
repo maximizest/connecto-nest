@@ -6,7 +6,7 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -25,6 +25,7 @@ import { PlanetCacheService } from '../cache/services/planet-cache.service';
 import { Message } from '../message/message.entity';
 import { MessageReadReceipt } from '../message/read-receipt.entity';
 import { ReadReceiptService } from '../message/read-receipt.service';
+import { NotificationService } from '../notification/notification.service';
 import { Planet } from '../planet/planet.entity';
 import { User } from '../user/user.entity';
 import {
@@ -39,6 +40,7 @@ import {
   WebSocketAuthGuard,
 } from './guards/websocket-auth.guard';
 import { RateLimitService } from './services/rate-limit.service';
+import { TypingIndicatorService } from './services/typing-indicator.service';
 import { WebSocketBroadcastService } from './services/websocket-broadcast.service';
 import { WebSocketRoomService } from './services/websocket-room.service';
 
@@ -150,6 +152,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly onlinePresenceService: OnlinePresenceService,
     private readonly planetCacheService: PlanetCacheService,
     private readonly rateLimitService: RateLimitService,
+    private readonly typingIndicatorService: TypingIndicatorService,
+    private readonly notificationService: NotificationService,
     private readonly eventEmitter: EventEmitter2,
     private readonly readReceiptService: ReadReceiptService,
     @InjectRepository(Planet)
@@ -190,11 +194,33 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         rooms: this.roomService.getUserRooms(authenticatedClient.userId),
       });
 
+      // 사용자의 온라인 상태 업데이트 (OnlinePresenceService 통합)
+      const deviceType = this.extractDeviceType(
+        client.handshake.headers['user-agent'],
+      );
+      const onlineInfo = this.onlinePresenceService.userEntityToOnlineInfo(
+        authenticatedClient.user,
+        [client.id],
+      );
+      onlineInfo.deviceType = deviceType;
+      onlineInfo.userAgent = client.handshake.headers['user-agent'] as string;
+
+      await this.onlinePresenceService.setUserOnline(
+        authenticatedClient.userId,
+        onlineInfo,
+      );
+      await this.onlinePresenceService.addUserSocket(
+        authenticatedClient.userId,
+        client.id,
+      );
+
       // 사용자 온라인 상태 브로드캐스트
       await this.broadcastService.broadcastOnlineStatus(this.server, {
         userId: authenticatedClient.userId,
         userName: authenticatedClient.user.name,
         isOnline: true,
+        deviceType: onlineInfo.deviceType,
+        connectedAt: onlineInfo.connectedAt,
       });
 
       this.logger.log(
@@ -443,50 +469,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         error: error.message,
         timestamp: new Date().toISOString(),
       });
-    }
-  }
-
-  /**
-   * 타이핑 상태 처리
-   */
-  @UseGuards(WebSocketAuthGuard)
-  @Throttle({ default: { limit: 5, ttl: 1000 } }) // 1초당 5개
-  @UseGuards(WebSocketRateLimitGuard)
-  @TypingRateLimit()
-  @SubscribeMessage('typing:start')
-  async handleTypingStart(
-    @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: TypingDto,
-  ) {
-    try {
-      await this.broadcastService.broadcastTypingStatus(this.server, {
-        userId: client.userId,
-        userName: client.user.name,
-        planetId: data.planetId,
-        isTyping: true,
-      });
-    } catch (error) {
-      this.logger.error(`Failed to handle typing start: ${error.message}`);
-    }
-  }
-
-  @UseGuards(WebSocketAuthGuard)
-  @UseGuards(WebSocketRateLimitGuard)
-  @TypingRateLimit()
-  @SubscribeMessage('typing:stop')
-  async handleTypingStop(
-    @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: TypingDto,
-  ) {
-    try {
-      await this.broadcastService.broadcastTypingStatus(this.server, {
-        userId: client.userId,
-        userName: client.user.name,
-        planetId: data.planetId,
-        isTyping: false,
-      });
-    } catch (error) {
-      this.logger.error(`Failed to handle typing stop: ${error.message}`);
     }
   }
 
@@ -1034,11 +1016,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /**
-   * 읽지 않은 메시지 카운트 조회 이벤트 핸들러
+   * Planet 읽지 않은 메시지 카운트 조회 이벤트 핸들러
    */
   @SubscribeMessage('planet:get_unread_count')
   @UseGuards(WebSocketAuthGuard)
-  async handleGetUnreadCount(
+  async handleGetPlanetUnreadCount(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() payload: { planetId: number },
   ) {
@@ -1106,8 +1088,634 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /**
+   * 온라인 상태 업데이트 이벤트 핸들러
+   */
+  @SubscribeMessage('presence:update')
+  @UseGuards(WebSocketAuthGuard)
+  async handleUpdatePresence(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody()
+    payload: {
+      currentTravelId?: number;
+      currentPlanetId?: number;
+      status?: string;
+    },
+  ) {
+    try {
+      const { currentTravelId, currentPlanetId, status } = payload;
+
+      // 기존 온라인 정보 조회
+      const currentInfo = await this.onlinePresenceService.getUserOnlineInfo(
+        client.user.id,
+      );
+
+      if (currentInfo) {
+        // 위치 변경 처리
+        if (currentTravelId !== currentInfo.currentTravelId) {
+          if (currentInfo.currentTravelId) {
+            await this.onlinePresenceService.removeUserFromTravel(
+              currentInfo.currentTravelId,
+              client.user.id,
+            );
+          }
+          if (currentTravelId) {
+            await this.onlinePresenceService.addUserToTravel(
+              currentTravelId,
+              client.user.id,
+            );
+          }
+        }
+
+        if (currentPlanetId !== currentInfo.currentPlanetId) {
+          if (currentInfo.currentPlanetId) {
+            await this.onlinePresenceService.removeUserFromPlanet(
+              currentInfo.currentPlanetId,
+              client.user.id,
+            );
+          }
+          if (currentPlanetId) {
+            await this.onlinePresenceService.addUserToPlanet(
+              currentPlanetId,
+              client.user.id,
+            );
+          }
+        }
+
+        // 온라인 상태 업데이트
+        const updates: any = {
+          lastActivity: new Date(),
+        };
+        if (currentTravelId !== undefined)
+          updates.currentTravelId = currentTravelId;
+        if (currentPlanetId !== undefined)
+          updates.currentPlanetId = currentPlanetId;
+        if (status) updates.status = status;
+
+        await this.onlinePresenceService.updateUserOnlineStatus(
+          client.user.id,
+          updates,
+        );
+
+        // 위치 업데이트 기록
+        await this.onlinePresenceService.updateUserLocation(
+          client.user.id,
+          currentTravelId,
+          currentPlanetId,
+        );
+
+        // 성공 응답
+        client.emit('presence:updated', {
+          userId: client.user.id,
+          currentTravelId,
+          currentPlanetId,
+          status,
+          lastActivity: new Date(),
+          timestamp: new Date().toISOString(),
+        });
+
+        this.logger.debug(
+          `Presence updated: userId=${client.user.id}, travel=${currentTravelId}, planet=${currentPlanetId}`,
+        );
+      } else {
+        client.emit('error', {
+          message: '온라인 상태 정보를 찾을 수 없습니다.',
+        });
+      }
+    } catch (error) {
+      this.logger.error('Presence update failed:', error);
+      client.emit('error', { message: '온라인 상태 업데이트에 실패했습니다.' });
+    }
+  }
+
+  /**
+   * Travel 온라인 사용자 조회 이벤트 핸들러
+   */
+  @SubscribeMessage('presence:get_travel_users')
+  @UseGuards(WebSocketAuthGuard)
+  async handleGetTravelOnlineUsers(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: { travelId: number },
+  ) {
+    try {
+      const { travelId } = payload;
+
+      const onlineUsers =
+        await this.onlinePresenceService.getTravelOnlineUsers(travelId);
+      const onlineUserInfos = await Promise.all(
+        onlineUsers.map(async (userId) => {
+          const info =
+            await this.onlinePresenceService.getUserOnlineInfo(userId);
+          return info;
+        }),
+      );
+
+      client.emit('presence:travel_users', {
+        travelId,
+        onlineCount: onlineUserInfos.filter(Boolean).length,
+        onlineUsers: onlineUserInfos.filter(Boolean),
+        timestamp: new Date().toISOString(),
+      });
+
+      this.logger.debug(
+        `Travel online users retrieved: travelId=${travelId}, count=${onlineUserInfos.length}`,
+      );
+    } catch (error) {
+      this.logger.error('Get travel online users failed:', error);
+      client.emit('error', {
+        message: 'Travel 온라인 사용자 조회에 실패했습니다.',
+      });
+    }
+  }
+
+  /**
+   * Planet 온라인 사용자 조회 이벤트 핸들러
+   */
+  @SubscribeMessage('presence:get_planet_users')
+  @UseGuards(WebSocketAuthGuard)
+  async handleGetPlanetOnlineUsers(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: { planetId: number },
+  ) {
+    try {
+      const { planetId } = payload;
+
+      const onlineUsers =
+        await this.onlinePresenceService.getPlanetOnlineUsers(planetId);
+      const onlineUserInfos = await Promise.all(
+        onlineUsers.map(async (userId) => {
+          const info =
+            await this.onlinePresenceService.getUserOnlineInfo(userId);
+          return info;
+        }),
+      );
+
+      client.emit('presence:planet_users', {
+        planetId,
+        onlineCount: onlineUserInfos.filter(Boolean).length,
+        onlineUsers: onlineUserInfos.filter(Boolean),
+        timestamp: new Date().toISOString(),
+      });
+
+      this.logger.debug(
+        `Planet online users retrieved: planetId=${planetId}, count=${onlineUserInfos.length}`,
+      );
+    } catch (error) {
+      this.logger.error('Get planet online users failed:', error);
+      client.emit('error', {
+        message: 'Planet 온라인 사용자 조회에 실패했습니다.',
+      });
+    }
+  }
+
+  /**
+   * 고급 타이핑 상태 시작 이벤트 핸들러
+   */
+  @SubscribeMessage('typing:advanced_start')
+  @UseGuards(WebSocketAuthGuard)
+  async handleAdvancedTypingStart(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody()
+    payload: {
+      planetId: number;
+      typingType?: 'text' | 'voice' | 'file' | 'image';
+      contentLength?: number;
+    },
+  ) {
+    try {
+      const { planetId, typingType = 'text', contentLength = 0 } = payload;
+
+      const deviceType = this.extractDeviceType(
+        client.handshake.headers['user-agent'],
+      );
+
+      // 고급 타이핑 상태 시작
+      const typingInfo = await this.typingIndicatorService.startTyping(
+        client.user.id,
+        planetId,
+        {
+          deviceType,
+          typingType,
+          contentLength,
+          sessionId: client.id,
+        },
+      );
+
+      // Planet 방에 고급 타이핑 상태 브로드캐스트
+      const roomId = `planet_${planetId}`;
+      client.to(roomId).emit('typing:advanced_started', {
+        planetId,
+        typingUser: typingInfo,
+        timestamp: new Date().toISOString(),
+      });
+
+      // 클라이언트에 성공 응답
+      client.emit('typing:start_success', {
+        planetId,
+        typingInfo,
+        success: true,
+      });
+
+      this.logger.debug(
+        `Advanced typing started: userId=${client.user.id}, planetId=${planetId}, type=${typingType}`,
+      );
+    } catch (error) {
+      this.logger.error('Advanced typing start failed:', error);
+      client.emit('error', { message: '타이핑 시작에 실패했습니다.' });
+    }
+  }
+
+  /**
+   * 타이핑 상태 업데이트 이벤트 핸들러
+   */
+  @SubscribeMessage('typing:update')
+  @UseGuards(WebSocketAuthGuard)
+  async handleTypingUpdate(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody()
+    payload: {
+      planetId: number;
+      contentLength?: number;
+      typingType?: 'text' | 'voice' | 'file' | 'image';
+    },
+  ) {
+    try {
+      const { planetId, contentLength, typingType } = payload;
+
+      // 타이핑 상태 업데이트
+      await this.typingIndicatorService.updateTyping(client.user.id, planetId, {
+        contentLength,
+        typingType,
+      });
+
+      // Planet 방에 타이핑 업데이트 브로드캐스트
+      const roomId = `planet_${planetId}`;
+      client.to(roomId).emit('typing:progress_updated', {
+        planetId,
+        userId: client.user.id,
+        userName: client.user.name,
+        contentLength,
+        typingType,
+        timestamp: new Date().toISOString(),
+      });
+
+      this.logger.debug(
+        `Typing updated: userId=${client.user.id}, planetId=${planetId}, length=${contentLength}`,
+      );
+    } catch (error) {
+      this.logger.error('Typing update failed:', error);
+    }
+  }
+
+  /**
+   * 고급 타이핑 상태 중지 이벤트 핸들러
+   */
+  @SubscribeMessage('typing:advanced_stop')
+  @UseGuards(WebSocketAuthGuard)
+  async handleAdvancedTypingStop(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: { planetId: number },
+  ) {
+    try {
+      const { planetId } = payload;
+
+      // 타이핑 상태 중지
+      await this.typingIndicatorService.stopTyping(client.user.id, planetId);
+
+      // Planet 방에 타이핑 중단 브로드캐스트
+      const roomId = `planet_${planetId}`;
+      client.to(roomId).emit('typing:advanced_stopped', {
+        planetId,
+        userId: client.user.id,
+        userName: client.user.name,
+        timestamp: new Date().toISOString(),
+      });
+
+      // 클라이언트에 성공 응답
+      client.emit('typing:stop_success', {
+        planetId,
+        success: true,
+      });
+
+      this.logger.debug(
+        `Advanced typing stopped: userId=${client.user.id}, planetId=${planetId}`,
+      );
+    } catch (error) {
+      this.logger.error('Advanced typing stop failed:', error);
+      client.emit('error', { message: '타이핑 중지에 실패했습니다.' });
+    }
+  }
+
+  /**
+   * Planet 타이핑 상태 조회 이벤트 핸들러
+   */
+  @SubscribeMessage('typing:get_status')
+  @UseGuards(WebSocketAuthGuard)
+  async handleGetTypingStatus(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: { planetId: number },
+  ) {
+    try {
+      const { planetId } = payload;
+
+      const typingStatus =
+        await this.typingIndicatorService.getPlanetTypingUsers(planetId);
+
+      client.emit('typing:status', {
+        ...typingStatus,
+        requestedBy: client.user.id,
+      });
+
+      this.logger.debug(
+        `Typing status retrieved: planetId=${planetId}, count=${typingStatus.totalTypingCount}`,
+      );
+    } catch (error) {
+      this.logger.error('Get typing status failed:', error);
+      client.emit('error', { message: '타이핑 상태 조회에 실패했습니다.' });
+    }
+  }
+
+  /**
+   * 타이핑 분석 데이터 조회 이벤트 핸들러
+   */
+  @SubscribeMessage('typing:get_analytics')
+  @UseGuards(WebSocketAuthGuard)
+  async handleGetTypingAnalytics(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: { planetId: number },
+  ) {
+    try {
+      const { planetId } = payload;
+
+      const analytics =
+        await this.typingIndicatorService.getTypingAnalytics(planetId);
+
+      client.emit('typing:analytics', {
+        ...analytics,
+        requestedBy: client.user.id,
+        timestamp: new Date().toISOString(),
+      });
+
+      this.logger.debug(`Typing analytics retrieved: planetId=${planetId}`);
+    } catch (error) {
+      this.logger.error('Get typing analytics failed:', error);
+      client.emit('error', { message: '타이핑 분석 조회에 실패했습니다.' });
+    }
+  }
+
+  /**
+   * 기본 타이핑 상태 시작 (하위 호환성)
+   */
+  @SubscribeMessage('typing:start')
+  @UseGuards(WebSocketAuthGuard)
+  async handleTypingStart(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: { planetId: number },
+  ) {
+    // 고급 타이핑으로 위임
+    await this.handleAdvancedTypingStart(client, {
+      ...payload,
+      typingType: 'text',
+      contentLength: 0,
+    });
+  }
+
+  /**
+   * 기본 타이핑 상태 중지 (하위 호환성)
+   */
+  @SubscribeMessage('typing:stop')
+  @UseGuards(WebSocketAuthGuard)
+  async handleTypingStop(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: { planetId: number },
+  ) {
+    // 고급 타이핑으로 위임
+    await this.handleAdvancedTypingStop(client, payload);
+  }
+
+  /**
+   * 전역 온라인 통계 조회 이벤트 핸들러
+   */
+  @SubscribeMessage('presence:get_global_stats')
+  @UseGuards(WebSocketAuthGuard)
+  async handleGetGlobalStats(@ConnectedSocket() client: AuthenticatedSocket) {
+    try {
+      const stats = await this.onlinePresenceService.collectOnlineStatistics();
+
+      client.emit('presence:global_stats', {
+        ...stats,
+        timestamp: new Date().toISOString(),
+      });
+
+      this.logger.debug(`Global stats retrieved for user ${client.user.id}`);
+    } catch (error) {
+      this.logger.error('Get global stats failed:', error);
+      client.emit('error', {
+        message: '전역 온라인 통계 조회에 실패했습니다.',
+      });
+    }
+  }
+
+  // ==============================
+  // 알림 관련 WebSocket 이벤트
+  // ==============================
+
+  /**
+   * WebSocket 알림 전송 이벤트 리스너
+   */
+  @OnEvent('notification.websocket')
+  async handleWebSocketNotification(data: {
+    notification: any;
+    userId: number;
+    event: string;
+    data: any;
+  }) {
+    try {
+      const { userId, event, data: notificationData } = data;
+
+      // 사용자의 활성 소켓 조회
+      const userSockets =
+        await this.onlinePresenceService.getUserSockets(userId);
+
+      if (userSockets.length > 0) {
+        // 모든 사용자 소켓에 알림 전송
+        userSockets.forEach((socketId) => {
+          const socket = this.server.sockets.sockets.get(socketId);
+          if (socket) {
+            socket.emit(event, {
+              ...notificationData,
+              receivedAt: new Date().toISOString(),
+            });
+          }
+        });
+
+        this.logger.debug(
+          `WebSocket notification sent to ${userSockets.length} sockets for user ${userId}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error('Failed to handle WebSocket notification:', error);
+    }
+  }
+
+  /**
+   * 사용자 알림 구독
+   */
+  @SubscribeMessage('notifications:subscribe')
+  @UseGuards(WebSocketAuthGuard)
+  async handleNotificationSubscribe(
+    @ConnectedSocket() client: AuthenticatedSocket,
+  ) {
+    try {
+      // 사용자를 알림 방에 추가
+      const notificationRoom = `notifications:${client.user.id}`;
+      await client.join(notificationRoom);
+
+      // 읽지 않은 알림 개수 전송
+      const stats = await this.notificationService.getUserNotificationStats(
+        client.user.id,
+      );
+
+      client.emit('notifications:subscribed', {
+        userId: client.user.id,
+        unreadCount: stats.unreadNotifications,
+        totalCount: stats.totalNotifications,
+        subscribedAt: new Date().toISOString(),
+      });
+
+      this.logger.debug(`User ${client.user.id} subscribed to notifications`);
+    } catch (error) {
+      this.logger.error('Notification subscription failed:', error);
+      client.emit('error', { message: '알림 구독에 실패했습니다.' });
+    }
+  }
+
+  /**
+   * 사용자 알림 구독 해제
+   */
+  @SubscribeMessage('notifications:unsubscribe')
+  @UseGuards(WebSocketAuthGuard)
+  async handleNotificationUnsubscribe(
+    @ConnectedSocket() client: AuthenticatedSocket,
+  ) {
+    try {
+      // 사용자를 알림 방에서 제거
+      const notificationRoom = `notifications:${client.user.id}`;
+      await client.leave(notificationRoom);
+
+      client.emit('notifications:unsubscribed', {
+        userId: client.user.id,
+        unsubscribedAt: new Date().toISOString(),
+      });
+
+      this.logger.debug(
+        `User ${client.user.id} unsubscribed from notifications`,
+      );
+    } catch (error) {
+      this.logger.error('Notification unsubscription failed:', error);
+      client.emit('error', { message: '알림 구독 해제에 실패했습니다.' });
+    }
+  }
+
+  /**
+   * 알림 읽음 처리 (WebSocket)
+   */
+  @SubscribeMessage('notifications:mark_read')
+  @UseGuards(WebSocketAuthGuard)
+  async handleMarkNotificationRead(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: { notificationId: number },
+  ) {
+    try {
+      const { notificationId } = payload;
+
+      const notification = await this.notificationService.markAsRead(
+        notificationId,
+        client.user.id,
+      );
+
+      // 클라이언트에 성공 응답
+      client.emit('notifications:mark_read_success', {
+        notificationId: notification.id,
+        isRead: notification.isRead,
+        readAt: notification.readAt,
+        readBy: client.user.id,
+      });
+
+      // 사용자의 모든 소켓에 읽음 상태 동기화
+      const notificationRoom = `notifications:${client.user.id}`;
+      client.to(notificationRoom).emit('notifications:read_synced', {
+        notificationId: notification.id,
+        isRead: notification.isRead,
+        readAt: notification.readAt,
+        syncedAt: new Date().toISOString(),
+      });
+
+      this.logger.debug(
+        `Notification ${notificationId} marked as read by user ${client.user.id}`,
+      );
+    } catch (error) {
+      this.logger.error('Mark notification read failed:', error);
+      client.emit('error', { message: '알림 읽음 처리에 실패했습니다.' });
+    }
+  }
+
+  /**
+   * 읽지 않은 알림 개수 조회 (WebSocket)
+   */
+  @SubscribeMessage('notifications:get_unread_count')
+  @UseGuards(WebSocketAuthGuard)
+  async handleGetNotificationUnreadCount(
+    @ConnectedSocket() client: AuthenticatedSocket,
+  ) {
+    try {
+      const stats = await this.notificationService.getUserNotificationStats(
+        client.user.id,
+      );
+
+      client.emit('notifications:unread_count', {
+        userId: client.user.id,
+        unreadCount: stats.unreadNotifications,
+        totalCount: stats.totalNotifications,
+        checkedAt: new Date().toISOString(),
+      });
+
+      this.logger.debug(
+        `Unread count retrieved for user ${client.user.id}: ${stats.unreadNotifications}`,
+      );
+    } catch (error) {
+      this.logger.error('Get unread count failed:', error);
+      client.emit('error', {
+        message: '읽지 않은 알림 개수 조회에 실패했습니다.',
+      });
+    }
+  }
+
+  /**
    * 헬퍼 메서드들
    */
+
+  /**
+   * User Agent에서 디바이스 타입 추출
+   */
+  private extractDeviceType(userAgent?: string): string {
+    if (!userAgent) return 'unknown';
+
+    const ua = userAgent.toLowerCase();
+
+    if (
+      ua.includes('mobile') ||
+      ua.includes('android') ||
+      ua.includes('iphone')
+    ) {
+      return 'mobile';
+    } else if (ua.includes('tablet') || ua.includes('ipad')) {
+      return 'tablet';
+    } else if (ua.includes('tv')) {
+      return 'tv';
+    } else {
+      return 'desktop';
+    }
+  }
 
   /**
    * 삭제/복구 권한 확인 (발신자 또는 Planet 관리자)

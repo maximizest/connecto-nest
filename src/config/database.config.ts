@@ -5,10 +5,21 @@ import {
   ENV_KEYS,
 } from '../common/constants/app.constants';
 import { Admin } from '../modules/admin/admin.entity';
+import { Analytics } from '../modules/analytics/analytics.entity';
 import { Message } from '../modules/message/message.entity';
 import { MessageReadReceipt } from '../modules/message/read-receipt.entity';
+import { Notification } from '../modules/notification/notification.entity';
+import {
+  PerformanceAlert,
+  PerformanceMetric,
+} from '../modules/performance/performance.entity';
 import { PlanetUser } from '../modules/planet-user/planet-user.entity';
 import { Planet } from '../modules/planet/planet.entity';
+import {
+  BlockedIp,
+  FileScanResult,
+  SecurityEvent,
+} from '../modules/security/security.entity';
 import { FileUpload } from '../modules/storage/file-upload.entity';
 import { StreamingSession } from '../modules/storage/streaming-session.entity';
 import { VideoProcessing } from '../modules/storage/video-processing.entity';
@@ -48,6 +59,13 @@ export const ENTITIES = [
   PlanetUser,
   Message,
   MessageReadReceipt,
+  Notification,
+  Analytics,
+  PerformanceMetric,
+  PerformanceAlert,
+  SecurityEvent,
+  BlockedIp,
+  FileScanResult,
   FileUpload,
   VideoProcessing,
   StreamingSession,

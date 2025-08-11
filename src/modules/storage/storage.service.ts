@@ -13,6 +13,13 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Injectable, Logger } from '@nestjs/common';
 import {
+  ExternalServiceException,
+  FileSizeExceededException,
+  FileTypeNotSupportedException,
+  FileUploadException,
+  FileUploadFailedException,
+} from '../../common/exceptions/business.exception';
+import {
   STORAGE_CONFIG,
   STORAGE_SETTINGS,
   isValidFileSize,
@@ -55,15 +62,14 @@ export class StorageService {
       // 파일 타입 검증
       const fileType = this.getFileType(file.originalname);
       if (!isValidFileType(file.originalname, fileType)) {
-        throw new Error(`지원하지 않는 파일 형식입니다: ${file.originalname}`);
+        const allowedTypes = this.getAllowedFileTypes();
+        throw new FileTypeNotSupportedException(file.mimetype, allowedTypes);
       }
 
       // 파일 크기 검증
       if (!isValidFileSize(file.size, fileType)) {
         const maxSize = this.getMaxSize(fileType);
-        throw new Error(
-          `파일 크기가 너무 큽니다. 최대 ${(maxSize / 1024 / 1024).toFixed(0)}MB`,
-        );
+        throw new FileSizeExceededException(file.size, maxSize);
       }
 
       // 파일 키 생성
@@ -101,8 +107,34 @@ export class StorageService {
         etag: result.ETag,
       };
     } catch (error) {
-      this.logger.error(`❌ File upload failed:`, error);
-      throw error;
+      this.logger.error(`❌ File upload failed: ${file.originalname}`, error);
+
+      // 이미 커스텀 예외인 경우 그대로 던지기
+      if (
+        error instanceof FileUploadException ||
+        error instanceof FileSizeExceededException ||
+        error instanceof FileTypeNotSupportedException
+      ) {
+        throw error;
+      }
+
+      // AWS/R2 관련 오류
+      if (error.name === 'NoSuchBucket') {
+        throw new ExternalServiceException(
+          'Cloudflare R2',
+          '버킷을 찾을 수 없습니다.',
+        );
+      }
+
+      if (error.name === 'AccessDenied') {
+        throw new ExternalServiceException(
+          'Cloudflare R2',
+          '접근 권한이 없습니다.',
+        );
+      }
+
+      // 일반적인 업로드 실패
+      throw new FileUploadFailedException(error.message);
     }
   }
 
@@ -385,6 +417,28 @@ export class StorageService {
       case 'file':
         return STORAGE_SETTINGS.maxFileSize;
     }
+  }
+
+  /**
+   * 허용된 파일 타입 목록 반환
+   */
+  private getAllowedFileTypes(): string[] {
+    const imageTypes = STORAGE_SETTINGS.allowedImageTypes.map(
+      (ext) => `image/${ext === 'jpg' ? 'jpeg' : ext}`,
+    );
+    const videoTypes = STORAGE_SETTINGS.allowedVideoTypes.map(
+      (ext) => `video/${ext}`,
+    );
+    const documentTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      'application/zip',
+      'application/x-rar-compressed',
+    ];
+
+    return [...imageTypes, ...videoTypes, ...documentTypes];
   }
 
   /**

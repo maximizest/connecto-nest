@@ -8,15 +8,20 @@ import { RedisModule } from '../cache/redis.module';
 import { Message } from '../message/message.entity';
 import { MessageReadReceipt } from '../message/read-receipt.entity';
 import { ReadReceiptService } from '../message/read-receipt.service';
+import { Notification } from '../notification/notification.entity';
+import { NotificationService } from '../notification/notification.service';
+import { PushNotificationService } from '../notification/services/push-notification.service';
 import { PlanetUser } from '../planet-user/planet-user.entity';
 import { Planet } from '../planet/planet.entity';
 import { TravelUser } from '../travel-user/travel-user.entity';
 import { Travel } from '../travel/travel.entity';
 import { User } from '../user/user.entity';
+import { TypingController } from './api/v1/typing.controller';
 import { ChatGateway } from './chat.gateway';
 import { WebSocketRateLimitGuard } from './guards/rate-limit.guard';
 import { WebSocketAuthGuard } from './guards/websocket-auth.guard';
 import { RateLimitService } from './services/rate-limit.service';
+import { TypingIndicatorService } from './services/typing-indicator.service';
 import { WebSocketBroadcastService } from './services/websocket-broadcast.service';
 import { WebSocketRoomService } from './services/websocket-room.service';
 
@@ -29,6 +34,7 @@ import { WebSocketRoomService } from './services/websocket-room.service';
       Planet,
       Message,
       MessageReadReceipt,
+      Notification,
       TravelUser,
       PlanetUser,
     ]),
@@ -45,6 +51,7 @@ import { WebSocketRoomService } from './services/websocket-room.service';
       },
     ]),
   ],
+  controllers: [TypingController],
   providers: [
     ChatGateway,
     WebSocketAuthGuard,
@@ -52,6 +59,9 @@ import { WebSocketRoomService } from './services/websocket-room.service';
     WebSocketRoomService,
     WebSocketBroadcastService,
     RateLimitService,
+    TypingIndicatorService,
+    NotificationService,
+    PushNotificationService,
     ReadReceiptService,
     Reflector,
   ],
@@ -60,6 +70,7 @@ import { WebSocketRoomService } from './services/websocket-room.service';
     WebSocketRoomService,
     WebSocketBroadcastService,
     RateLimitService,
+    TypingIndicatorService,
   ],
 })
 export class WebSocketModule {}

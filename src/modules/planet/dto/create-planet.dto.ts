@@ -7,6 +7,10 @@ import {
   IsUrl,
   MaxLength,
 } from 'class-validator';
+import {
+  IsValidMemberLimit,
+  IsValidTimeRestriction,
+} from '../../../common/validators/business-validation.decorator';
 import { PlanetType } from '../planet.entity';
 
 /**
@@ -35,6 +39,7 @@ export class CreatePlanetDto {
   @IsOptional()
   @IsNumber()
   @IsPositive()
+  @IsValidMemberLimit()
   maxMembers?: number;
 
   @IsOptional()
@@ -43,6 +48,7 @@ export class CreatePlanetDto {
   partnerId?: number;
 
   @IsOptional()
+  @IsValidTimeRestriction()
   timeRestriction?: any;
 
   @IsOptional()
