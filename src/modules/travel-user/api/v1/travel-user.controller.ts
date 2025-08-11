@@ -8,8 +8,11 @@ import {
 import {
   Controller,
   ForbiddenException,
+  Get,
   Logger,
   NotFoundException,
+  Param,
+  Post,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -61,6 +64,8 @@ import { TravelUserService } from '../../travel-user.service';
     'inviteCode', // 가입 시 초대 코드
     'role', // 관리자가 권한 변경 시
     'status', // 관리자가 상태 변경 시 (탈퇴 포함)
+    'banReason', // 밴 사유
+    'banDuration', // 밴 기간 (초 단위)
   ],
 
   // 관계 포함 허용 필드
@@ -96,11 +101,13 @@ import { TravelUserService } from '../../travel-user.service';
       ],
     },
 
-    // 수정: 관리자만 권한/상태 변경 가능 (탈퇴 포함)
+    // 수정: 관리자만 권한/상태 변경 가능 (탈퇴, 밴 포함)
     update: {
       allowedParams: [
         'role', // 권한 변경
         'status', // 상태 변경 (탈퇴, 밴, 음소거 등)
+        'banReason', // 밴 사유
+        'banDuration', // 밴 기간 (초 단위)
       ],
     },
   },
@@ -312,6 +319,29 @@ export class TravelUserController {
       );
     }
 
+    // 밴 처리인지 확인
+    if (body.status === TravelUserStatus.BANNED) {
+      return await this.handleTravelBan(
+        body,
+        user,
+        existingTravelUser,
+        requesterMembership,
+      );
+    }
+
+    // 밴 해제 처리인지 확인 (ACTIVE로 상태 변경 시)
+    if (
+      body.status === TravelUserStatus.ACTIVE &&
+      existingTravelUser.status === TravelUserStatus.BANNED
+    ) {
+      return await this.handleTravelUnban(
+        body,
+        user,
+        existingTravelUser,
+        requesterMembership,
+      );
+    }
+
     // 일반적인 수정 처리
     const canManage =
       requesterMembership.role === TravelUserRole.OWNER ||
@@ -433,5 +463,291 @@ export class TravelUserController {
     );
 
     return body;
+  }
+
+  /**
+   * Travel 밴 처리
+   */
+  private async handleTravelBan(
+    body: any,
+    user: User,
+    existingTravelUser: TravelUser,
+    requesterMembership: TravelUser,
+  ): Promise<any> {
+    // 밴 권한 확인: 소유자 또는 관리자만 가능
+    const canBan =
+      requesterMembership.role === TravelUserRole.OWNER ||
+      requesterMembership.role === TravelUserRole.ADMIN;
+
+    if (!canBan) {
+      throw new ForbiddenException('멤버 밴 권한이 없습니다.');
+    }
+
+    // 자기 자신을 밴할 수 없음
+    if (requesterMembership.userId === existingTravelUser.userId) {
+      throw new ForbiddenException('자기 자신을 밴할 수 없습니다.');
+    }
+
+    // 소유자는 밴할 수 없음
+    if (existingTravelUser.role === TravelUserRole.OWNER) {
+      throw new ForbiddenException('소유자를 밴할 수 없습니다.');
+    }
+
+    // 관리자가 다른 관리자를 밴하는 경우, 소유자만 가능
+    if (
+      existingTravelUser.role === TravelUserRole.ADMIN &&
+      requesterMembership.role !== TravelUserRole.OWNER
+    ) {
+      throw new ForbiddenException('소유자만 관리자를 밴할 수 있습니다.');
+    }
+
+    // 밴 정보 설정
+    body.status = TravelUserStatus.BANNED;
+    body.bannedAt = new Date();
+    body.bannedBy = user.id;
+    body.banReason = body.banReason || '규칙 위반';
+
+    // 밴 기간 설정 (초 단위)
+    if (body.banDuration && body.banDuration > 0) {
+      body.banExpiresAt = new Date(Date.now() + body.banDuration * 1000);
+    }
+
+    // 불필요한 필드 제거
+    delete body.banDuration;
+
+    this.logger.log(
+      `Travel member banned: travelId=${existingTravelUser.travelId}, userId=${existingTravelUser.userId}, bannedBy=${user.id}, reason=${body.banReason}`,
+    );
+
+    return body;
+  }
+
+  /**
+   * Travel 밴 해제 처리
+   */
+  private async handleTravelUnban(
+    body: any,
+    user: User,
+    existingTravelUser: TravelUser,
+    requesterMembership: TravelUser,
+  ): Promise<any> {
+    // 밴 해제 권한 확인: 소유자 또는 관리자만 가능
+    const canUnban =
+      requesterMembership.role === TravelUserRole.OWNER ||
+      requesterMembership.role === TravelUserRole.ADMIN;
+
+    if (!canUnban) {
+      throw new ForbiddenException('멤버 밴 해제 권한이 없습니다.');
+    }
+
+    // 밴 상태인지 확인
+    if (existingTravelUser.status !== TravelUserStatus.BANNED) {
+      throw new ForbiddenException('밴 상태가 아닌 사용자입니다.');
+    }
+
+    // 밴 해제 정보 설정
+    body.status = TravelUserStatus.ACTIVE;
+    body.bannedAt = null;
+    body.banExpiresAt = null;
+    body.bannedBy = null;
+    body.banReason = null;
+
+    this.logger.log(
+      `Travel member unbanned: travelId=${existingTravelUser.travelId}, userId=${existingTravelUser.userId}, unbannedBy=${user.id}`,
+    );
+
+    return body;
+  }
+
+  /**
+   * Travel 멤버 밴 (별도 엔드포인트)
+   * POST /api/v1/travel-users/:id/ban
+   */
+  @Post(':id/ban')
+  async banTravelMember(
+    @Param('id') travelUserId: string,
+    @Request() req: any,
+  ) {
+    const user: User = req.user;
+
+    // 기존 TravelUser 조회
+    const existingTravelUser = await this.travelUserRepository.findOne({
+      where: { id: parseInt(travelUserId) },
+      relations: ['user', 'travel'],
+    });
+
+    if (!existingTravelUser) {
+      throw new NotFoundException('Travel 멤버를 찾을 수 없습니다.');
+    }
+
+    // 요청자의 권한 확인
+    const requesterMembership = await this.travelUserRepository.findOne({
+      where: {
+        travelId: existingTravelUser.travelId,
+        userId: user.id,
+        status: TravelUserStatus.ACTIVE,
+      },
+    });
+
+    if (!requesterMembership) {
+      throw new ForbiddenException('이 Travel의 멤버가 아닙니다.');
+    }
+
+    const canBan =
+      requesterMembership.role === TravelUserRole.OWNER ||
+      requesterMembership.role === TravelUserRole.ADMIN;
+
+    if (!canBan) {
+      throw new ForbiddenException('멤버 밴 권한이 없습니다.');
+    }
+
+    // 엔티티의 banUser 메서드 사용
+    existingTravelUser.banUser(user.id, req.body?.reason, req.body?.duration);
+    await this.travelUserRepository.save(existingTravelUser);
+
+    this.logger.log(
+      `Travel member banned via endpoint: travelUserId=${travelUserId}, bannedBy=${user.id}`,
+    );
+
+    return {
+      success: true,
+      message: '멤버가 성공적으로 밴되었습니다.',
+      bannedUser: {
+        id: existingTravelUser.id,
+        userId: existingTravelUser.userId,
+        travelId: existingTravelUser.travelId,
+        bannedAt: existingTravelUser.bannedAt,
+        banReason: existingTravelUser.banReason,
+        banExpiresAt: existingTravelUser.banExpiresAt,
+      },
+    };
+  }
+
+  /**
+   * Travel 멤버 밴 해제 (별도 엔드포인트)
+   * POST /api/v1/travel-users/:id/unban
+   */
+  @Post(':id/unban')
+  async unbanTravelMember(
+    @Param('id') travelUserId: string,
+    @Request() req: any,
+  ) {
+    const user: User = req.user;
+
+    // 기존 TravelUser 조회
+    const existingTravelUser = await this.travelUserRepository.findOne({
+      where: { id: parseInt(travelUserId) },
+      relations: ['user', 'travel'],
+    });
+
+    if (!existingTravelUser) {
+      throw new NotFoundException('Travel 멤버를 찾을 수 없습니다.');
+    }
+
+    // 요청자의 권한 확인
+    const requesterMembership = await this.travelUserRepository.findOne({
+      where: {
+        travelId: existingTravelUser.travelId,
+        userId: user.id,
+        status: TravelUserStatus.ACTIVE,
+      },
+    });
+
+    if (!requesterMembership) {
+      throw new ForbiddenException('이 Travel의 멤버가 아닙니다.');
+    }
+
+    const canUnban =
+      requesterMembership.role === TravelUserRole.OWNER ||
+      requesterMembership.role === TravelUserRole.ADMIN;
+
+    if (!canUnban) {
+      throw new ForbiddenException('멤버 밴 해제 권한이 없습니다.');
+    }
+
+    if (existingTravelUser.status !== TravelUserStatus.BANNED) {
+      throw new ForbiddenException('밴 상태가 아닌 사용자입니다.');
+    }
+
+    // 엔티티의 unbanUser 메서드 사용
+    existingTravelUser.unbanUser();
+    await this.travelUserRepository.save(existingTravelUser);
+
+    this.logger.log(
+      `Travel member unbanned via endpoint: travelUserId=${travelUserId}, unbannedBy=${user.id}`,
+    );
+
+    return {
+      success: true,
+      message: '멤버 밴이 성공적으로 해제되었습니다.',
+      unbannedUser: {
+        id: existingTravelUser.id,
+        userId: existingTravelUser.userId,
+        travelId: existingTravelUser.travelId,
+        status: existingTravelUser.status,
+      },
+    };
+  }
+
+  /**
+   * Travel 밴 목록 조회 (관리자용)
+   * GET /api/v1/travel-users/banned/:travelId
+   */
+  @Get('banned/:travelId')
+  async getBannedTravelMembers(
+    @Param('travelId') travelId: string,
+    @Request() req: any,
+  ) {
+    const user: User = req.user;
+
+    // 요청자의 권한 확인
+    const requesterMembership = await this.travelUserRepository.findOne({
+      where: {
+        travelId: parseInt(travelId),
+        userId: user.id,
+        status: TravelUserStatus.ACTIVE,
+      },
+    });
+
+    if (!requesterMembership) {
+      throw new ForbiddenException('이 Travel의 멤버가 아닙니다.');
+    }
+
+    const canView =
+      requesterMembership.role === TravelUserRole.OWNER ||
+      requesterMembership.role === TravelUserRole.ADMIN;
+
+    if (!canView) {
+      throw new ForbiddenException('밴 목록 조회 권한이 없습니다.');
+    }
+
+    // 밴된 멤버 목록 조회
+    const bannedMembers = await this.travelUserRepository.find({
+      where: {
+        travelId: parseInt(travelId),
+        status: TravelUserStatus.BANNED,
+      },
+      relations: ['user'],
+      order: { bannedAt: 'DESC' },
+    });
+
+    return {
+      travelId: parseInt(travelId),
+      bannedMembers: bannedMembers.map((member) => ({
+        id: member.id,
+        user: {
+          id: member.user.id,
+          name: member.user.name,
+          avatar: member.user.avatar,
+        },
+        bannedAt: member.bannedAt,
+        banExpiresAt: member.banExpiresAt,
+        bannedBy: member.bannedBy,
+        banReason: member.banReason,
+        remainingBanTime: member.getBanRemainingSeconds(),
+        isPermanentBan: !member.banExpiresAt,
+      })),
+      totalCount: bannedMembers.length,
+    };
   }
 }
