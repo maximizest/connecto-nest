@@ -7,9 +7,9 @@ import {
   tags,
 } from '@foryourdev/jest-swag';
 import * as request from 'supertest';
-import { describeE2E } from './helpers/test-app.helper';
+import { describeSimpleE2E } from './helpers/test-app.helper';
 
-describeE2E('Schema API (e2e)', (getApp) => {
+describeSimpleE2E('Schema API (e2e)', (getApp) => {
   path('/api/v1/schema', () => {
     get('Get all entity schemas', () => {
       tags('Schema');

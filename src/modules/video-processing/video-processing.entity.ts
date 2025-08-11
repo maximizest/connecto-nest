@@ -18,8 +18,8 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { FileUpload } from '../file-upload/file-upload.entity';
 import { User } from '../user/user.entity';
-import { FileUpload } from './file-upload.entity';
 
 /**
  * 비디오 프로세싱 상태

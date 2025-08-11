@@ -17,9 +17,9 @@ import {
   Unique,
   UpdateDateColumn,
 } from 'typeorm';
-import { Message } from '../../message/message.entity';
-import { Planet } from '../../planet/planet.entity';
-import { User } from '../../user/user.entity';
+import { Message } from '../message/message.entity';
+import { Planet } from '../planet/planet.entity';
+import { User } from '../user/user.entity';
 
 /**
  * 메시지 읽음 영수증 엔티티
