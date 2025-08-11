@@ -8,7 +8,7 @@ import { AdminService } from '../../admin.service';
 
 @Crud({
   entity: Admin,
-  allowedFilters: [],
+  allowedFilters: ['name', 'email', 'createdAt', 'updatedAt'],
   allowedParams: ['name', 'email', 'password'],
   allowedIncludes: [],
   only: ['index', 'show', 'create', 'update', 'destroy'],

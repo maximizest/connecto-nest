@@ -1,3 +1,4 @@
+import { BeforeCreate, BeforeUpdate, Crud } from '@foryourdev/nestjs-crud';
 import {
   Body,
   Controller,
@@ -38,12 +39,145 @@ interface MetricRecordDto {
 /**
  * 성능 모니터링 API 컨트롤러
  *
- * 성능 메트릭 조회, 알람 관리 등 성능 모니터링 기능을 제공합니다.
+ * @foryourdev/nestjs-crud 기반 성능 메트릭 CRUD와
+ * 성능 모니터링 전용 기능을 제공합니다.
  */
 @Controller({ path: 'performance', version: '1' })
+@Crud({
+  entity: PerformanceMetric,
+  allowedFilters: [
+    'type',
+    'category',
+    'resourceType',
+    'resourceId',
+    'value',
+    'unit',
+    'createdAt',
+  ],
+  allowedParams: [
+    'type',
+    'category',
+    'value',
+    'unit',
+    'resourceType',
+    'resourceId',
+    'metadata',
+  ],
+  allowedIncludes: [],
+  only: ['index', 'show'],
+  routes: {
+    index: {
+      allowedFilters: [
+        'type',
+        'category',
+        'resourceType',
+        'resourceId',
+        'value_gt',
+        'value_lt',
+        'createdAt_gt',
+        'createdAt_lt',
+      ],
+    },
+    show: {
+      allowedIncludes: [],
+    },
+  },
+})
 @UseGuards(AuthGuard)
 export class PerformanceController {
-  constructor(private readonly performanceService: PerformanceService) {}
+  constructor(public readonly crudService: PerformanceService) {}
+
+  /**
+   * 성능 메트릭 생성 전 전처리
+   */
+  @BeforeCreate()
+  async preprocessCreateMetric(body: any, context: any) {
+    // 카테고리 자동 설정
+    if (body.type && !body.category) {
+      body.category = this.getMetricCategory(body.type);
+    }
+
+    // 기본 단위 설정
+    if (body.type && !body.unit) {
+      body.unit = this.getDefaultUnit(body.type);
+    }
+
+    // 메타데이터 기본값 설정
+    if (!body.metadata) {
+      body.metadata = {};
+    }
+    body.metadata.createdBy = 'system';
+    body.metadata.source = 'api';
+
+    return body;
+  }
+
+  /**
+   * 성능 메트릭 업데이트 전 전처리
+   */
+  @BeforeUpdate()
+  async preprocessUpdateMetric(body: any, context: any) {
+    // 메트릭 업데이트는 일반적으로 허용되지 않음
+    throw new Error(
+      '성능 메트릭은 수정할 수 없습니다. 새로운 메트릭을 생성해주세요.',
+    );
+  }
+
+  /**
+   * 메트릭 카테고리 결정
+   */
+  private getMetricCategory(type: MetricType): MetricCategory {
+    switch (type) {
+      case MetricType.API_RESPONSE_TIME:
+        return MetricCategory.API;
+      case MetricType.DATABASE_QUERY_TIME:
+        return MetricCategory.DATABASE;
+      case MetricType.CACHE_HIT_RATE:
+        return MetricCategory.CACHE;
+      case MetricType.FILE_UPLOAD_SPEED:
+      case MetricType.FILE_DOWNLOAD_SPEED:
+      case MetricType.FILE_PROCESSING_TIME:
+        return MetricCategory.FILE_STORAGE;
+      case MetricType.WEBSOCKET_CONNECTION:
+        return MetricCategory.WEBSOCKET;
+      case MetricType.MEMORY_USAGE:
+      case MetricType.CPU_USAGE:
+      case MetricType.DISK_USAGE:
+        return MetricCategory.SYSTEM;
+      case MetricType.ERROR_RATE:
+        return MetricCategory.ERROR;
+      case MetricType.CONCURRENT_USERS:
+        return MetricCategory.USER;
+      default:
+        return MetricCategory.SYSTEM;
+    }
+  }
+
+  /**
+   * 기본 단위 반환
+   */
+  private getDefaultUnit(type: MetricType): string {
+    switch (type) {
+      case MetricType.API_RESPONSE_TIME:
+      case MetricType.DATABASE_QUERY_TIME:
+      case MetricType.FILE_PROCESSING_TIME:
+        return 'ms';
+      case MetricType.CACHE_HIT_RATE:
+      case MetricType.MEMORY_USAGE:
+      case MetricType.CPU_USAGE:
+      case MetricType.DISK_USAGE:
+      case MetricType.ERROR_RATE:
+        return '%';
+      case MetricType.FILE_UPLOAD_SPEED:
+      case MetricType.FILE_DOWNLOAD_SPEED:
+        return 'MB/s';
+      case MetricType.WEBSOCKET_CONNECTION:
+      case MetricType.CONCURRENT_USERS:
+        return 'count';
+      default:
+        return 'unit';
+    }
+  }
 
   /**
    * 성능 메트릭 조회
@@ -55,7 +189,7 @@ export class PerformanceController {
   }> {
     const { type, category, resourceType, resourceId, hours = 24 } = query;
 
-    const metrics = await this.performanceService.getMetrics(
+    const metrics = await this.crudService.getMetrics(
       type,
       category,
       resourceType,
@@ -81,7 +215,7 @@ export class PerformanceController {
     const { hours = 24 } = query;
 
     // 전체 통계
-    const overall = await this.performanceService.getPerformanceStats(
+    const overall = await this.crudService.getPerformanceStats(
       undefined,
       hours,
     );
@@ -90,10 +224,7 @@ export class PerformanceController {
     const metricTypes = Object.values(MetricType);
     const byType = await Promise.all(
       metricTypes.map(async (type) => {
-        const stats = await this.performanceService.getPerformanceStats(
-          type,
-          hours,
-        );
+        const stats = await this.crudService.getPerformanceStats(type, hours);
         return { type, ...stats };
       }),
     );
@@ -137,19 +268,16 @@ export class PerformanceController {
   }> {
     const [apiStats, errorStats, systemMetrics, activeAlerts] =
       await Promise.all([
-        this.performanceService.getPerformanceStats(
-          MetricType.API_RESPONSE_TIME,
-          1,
-        ),
-        this.performanceService.getPerformanceStats(MetricType.ERROR_RATE, 1),
-        this.performanceService.getMetrics(
+        this.crudService.getPerformanceStats(MetricType.API_RESPONSE_TIME, 1),
+        this.crudService.getPerformanceStats(MetricType.ERROR_RATE, 1),
+        this.crudService.getMetrics(
           MetricType.MEMORY_USAGE,
           undefined,
           undefined,
           undefined,
           1,
         ),
-        this.performanceService.getActiveAlerts(),
+        this.crudService.getActiveAlerts(),
       ]);
 
     return {
@@ -189,21 +317,21 @@ export class PerformanceController {
     };
   }> {
     const [apiMetrics, messageMetrics, fileMetrics] = await Promise.all([
-      this.performanceService.getMetrics(
+      this.crudService.getMetrics(
         MetricType.API_RESPONSE_TIME,
         undefined,
         'travel',
         travelId,
         hours,
       ),
-      this.performanceService.getMetrics(
+      this.crudService.getMetrics(
         MetricType.API_RESPONSE_TIME,
         undefined,
         'message',
         undefined,
         hours,
       ),
-      this.performanceService.getMetrics(
+      this.crudService.getMetrics(
         MetricType.FILE_UPLOAD_SPEED,
         undefined,
         'travel',
@@ -241,7 +369,7 @@ export class PerformanceController {
       responseTimeAnalysis: any;
     };
   }> {
-    const messageMetrics = await this.performanceService.getMetrics(
+    const messageMetrics = await this.crudService.getMetrics(
       MetricType.API_RESPONSE_TIME,
       undefined,
       'planet',
@@ -278,14 +406,14 @@ export class PerformanceController {
     topLargeFiles: any[];
   }> {
     const [uploadMetrics, processingMetrics] = await Promise.all([
-      this.performanceService.getMetrics(
+      this.crudService.getMetrics(
         MetricType.FILE_UPLOAD_SPEED,
         undefined,
         undefined,
         undefined,
         hours,
       ),
-      this.performanceService.getMetrics(
+      this.crudService.getMetrics(
         MetricType.FILE_PROCESSING_TIME,
         undefined,
         undefined,
@@ -319,7 +447,7 @@ export class PerformanceController {
       bySeverity: any;
     };
   }> {
-    const alerts = await this.performanceService.getActiveAlerts(severity);
+    const alerts = await this.crudService.getActiveAlerts(severity);
 
     const summary = {
       total: alerts.length,
@@ -346,7 +474,7 @@ export class PerformanceController {
   async resolveAlert(@Param('alertId', ParseIntPipe) alertId: number): Promise<{
     message: string;
   }> {
-    await this.performanceService.resolveAlert(alertId);
+    await this.crudService.resolveAlert(alertId);
     return { message: '알람이 해결되었습니다.' };
   }
 
@@ -358,7 +486,7 @@ export class PerformanceController {
   async recordMetric(@Body() data: MetricRecordDto): Promise<{
     message: string;
   }> {
-    await this.performanceService.recordMetric(data);
+    await this.crudService.recordMetric(data);
     return { message: '성능 메트릭이 기록되었습니다.' };
   }
 
@@ -377,23 +505,20 @@ export class PerformanceController {
   }> {
     const [overallStats, apiStats, dbStats, fileStats, errorStats] =
       await Promise.all([
-        this.performanceService.getPerformanceStats(undefined, hours),
-        this.performanceService.getPerformanceStats(
+        this.crudService.getPerformanceStats(undefined, hours),
+        this.crudService.getPerformanceStats(
           MetricType.API_RESPONSE_TIME,
           hours,
         ),
-        this.performanceService.getPerformanceStats(
+        this.crudService.getPerformanceStats(
           MetricType.DATABASE_QUERY_TIME,
           hours,
         ),
-        this.performanceService.getPerformanceStats(
+        this.crudService.getPerformanceStats(
           MetricType.FILE_UPLOAD_SPEED,
           hours,
         ),
-        this.performanceService.getPerformanceStats(
-          MetricType.ERROR_RATE,
-          hours,
-        ),
+        this.crudService.getPerformanceStats(MetricType.ERROR_RATE, hours),
       ]);
 
     const recommendations = this.generateRecommendations({
@@ -428,7 +553,7 @@ export class PerformanceController {
    * 최근 API 응답 시간 조회
    */
   private async getRecentApiResponseTimes(): Promise<any[]> {
-    const metrics = await this.performanceService.getMetrics(
+    const metrics = await this.crudService.getMetrics(
       MetricType.API_RESPONSE_TIME,
       undefined,
       undefined,
@@ -461,7 +586,7 @@ export class PerformanceController {
    * 가장 느린 엔드포인트 조회
    */
   private async getTopSlowEndpoints(): Promise<any[]> {
-    const metrics = await this.performanceService.getMetrics(
+    const metrics = await this.crudService.getMetrics(
       MetricType.API_RESPONSE_TIME,
       undefined,
       undefined,
@@ -506,7 +631,7 @@ export class PerformanceController {
    */
   private async getHourlyTrends(hours: number): Promise<any[]> {
     // 간단화된 구현 - 실제로는 더 정교한 시계열 분석이 필요
-    const metrics = await this.performanceService.getMetrics(
+    const metrics = await this.crudService.getMetrics(
       MetricType.API_RESPONSE_TIME,
       undefined,
       undefined,

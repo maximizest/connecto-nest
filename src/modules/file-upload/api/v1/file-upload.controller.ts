@@ -1,3 +1,4 @@
+import { BeforeCreate, BeforeUpdate, Crud } from '@foryourdev/nestjs-crud';
 import {
   Body,
   Controller,
@@ -22,7 +23,7 @@ import { STORAGE_SETTINGS } from '../../../../config/storage.config';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { StorageService } from '../../../storage/storage.service';
 import { User } from '../../../user/user.entity';
-import { FileUploadType } from '../../file-upload.entity';
+import { FileUpload, FileUploadType } from '../../file-upload.entity';
 import { FileUploadService } from '../../file-upload.service';
 
 interface ChunkUploadDto {
@@ -40,19 +41,108 @@ interface CompleteUploadDto {
  * File Upload API Controller (v1)
  *
  * 대용량 파일 업로드를 위한 API를 제공합니다.
- * - 단일 파일 업로드 (최대 100MB)
+ * - 기본 CRUD 작업 (index, show, create, update, destroy)
+ * - 파일 업로드 관련 커스텀 엔드포인트
  * - 청크 기반 대용량 파일 업로드 (최대 500MB)
- * - 파일 관리 기능 (삭제, 다운로드 등)
  */
 @Controller({ path: 'files', version: '1' })
+@Crud({
+  entity: FileUpload,
+  allowedFilters: [
+    'userId',
+    'status',
+    'uploadType',
+    'folder',
+    'mimeType',
+    'createdAt',
+  ],
+  allowedParams: [
+    'originalFileName',
+    'storageKey',
+    'mimeType',
+    'fileSize',
+    'uploadType',
+    'folder',
+    'metadata',
+  ],
+  allowedIncludes: ['user'],
+  only: ['index', 'show', 'create', 'update', 'destroy'],
+  routes: {
+    index: {
+      allowedFilters: [
+        'userId',
+        'status',
+        'uploadType',
+        'folder',
+        'mimeType',
+        'createdAt',
+        'completedAt',
+      ],
+    },
+    show: {
+      allowedIncludes: ['user'],
+    },
+  },
+})
 @UseGuards(AuthGuard)
 export class FileUploadController {
   private readonly logger = new Logger(FileUploadController.name);
 
   constructor(
+    public readonly crudService: FileUploadService,
     private readonly storageService: StorageService,
-    private readonly fileUploadService: FileUploadService,
   ) {}
+
+  /**
+   * 파일 업로드 레코드 생성 전 전처리
+   */
+  @BeforeCreate()
+  async preprocessCreateUpload(body: any, context: any) {
+    const user: User = context.request?.user;
+
+    // 사용자 정보 자동 설정
+    if (user) {
+      body.userId = user.id;
+    }
+
+    // 기본값 설정
+    body.status = body.status || 'pending';
+    body.totalChunks = body.totalChunks || 0;
+    body.completedChunks = 0;
+    body.uploadedBytes = 0;
+    body.progress = 0;
+    body.retryCount = 0;
+
+    this.logger.log(
+      `Creating upload record for user ${user?.id}: ${body.originalFileName}`,
+    );
+    return body;
+  }
+
+  /**
+   * 파일 업로드 레코드 업데이트 전 전처리
+   */
+  @BeforeUpdate()
+  async preprocessUpdateUpload(body: any, context: any) {
+    const user: User = context.request?.user;
+
+    // 사용자 권한 확인
+    if (context.currentEntity && context.currentEntity.userId !== user?.id) {
+      throw new Error('파일 업로드 수정 권한이 없습니다.');
+    }
+
+    // 진행률 재계산 (청크 업로드의 경우)
+    if (body.completedChunks !== undefined && body.totalChunks > 0) {
+      body.progress = Math.round(
+        (body.completedChunks / body.totalChunks) * 100,
+      );
+    }
+
+    this.logger.log(
+      `Updating upload record ${context.currentEntity?.id} for user ${user?.id}`,
+    );
+    return body;
+  }
 
   /**
    * 단일 파일 업로드 (최대 100MB)
@@ -101,7 +191,7 @@ export class FileUploadController {
       const uploadFolder = folder || 'files';
 
       // 업로드 레코드 생성
-      const uploadRecord = await this.fileUploadService.createUploadRecord({
+      const uploadRecord = await this.crudService.createUploadRecord({
         userId: user.id,
         originalFileName: file.originalname,
         storageKey: '', // 임시로 빈 문자열, 업로드 후 업데이트
@@ -121,10 +211,7 @@ export class FileUploadController {
 
         // 업로드 레코드 업데이트
         uploadRecord.storageKey = result.key;
-        await this.fileUploadService.markAsCompleted(
-          uploadRecord.id,
-          result.url,
-        );
+        await this.crudService.markAsCompleted(uploadRecord.id, result.url);
 
         this.logger.log(`File uploaded: ${result.key}, user: ${user.id}`);
 
@@ -144,7 +231,7 @@ export class FileUploadController {
         };
       } catch (uploadError) {
         // 업로드 실패 시 레코드 업데이트
-        await this.fileUploadService.markAsFailed(
+        await this.crudService.markAsFailed(
           uploadRecord.id,
           uploadError.message,
         );
@@ -216,7 +303,7 @@ export class FileUploadController {
       const totalChunks = Math.ceil(fileSize / CHUNK_SIZE);
 
       // 업로드 레코드 생성
-      const uploadRecord = await this.fileUploadService.createUploadRecord({
+      const uploadRecord = await this.crudService.createUploadRecord({
         userId: user.id,
         originalFileName: fileName,
         storageKey: result.key,
@@ -288,8 +375,7 @@ export class FileUploadController {
       }
 
       // 업로드 레코드 찾기
-      const uploadRecord =
-        await this.fileUploadService.findByUploadId(uploadId);
+      const uploadRecord = await this.crudService.findByUploadId(uploadId);
       if (!uploadRecord) {
         throw new NotFoundException(
           `Upload record not found for uploadId: ${uploadId}`,
@@ -309,10 +395,7 @@ export class FileUploadController {
       );
 
       // 청크 업로드 진행률 업데이트
-      await this.fileUploadService.updateChunkProgress(
-        uploadRecord.id,
-        chunk.size,
-      );
+      await this.crudService.updateChunkProgress(uploadRecord.id, chunk.size);
 
       this.logger.log(
         `Chunk uploaded: ${key}, part: ${partNum}, user: ${user.id}`,
@@ -354,8 +437,7 @@ export class FileUploadController {
       }
 
       // 업로드 레코드 찾기
-      const uploadRecord =
-        await this.fileUploadService.findByUploadId(uploadId);
+      const uploadRecord = await this.crudService.findByUploadId(uploadId);
       if (!uploadRecord) {
         throw new NotFoundException(
           `Upload record not found for uploadId: ${uploadId}`,
@@ -377,7 +459,7 @@ export class FileUploadController {
       );
 
       // 업로드 완료 처리
-      await this.fileUploadService.markAsCompleted(uploadRecord.id, result.url);
+      await this.crudService.markAsCompleted(uploadRecord.id, result.url);
 
       this.logger.log(
         `Multipart upload completed: ${key}, parts: ${parts.length}, user: ${user.id}`,
@@ -423,8 +505,7 @@ export class FileUploadController {
 
     try {
       // 업로드 레코드 찾기
-      const uploadRecord =
-        await this.fileUploadService.findByUploadId(uploadId);
+      const uploadRecord = await this.crudService.findByUploadId(uploadId);
       if (!uploadRecord) {
         throw new NotFoundException(
           `Upload record not found for uploadId: ${uploadId}`,
@@ -439,7 +520,7 @@ export class FileUploadController {
       await this.storageService.abortMultipartUpload(key, uploadId);
 
       // 업로드 레코드를 취소 상태로 업데이트
-      await this.fileUploadService.updateStatus(
+      await this.crudService.updateStatus(
         uploadRecord.id,
         uploadRecord.status === 'cancelled'
           ? uploadRecord.status
@@ -479,9 +560,7 @@ export class FileUploadController {
     const user: User = req.user;
 
     try {
-      const uploadRecord = await this.fileUploadService.findById(
-        parseInt(recordId),
-      );
+      const uploadRecord = await this.crudService.findById(parseInt(recordId));
       if (!uploadRecord) {
         throw new NotFoundException(`Upload record not found: ${recordId}`);
       }
@@ -522,7 +601,7 @@ export class FileUploadController {
       const validatedLimit = Math.min(Math.max(1, limit), 100);
       const offset = (page - 1) * validatedLimit;
 
-      const result = await this.fileUploadService.findByUser(user.id, {
+      const result = await this.crudService.findByUser(user.id, {
         status: status as any,
         limit: validatedLimit,
         offset,
@@ -559,7 +638,7 @@ export class FileUploadController {
     const user: User = req.user;
 
     try {
-      const stats = await this.fileUploadService.getUploadStats(user.id);
+      const stats = await this.crudService.getUploadStats(user.id);
 
       return {
         success: true,

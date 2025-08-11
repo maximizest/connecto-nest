@@ -1,3 +1,4 @@
+import { CrudService } from '@foryourdev/nestjs-crud';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -8,13 +9,15 @@ import {
 } from './file-upload.entity';
 
 @Injectable()
-export class FileUploadService {
+export class FileUploadService extends CrudService<FileUpload> {
   private readonly logger = new Logger(FileUploadService.name);
 
   constructor(
     @InjectRepository(FileUpload)
     private readonly fileUploadRepository: Repository<FileUpload>,
-  ) {}
+  ) {
+    super(fileUploadRepository);
+  }
 
   /**
    * 새 파일 업로드 레코드 생성
@@ -31,7 +34,7 @@ export class FileUploadService {
     totalChunks?: number;
     metadata?: Record<string, any>;
   }): Promise<FileUpload> {
-    const upload = this.fileUploadRepository.create({
+    const upload = this.repository.create({
       ...data,
       status: FileUploadStatus.PENDING,
       totalChunks: data.totalChunks || 0,
@@ -41,7 +44,7 @@ export class FileUploadService {
       retryCount: 0,
     });
 
-    const savedUpload = await this.fileUploadRepository.save(upload);
+    const savedUpload = await this.repository.save(upload);
 
     this.logger.log(
       `Upload record created: ${savedUpload.id} for user ${data.userId}`,
@@ -53,7 +56,7 @@ export class FileUploadService {
    * 업로드 레코드 조회 (ID)
    */
   async findById(id: number): Promise<FileUpload | null> {
-    return await this.fileUploadRepository.findOne({
+    return await this.repository.findOne({
       where: { id },
       relations: ['user'],
     });
@@ -63,7 +66,7 @@ export class FileUploadService {
    * 업로드 레코드 조회 (Storage Key)
    */
   async findByStorageKey(storageKey: string): Promise<FileUpload | null> {
-    return await this.fileUploadRepository.findOne({
+    return await this.repository.findOne({
       where: { storageKey },
       relations: ['user'],
     });
@@ -73,7 +76,7 @@ export class FileUploadService {
    * 업로드 레코드 조회 (Upload ID)
    */
   async findByUploadId(uploadId: string): Promise<FileUpload | null> {
-    return await this.fileUploadRepository.findOne({
+    return await this.repository.findOne({
       where: { uploadId },
       relations: ['user'],
     });
@@ -90,7 +93,7 @@ export class FileUploadService {
       offset?: number;
     },
   ): Promise<{ uploads: FileUpload[]; total: number }> {
-    const queryBuilder = this.fileUploadRepository
+    const queryBuilder = this.repository
       .createQueryBuilder('upload')
       .leftJoinAndSelect('upload.user', 'user')
       .where('upload.userId = :userId', { userId });
@@ -138,7 +141,7 @@ export class FileUploadService {
       upload.cancelUpload();
     }
 
-    const updatedUpload = await this.fileUploadRepository.save(upload);
+    const updatedUpload = await this.repository.save(upload);
 
     this.logger.log(`Upload status updated: ${id} -> ${status}`);
     return updatedUpload;
@@ -167,7 +170,7 @@ export class FileUploadService {
       upload.completeUpload(publicUrl);
     }
 
-    const updatedUpload = await this.fileUploadRepository.save(upload);
+    const updatedUpload = await this.repository.save(upload);
 
     this.logger.log(
       `Chunk progress updated: ${id} (${upload.completedChunks}/${upload.totalChunks})`,
@@ -186,7 +189,7 @@ export class FileUploadService {
     }
 
     upload.failUpload(errorMessage);
-    const updatedUpload = await this.fileUploadRepository.save(upload);
+    const updatedUpload = await this.repository.save(upload);
 
     this.logger.error(`Upload failed: ${id} - ${errorMessage}`);
     return updatedUpload;
@@ -202,7 +205,7 @@ export class FileUploadService {
     }
 
     upload.completeUpload(publicUrl);
-    const updatedUpload = await this.fileUploadRepository.save(upload);
+    const updatedUpload = await this.repository.save(upload);
 
     this.logger.log(`Upload completed: ${id}`);
     return updatedUpload;
@@ -216,7 +219,7 @@ export class FileUploadService {
   ): Promise<FileUpload[]> {
     const cutoffTime = new Date(Date.now() - olderThanMinutes * 60 * 1000);
 
-    return await this.fileUploadRepository.find({
+    return await this.repository.find({
       where: {
         status: FileUploadStatus.UPLOADING,
       },
@@ -233,7 +236,7 @@ export class FileUploadService {
       Date.now() - olderThanDays * 24 * 60 * 60 * 1000,
     );
 
-    const result = await this.fileUploadRepository
+    const result = await this.repository
       .createQueryBuilder()
       .delete()
       .where('status = :status', { status: FileUploadStatus.FAILED })
@@ -259,7 +262,7 @@ export class FileUploadService {
     totalSize: number;
     averageSpeed: number;
   }> {
-    const queryBuilder = this.fileUploadRepository.createQueryBuilder('upload');
+    const queryBuilder = this.repository.createQueryBuilder('upload');
 
     if (userId) {
       queryBuilder.where('upload.userId = :userId', { userId });
@@ -344,7 +347,7 @@ export class FileUploadService {
     upload.startedAt = undefined;
     upload.completedAt = undefined;
 
-    const updatedUpload = await this.fileUploadRepository.save(upload);
+    const updatedUpload = await this.repository.save(upload);
 
     this.logger.log(`Upload retry initiated: ${id}`);
     return updatedUpload;
@@ -359,7 +362,7 @@ export class FileUploadService {
       throw new NotFoundException(`Upload record not found: ${id}`);
     }
 
-    await this.fileUploadRepository.remove(upload);
+    await this.repository.remove(upload);
 
     this.logger.log(`Upload record deleted: ${id}`);
   }

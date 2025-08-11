@@ -1,3 +1,4 @@
+import { CrudService } from '@foryourdev/nestjs-crud';
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -30,10 +31,11 @@ interface AlertThreshold {
 /**
  * 성능 모니터링 서비스
  *
- * 애플리케이션의 다양한 성능 지표를 실시간으로 수집, 분석, 모니터링합니다.
+ * @foryourdev/nestjs-crud의 CrudService를 상속받아
+ * 기본 CRUD 작업과 성능 모니터링 기능을 제공합니다.
  */
 @Injectable()
-export class PerformanceService {
+export class PerformanceService extends CrudService<PerformanceMetric> {
   private readonly logger = new Logger(PerformanceService.name);
   private readonly CACHE_PREFIX = 'perf_metrics';
   private readonly CACHE_TTL = 300; // 5분
@@ -99,6 +101,7 @@ export class PerformanceService {
     private readonly eventEmitter: EventEmitter2,
     private readonly notificationService: NotificationService,
   ) {
+    super(performanceMetricRepository);
     this.logger.log('🔍 Performance monitoring service initialized');
   }
 

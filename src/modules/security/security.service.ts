@@ -1,3 +1,4 @@
+import { CrudService } from '@foryourdev/nestjs-crud';
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -45,7 +46,7 @@ interface FileSecurityCheck {
  * 보안 이벤트 기록, IP 차단, 파일 스캔 등 전반적인 보안 관리를 담당합니다.
  */
 @Injectable()
-export class SecurityService {
+export class SecurityService extends CrudService<SecurityEvent> {
   private readonly logger = new Logger(SecurityService.name);
   private readonly CACHE_PREFIX = 'security';
   private readonly RATE_LIMIT_PREFIX = 'rate_limit';
@@ -71,6 +72,7 @@ export class SecurityService {
     private readonly redisService: RedisService,
     private readonly eventEmitter: EventEmitter2,
   ) {
+    super(securityEventRepository);
     this.logger.log('🔒 Security service initialized');
   }
 

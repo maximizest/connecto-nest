@@ -1,3 +1,4 @@
+import { BeforeCreate, BeforeUpdate, Crud } from '@foryourdev/nestjs-crud';
 import {
   BadRequestException,
   Body,
@@ -47,13 +48,92 @@ interface SecurityEventQueryDto {
 /**
  * 보안 관리 API 컨트롤러
  *
- * 보안 이벤트, IP 차단, 파일 스캔 등의 보안 관리 기능을 제공합니다.
+ * @foryourdev/nestjs-crud 기반 보안 이벤트 CRUD와
+ * 보안 관리 전용 기능을 제공합니다.
  */
 @Controller({ path: 'security', version: '1' })
+@Crud({
+  entity: SecurityEvent,
+  allowedFilters: [
+    'type',
+    'riskLevel',
+    'status',
+    'userId',
+    'ipAddress',
+    'resourceType',
+    'resourceId',
+    'createdAt',
+  ],
+  allowedParams: [
+    'type',
+    'riskLevel',
+    'title',
+    'description',
+    'userId',
+    'ipAddress',
+    'userAgent',
+    'requestUrl',
+    'requestMethod',
+    'resourceType',
+    'resourceId',
+    'metadata',
+  ],
+  allowedIncludes: [],
+  only: ['index', 'show'],
+  routes: {
+    index: {
+      allowedFilters: [
+        'type',
+        'riskLevel',
+        'status',
+        'userId',
+        'ipAddress',
+        'createdAt_gt',
+        'createdAt_lt',
+      ],
+    },
+    show: {
+      allowedIncludes: [],
+    },
+  },
+})
 @UseGuards(AuthGuard)
 @SecurityLog('security_api_access')
 export class SecurityController {
-  constructor(private readonly securityService: SecurityService) {}
+  constructor(public readonly crudService: SecurityService) {}
+
+  /**
+   * 보안 이벤트 생성 전 전처리
+   */
+  @BeforeCreate()
+  async preprocessCreateEvent(body: any, context: any) {
+    // 보안 이벤트는 일반적으로 시스템에서 자동 생성되므로
+    // 수동 생성은 제한적으로 허용
+    body.status = body.status || SecurityEventStatus.DETECTED;
+    body.metadata = body.metadata || {};
+    body.metadata.createdBy = 'system';
+    body.metadata.source = 'manual';
+
+    return body;
+  }
+
+  /**
+   * 보안 이벤트 업데이트 전 전처리
+   */
+  @BeforeUpdate()
+  async preprocessUpdateEvent(body: any, context: any) {
+    // 보안 이벤트는 상태 변경만 허용 (조사 완료, 해결됨 등)
+    const allowedFields = ['status', 'metadata'];
+    const filteredBody = {};
+
+    allowedFields.forEach((field) => {
+      if (body[field] !== undefined) {
+        filteredBody[field] = body[field];
+      }
+    });
+
+    return filteredBody;
+  }
 
   /**
    * 보안 이벤트 조회
