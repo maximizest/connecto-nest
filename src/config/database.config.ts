@@ -8,6 +8,7 @@ import { Admin } from '../modules/admin/admin.entity';
 import { Message } from '../modules/message/message.entity';
 import { PlanetUser } from '../modules/planet-user/planet-user.entity';
 import { Planet } from '../modules/planet/planet.entity';
+import { FileUpload } from '../modules/storage/file-upload.entity';
 import { TravelUser } from '../modules/travel-user/travel-user.entity';
 import { Travel } from '../modules/travel/travel.entity';
 import { User } from '../modules/user/user.entity';
@@ -43,6 +44,7 @@ export const ENTITIES = [
   Planet,
   PlanetUser,
   Message,
+  FileUpload,
 ];
 
 /**
