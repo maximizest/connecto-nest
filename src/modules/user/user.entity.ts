@@ -14,6 +14,7 @@ import {
   CreateDateColumn,
   Entity,
   Index,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -246,7 +247,15 @@ export class User extends BaseEntity {
   @IsDateString()
   updatedAt: Date;
 
-  // 관계 설정은 나중에 Travel/Planet 엔티티와 함께 구현
+  /**
+   * 관계 설정
+   */
+  @OneToOne('Profile', 'user', {
+    eager: false,
+    cascade: true, // Profile도 함께 저장/삭제
+    onDelete: 'CASCADE',
+  })
+  profile?: any; // Profile 타입은 순환 참조를 피하기 위해 any 사용
 
   /**
    * 비즈니스 로직 메서드

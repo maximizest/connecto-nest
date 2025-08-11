@@ -72,6 +72,7 @@ import { UserService } from '../../user.service';
 
   // 관계 포함 허용 필드
   allowedIncludes: [
+    'profile', // 프로필 정보 포함 허용
     'travelMemberships',
     'travelMemberships.travel',
     'planetMemberships',
@@ -91,6 +92,7 @@ import { UserService } from '../../user.service';
     // 단일 조회: 본인은 모든 정보, 타인은 제한적 정보
     show: {
       allowedIncludes: [
+        'profile', // 프로필 정보 포함 허용
         'travelMemberships',
         'travelMemberships.travel',
         'planetMemberships',

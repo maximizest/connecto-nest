@@ -22,6 +22,7 @@ import { NotificationModule } from './notification/notification.module';
 import { PerformanceModule } from './performance/performance.module';
 import { PlanetUserModule } from './planet-user/planet-user.module';
 import { PlanetModule } from './planet/planet.module';
+import { ProfileModule } from './profile/profile.module';
 import { ReadReceiptModule } from './read-receipt/read-receipt.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { SchemaModule } from './schema/schema.module';
@@ -75,6 +76,7 @@ modules.push(SecurityModule);
 modules.push(SchedulerModule);
 modules.push(AdminModule);
 modules.push(UserModule);
+modules.push(ProfileModule); // User와 1:1 관계의 프로필 모듈
 modules.push(TravelModule);
 modules.push(TravelUserModule);
 modules.push(PlanetModule);

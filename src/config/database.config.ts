@@ -15,6 +15,7 @@ import {
 } from '../modules/performance/performance.entity';
 import { PlanetUser } from '../modules/planet-user/planet-user.entity';
 import { Planet } from '../modules/planet/planet.entity';
+import { Profile } from '../modules/profile/profile.entity';
 import { MessageReadReceipt } from '../modules/read-receipt/read-receipt.entity';
 import {
   BlockedIp,
@@ -53,6 +54,7 @@ dotenv.config();
 export const ENTITIES = [
   Admin,
   User,
+  Profile, // User와 1:1 관계의 프로필 정보
   Travel,
   TravelUser,
   Planet,
