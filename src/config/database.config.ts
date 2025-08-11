@@ -5,6 +5,12 @@ import {
   ENV_KEYS,
 } from '../common/constants/app.constants';
 import { Admin } from '../modules/admin/admin.entity';
+import { Message } from '../modules/message/message.entity';
+import { PlanetUser } from '../modules/planet-user/planet-user.entity';
+import { Planet } from '../modules/planet/planet.entity';
+import { TravelUser } from '../modules/travel-user/travel-user.entity';
+import { Travel } from '../modules/travel/travel.entity';
+import { User } from '../modules/user/user.entity';
 
 // 테스트 환경 검증 함수를 별도로 임포트하지 않고 여기서 정의
 const validateTestDatabaseConfig = (): void => {
@@ -29,7 +35,15 @@ dotenv.config();
 /**
  * 모든 엔티티 목록 (중앙 관리)
  */
-export const ENTITIES = [Admin];
+export const ENTITIES = [
+  Admin,
+  User,
+  Travel,
+  TravelUser,
+  Planet,
+  PlanetUser,
+  Message,
+];
 
 /**
  * 공통 데이터베이스 설정
