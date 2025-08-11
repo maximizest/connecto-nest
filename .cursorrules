@@ -14,6 +14,11 @@
 - NestJS 데코레이터 패턴 준수
 - class-validator, class-transformer 사용한 DTO 검증
 
+### Import 경로 규칙
+- **필수**: 상대경로 사용 (`../../guards/auth.guard`)
+- **금지**: 절대경로 (`src/guards/auth.guard`) - Jest 테스트 오류 원인
+- 경로 예시: `import { AuthGuard } from '../../guards/auth.guard';`
+
 ### 패키지 매니저
 - **MUST**: yarn 명령어만 사용 (npm 금지)
 - 예: `yarn install`, `yarn dev`, `yarn migration:run`
@@ -161,11 +166,12 @@ src/modules/{module-name}/
 - 함수형보다 클래스 기반 접근
 
 ## ⚠️ 공통 실수 방지
-- 모듈 클래스명 일치: `AdminModule` (❌ UserModule)
-- 엔티티 import 경로 정확성 확인
-- ENTITIES 배열에 엔티티 등록 필수
-- 패스워드 해싱 시 상수 사용: `SECURITY_CONSTANTS.BCRYPT_SALT_ROUNDS`
-- 컨트롤러 경로 일치: 파일 위치와 @Controller path 동일
+- **모듈 클래스명 일치**: `AdminModule` (❌ UserModule)
+- **상대경로 필수**: `../../guards/auth.guard` (❌ `src/guards/auth.guard`)
+- **엔티티 등록 필수**: ENTITIES 배열에 엔티티 등록
+- **상수 사용**: `SECURITY_CONSTANTS.BCRYPT_SALT_ROUNDS` (❌ 하드코딩 10)
+- **경로 일치**: 파일 위치와 @Controller path 동일
+- **테스트 환경**: 절대경로 사용 시 Jest 테스트 실패
 
 ## 🔧 개발 워크플로
 1. **새 기능 개발 시**: 엔티티 → 서비스 → 컨트롤러 → 모듈 → 마이그레이션 순서

@@ -1,7 +1,8 @@
 import { BeforeCreate, BeforeUpdate, Crud } from '@foryourdev/nestjs-crud';
 import { Controller, UseGuards } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { AdminGuard } from 'src/guards/admin.guard';
+import { SECURITY_CONSTANTS } from '../../../../common/constants/app.constants';
+import { AdminGuard } from '../../../../guards/admin.guard';
 import { Admin } from '../../admin.entity';
 import { AdminService } from '../../admin.service';
 
@@ -24,7 +25,10 @@ export class AdminController {
   @BeforeUpdate()
   async hashPassword(body: any) {
     if (body.password) {
-      body.password = await bcrypt.hash(body.password, 10);
+      body.password = await bcrypt.hash(
+        body.password,
+        SECURITY_CONSTANTS.BCRYPT_SALT_ROUNDS,
+      );
     }
 
     return body;

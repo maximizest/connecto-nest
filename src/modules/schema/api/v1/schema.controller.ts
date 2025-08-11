@@ -8,9 +8,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import 'reflect-metadata';
-import { DevOnlyGuard } from 'src/guards/dev-only.guard';
 import { DataSource } from 'typeorm';
 import { ColumnMetadata as TypeORMColumnMetadata } from 'typeorm/metadata/ColumnMetadata';
+import { DevOnlyGuard } from '../../../../guards/dev-only.guard';
 import { CrudMetadataService } from '../../services/crud-metadata.service';
 import {
   CheckInfo,

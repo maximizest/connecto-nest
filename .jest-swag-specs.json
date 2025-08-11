@@ -129,19 +129,632 @@
               "properties": {
                 "data": {
                   "type": "array",
-                  "items": {},
-                  "example": []
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "entityName": {
+                        "type": "string",
+                        "example": "Admin"
+                      },
+                      "tableName": {
+                        "type": "string",
+                        "example": "admins"
+                      },
+                      "targetName": {
+                        "type": "string",
+                        "example": "Admin"
+                      },
+                      "primaryKeys": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "example": "id"
+                            },
+                            "databaseName": {
+                              "type": "string",
+                              "example": "id"
+                            },
+                            "type": {
+                              "type": "integer",
+                              "example": 0
+                            },
+                            "isGenerated": {
+                              "type": "boolean",
+                              "example": true
+                            },
+                            "generationStrategy": {
+                              "type": "string",
+                              "example": "increment"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "databaseName",
+                            "type",
+                            "isGenerated",
+                            "generationStrategy"
+                          ],
+                          "example": {
+                            "name": "id",
+                            "databaseName": "id",
+                            "type": 0,
+                            "isGenerated": true,
+                            "generationStrategy": "increment"
+                          }
+                        },
+                        "example": [
+                          {
+                            "name": "id",
+                            "databaseName": "id",
+                            "type": 0,
+                            "isGenerated": true,
+                            "generationStrategy": "increment"
+                          }
+                        ]
+                      },
+                      "columns": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "example": "id"
+                            },
+                            "databaseName": {
+                              "type": "string",
+                              "example": "id"
+                            },
+                            "type": {
+                              "type": "integer",
+                              "example": 0
+                            },
+                            "jsType": {
+                              "type": "string",
+                              "example": "unknown"
+                            },
+                            "isPrimary": {
+                              "type": "boolean",
+                              "example": true
+                            },
+                            "isGenerated": {
+                              "type": "boolean",
+                              "example": true
+                            },
+                            "generationStrategy": {
+                              "type": "string",
+                              "example": "increment"
+                            },
+                            "isNullable": {
+                              "type": "boolean",
+                              "example": false
+                            },
+                            "isArray": {
+                              "type": "boolean",
+                              "example": false
+                            },
+                            "length": {
+                              "type": "string",
+                              "example": ""
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "databaseName",
+                            "type",
+                            "jsType",
+                            "isPrimary",
+                            "isGenerated",
+                            "generationStrategy",
+                            "isNullable",
+                            "isArray",
+                            "length"
+                          ],
+                          "example": {
+                            "name": "id",
+                            "databaseName": "id",
+                            "type": 0,
+                            "jsType": "unknown",
+                            "isPrimary": true,
+                            "isGenerated": true,
+                            "generationStrategy": "increment",
+                            "isNullable": false,
+                            "isArray": false,
+                            "length": ""
+                          }
+                        },
+                        "example": [
+                          {
+                            "name": "id",
+                            "databaseName": "id",
+                            "type": 0,
+                            "jsType": "unknown",
+                            "isPrimary": true,
+                            "isGenerated": true,
+                            "generationStrategy": "increment",
+                            "isNullable": false,
+                            "isArray": false,
+                            "length": "",
+                            "zerofill": false,
+                            "unsigned": false,
+                            "metadata": {
+                              "type": 0,
+                              "jsType": "unknown",
+                              "isEnum": false,
+                              "isNullable": false,
+                              "isPrimary": true,
+                              "isGenerated": true,
+                              "length": ""
+                            }
+                          }
+                        ]
+                      },
+                      "relations": {
+                        "type": "array",
+                        "items": {},
+                        "example": []
+                      },
+                      "indices": {
+                        "type": "array",
+                        "items": {},
+                        "example": []
+                      },
+                      "checks": {
+                        "type": "array",
+                        "items": {},
+                        "example": []
+                      },
+                      "uniques": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "example": "UQ_051db7d37d478a69a7432df1479"
+                            },
+                            "columns": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "example": "email"
+                              },
+                              "example": [
+                                "email"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "columns"
+                          ],
+                          "example": {
+                            "name": "UQ_051db7d37d478a69a7432df1479",
+                            "columns": [
+                              "email"
+                            ]
+                          }
+                        },
+                        "example": [
+                          {
+                            "name": "UQ_051db7d37d478a69a7432df1479",
+                            "columns": [
+                              "email"
+                            ]
+                          }
+                        ]
+                      },
+                      "foreignKeys": {
+                        "type": "array",
+                        "items": {},
+                        "example": []
+                      }
+                    },
+                    "required": [
+                      "entityName",
+                      "tableName",
+                      "targetName",
+                      "primaryKeys",
+                      "columns",
+                      "relations",
+                      "indices",
+                      "checks",
+                      "uniques",
+                      "foreignKeys"
+                    ],
+                    "example": {
+                      "entityName": "Admin",
+                      "tableName": "admins",
+                      "targetName": "Admin",
+                      "primaryKeys": [
+                        {
+                          "name": "id",
+                          "databaseName": "id",
+                          "type": 0,
+                          "isGenerated": true,
+                          "generationStrategy": "increment"
+                        }
+                      ],
+                      "columns": [
+                        {
+                          "name": "id",
+                          "databaseName": "id",
+                          "type": 0,
+                          "jsType": "unknown",
+                          "isPrimary": true,
+                          "isGenerated": true,
+                          "generationStrategy": "increment",
+                          "isNullable": false,
+                          "isArray": false,
+                          "length": "",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": 0,
+                            "jsType": "unknown",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": true,
+                            "isGenerated": true,
+                            "length": ""
+                          }
+                        },
+                        {
+                          "name": "name",
+                          "databaseName": "name",
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "length": "100",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "varchar",
+                            "jsType": "string",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "100"
+                          }
+                        },
+                        {
+                          "name": "email",
+                          "databaseName": "email",
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "length": "200",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "varchar",
+                            "jsType": "string",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "200"
+                          }
+                        },
+                        {
+                          "name": "password",
+                          "databaseName": "password",
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "length": "255",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "varchar",
+                            "jsType": "string",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "255"
+                          }
+                        },
+                        {
+                          "name": "refreshToken",
+                          "databaseName": "refreshToken",
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": true,
+                          "isArray": false,
+                          "length": "255",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "varchar",
+                            "jsType": "string",
+                            "isEnum": false,
+                            "isNullable": true,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "255"
+                          }
+                        },
+                        {
+                          "name": "createdAt",
+                          "databaseName": "createdAt",
+                          "type": "timestamp",
+                          "jsType": "Date",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "default": "now()",
+                          "length": "",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "timestamp",
+                            "jsType": "Date",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "",
+                            "default": "now()"
+                          }
+                        },
+                        {
+                          "name": "updatedAt",
+                          "databaseName": "updatedAt",
+                          "type": "timestamp",
+                          "jsType": "Date",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "default": "now()",
+                          "length": "",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "timestamp",
+                            "jsType": "Date",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "",
+                            "default": "now()"
+                          }
+                        }
+                      ],
+                      "relations": [],
+                      "indices": [],
+                      "checks": [],
+                      "uniques": [
+                        {
+                          "name": "UQ_051db7d37d478a69a7432df1479",
+                          "columns": [
+                            "email"
+                          ]
+                        }
+                      ],
+                      "foreignKeys": []
+                    }
+                  },
+                  "example": [
+                    {
+                      "entityName": "Admin",
+                      "tableName": "admins",
+                      "targetName": "Admin",
+                      "primaryKeys": [
+                        {
+                          "name": "id",
+                          "databaseName": "id",
+                          "type": 0,
+                          "isGenerated": true,
+                          "generationStrategy": "increment"
+                        }
+                      ],
+                      "columns": [
+                        {
+                          "name": "id",
+                          "databaseName": "id",
+                          "type": 0,
+                          "jsType": "unknown",
+                          "isPrimary": true,
+                          "isGenerated": true,
+                          "generationStrategy": "increment",
+                          "isNullable": false,
+                          "isArray": false,
+                          "length": "",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": 0,
+                            "jsType": "unknown",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": true,
+                            "isGenerated": true,
+                            "length": ""
+                          }
+                        },
+                        {
+                          "name": "name",
+                          "databaseName": "name",
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "length": "100",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "varchar",
+                            "jsType": "string",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "100"
+                          }
+                        },
+                        {
+                          "name": "email",
+                          "databaseName": "email",
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "length": "200",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "varchar",
+                            "jsType": "string",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "200"
+                          }
+                        },
+                        {
+                          "name": "password",
+                          "databaseName": "password",
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "length": "255",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "varchar",
+                            "jsType": "string",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "255"
+                          }
+                        },
+                        {
+                          "name": "refreshToken",
+                          "databaseName": "refreshToken",
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": true,
+                          "isArray": false,
+                          "length": "255",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "varchar",
+                            "jsType": "string",
+                            "isEnum": false,
+                            "isNullable": true,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "255"
+                          }
+                        },
+                        {
+                          "name": "createdAt",
+                          "databaseName": "createdAt",
+                          "type": "timestamp",
+                          "jsType": "Date",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "default": "now()",
+                          "length": "",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "timestamp",
+                            "jsType": "Date",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "",
+                            "default": "now()"
+                          }
+                        },
+                        {
+                          "name": "updatedAt",
+                          "databaseName": "updatedAt",
+                          "type": "timestamp",
+                          "jsType": "Date",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "default": "now()",
+                          "length": "",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "timestamp",
+                            "jsType": "Date",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "",
+                            "default": "now()"
+                          }
+                        }
+                      ],
+                      "relations": [],
+                      "indices": [],
+                      "checks": [],
+                      "uniques": [
+                        {
+                          "name": "UQ_051db7d37d478a69a7432df1479",
+                          "columns": [
+                            "email"
+                          ]
+                        }
+                      ],
+                      "foreignKeys": [],
+                      "synchronize": true,
+                      "withoutRowid": false
+                    }
+                  ]
                 },
                 "metadata": {
                   "type": "object",
                   "properties": {
                     "timestamp": {
                       "type": "string",
-                      "example": "2025-08-10T23:51:02.129Z"
+                      "example": "2025-08-11T05:07:18.474Z"
                     },
                     "affectedCount": {
                       "type": "integer",
-                      "example": 0
+                      "example": 1
                     },
                     "pagination": {
                       "type": "object",
@@ -152,7 +765,7 @@
                         },
                         "total": {
                           "type": "integer",
-                          "example": 0
+                          "example": 1
                         },
                         "page": {
                           "type": "integer",
@@ -160,15 +773,15 @@
                         },
                         "pages": {
                           "type": "integer",
-                          "example": 0
+                          "example": 1
                         },
                         "offset": {
                           "type": "integer",
-                          "example": 0
+                          "example": 1
                         },
                         "nextCursor": {
                           "type": "string",
-                          "example": "eyJuZXh0Q3Vyc29yIjoiTUE9PSIsInRvdGFsIjowfQ=="
+                          "example": "eyJuZXh0Q3Vyc29yIjoiTVE9PSIsInRvdGFsIjoxfQ=="
                         }
                       },
                       "required": [
@@ -181,11 +794,11 @@
                       ],
                       "example": {
                         "type": "offset",
-                        "total": 0,
+                        "total": 1,
                         "page": 1,
-                        "pages": 0,
-                        "offset": 0,
-                        "nextCursor": "eyJuZXh0Q3Vyc29yIjoiTUE9PSIsInRvdGFsIjowfQ=="
+                        "pages": 1,
+                        "offset": 1,
+                        "nextCursor": "eyJuZXh0Q3Vyc29yIjoiTVE9PSIsInRvdGFsIjoxfQ=="
                       }
                     }
                   },
@@ -195,15 +808,15 @@
                     "pagination"
                   ],
                   "example": {
-                    "timestamp": "2025-08-10T23:51:02.129Z",
-                    "affectedCount": 0,
+                    "timestamp": "2025-08-11T05:07:18.474Z",
+                    "affectedCount": 1,
                     "pagination": {
                       "type": "offset",
-                      "total": 0,
+                      "total": 1,
                       "page": 1,
-                      "pages": 0,
-                      "offset": 0,
-                      "nextCursor": "eyJuZXh0Q3Vyc29yIjoiTUE9PSIsInRvdGFsIjowfQ=="
+                      "pages": 1,
+                      "offset": 1,
+                      "nextCursor": "eyJuZXh0Q3Vyc29yIjoiTVE9PSIsInRvdGFsIjoxfQ=="
                     }
                   }
                 }
@@ -213,33 +826,413 @@
                 "metadata"
               ],
               "example": {
-                "data": [],
+                "data": [
+                  {
+                    "entityName": "Admin",
+                    "tableName": "admins",
+                    "targetName": "Admin",
+                    "primaryKeys": [
+                      {
+                        "name": "id",
+                        "databaseName": "id",
+                        "type": 0,
+                        "isGenerated": true,
+                        "generationStrategy": "increment"
+                      }
+                    ],
+                    "columns": [
+                      {
+                        "name": "id",
+                        "databaseName": "id",
+                        "type": 0,
+                        "jsType": "unknown",
+                        "isPrimary": true,
+                        "isGenerated": true,
+                        "generationStrategy": "increment",
+                        "isNullable": false,
+                        "isArray": false,
+                        "length": "",
+                        "zerofill": false,
+                        "unsigned": false,
+                        "metadata": {
+                          "type": 0,
+                          "jsType": "unknown",
+                          "isEnum": false,
+                          "isNullable": false,
+                          "isPrimary": true,
+                          "isGenerated": true,
+                          "length": ""
+                        }
+                      },
+                      {
+                        "name": "name",
+                        "databaseName": "name",
+                        "type": "varchar",
+                        "jsType": "string",
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "isNullable": false,
+                        "isArray": false,
+                        "length": "100",
+                        "zerofill": false,
+                        "unsigned": false,
+                        "metadata": {
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isEnum": false,
+                          "isNullable": false,
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "length": "100"
+                        }
+                      },
+                      {
+                        "name": "email",
+                        "databaseName": "email",
+                        "type": "varchar",
+                        "jsType": "string",
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "isNullable": false,
+                        "isArray": false,
+                        "length": "200",
+                        "zerofill": false,
+                        "unsigned": false,
+                        "metadata": {
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isEnum": false,
+                          "isNullable": false,
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "length": "200"
+                        }
+                      },
+                      {
+                        "name": "password",
+                        "databaseName": "password",
+                        "type": "varchar",
+                        "jsType": "string",
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "isNullable": false,
+                        "isArray": false,
+                        "length": "255",
+                        "zerofill": false,
+                        "unsigned": false,
+                        "metadata": {
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isEnum": false,
+                          "isNullable": false,
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "length": "255"
+                        }
+                      },
+                      {
+                        "name": "refreshToken",
+                        "databaseName": "refreshToken",
+                        "type": "varchar",
+                        "jsType": "string",
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "isNullable": true,
+                        "isArray": false,
+                        "length": "255",
+                        "zerofill": false,
+                        "unsigned": false,
+                        "metadata": {
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isEnum": false,
+                          "isNullable": true,
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "length": "255"
+                        }
+                      },
+                      {
+                        "name": "createdAt",
+                        "databaseName": "createdAt",
+                        "type": "timestamp",
+                        "jsType": "Date",
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "isNullable": false,
+                        "isArray": false,
+                        "default": "now()",
+                        "length": "",
+                        "zerofill": false,
+                        "unsigned": false,
+                        "metadata": {
+                          "type": "timestamp",
+                          "jsType": "Date",
+                          "isEnum": false,
+                          "isNullable": false,
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "length": "",
+                          "default": "now()"
+                        }
+                      },
+                      {
+                        "name": "updatedAt",
+                        "databaseName": "updatedAt",
+                        "type": "timestamp",
+                        "jsType": "Date",
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "isNullable": false,
+                        "isArray": false,
+                        "default": "now()",
+                        "length": "",
+                        "zerofill": false,
+                        "unsigned": false,
+                        "metadata": {
+                          "type": "timestamp",
+                          "jsType": "Date",
+                          "isEnum": false,
+                          "isNullable": false,
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "length": "",
+                          "default": "now()"
+                        }
+                      }
+                    ],
+                    "relations": [],
+                    "indices": [],
+                    "checks": [],
+                    "uniques": [
+                      {
+                        "name": "UQ_051db7d37d478a69a7432df1479",
+                        "columns": [
+                          "email"
+                        ]
+                      }
+                    ],
+                    "foreignKeys": [],
+                    "synchronize": true,
+                    "withoutRowid": false
+                  }
+                ],
                 "metadata": {
-                  "timestamp": "2025-08-10T23:51:02.129Z",
-                  "affectedCount": 0,
+                  "timestamp": "2025-08-11T05:07:18.474Z",
+                  "affectedCount": 1,
                   "pagination": {
                     "type": "offset",
-                    "total": 0,
+                    "total": 1,
                     "page": 1,
-                    "pages": 0,
-                    "offset": 0,
-                    "nextCursor": "eyJuZXh0Q3Vyc29yIjoiTUE9PSIsInRvdGFsIjowfQ=="
+                    "pages": 1,
+                    "offset": 1,
+                    "nextCursor": "eyJuZXh0Q3Vyc29yIjoiTVE9PSIsInRvdGFsIjoxfQ=="
                   }
                 }
               }
             },
             "example": {
-              "data": [],
+              "data": [
+                {
+                  "entityName": "Admin",
+                  "tableName": "admins",
+                  "targetName": "Admin",
+                  "primaryKeys": [
+                    {
+                      "name": "id",
+                      "databaseName": "id",
+                      "type": 0,
+                      "isGenerated": true,
+                      "generationStrategy": "increment"
+                    }
+                  ],
+                  "columns": [
+                    {
+                      "name": "id",
+                      "databaseName": "id",
+                      "type": 0,
+                      "jsType": "unknown",
+                      "isPrimary": true,
+                      "isGenerated": true,
+                      "generationStrategy": "increment",
+                      "isNullable": false,
+                      "isArray": false,
+                      "length": "",
+                      "zerofill": false,
+                      "unsigned": false,
+                      "metadata": {
+                        "type": 0,
+                        "jsType": "unknown",
+                        "isEnum": false,
+                        "isNullable": false,
+                        "isPrimary": true,
+                        "isGenerated": true,
+                        "length": ""
+                      }
+                    },
+                    {
+                      "name": "name",
+                      "databaseName": "name",
+                      "type": "varchar",
+                      "jsType": "string",
+                      "isPrimary": false,
+                      "isGenerated": false,
+                      "isNullable": false,
+                      "isArray": false,
+                      "length": "100",
+                      "zerofill": false,
+                      "unsigned": false,
+                      "metadata": {
+                        "type": "varchar",
+                        "jsType": "string",
+                        "isEnum": false,
+                        "isNullable": false,
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "length": "100"
+                      }
+                    },
+                    {
+                      "name": "email",
+                      "databaseName": "email",
+                      "type": "varchar",
+                      "jsType": "string",
+                      "isPrimary": false,
+                      "isGenerated": false,
+                      "isNullable": false,
+                      "isArray": false,
+                      "length": "200",
+                      "zerofill": false,
+                      "unsigned": false,
+                      "metadata": {
+                        "type": "varchar",
+                        "jsType": "string",
+                        "isEnum": false,
+                        "isNullable": false,
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "length": "200"
+                      }
+                    },
+                    {
+                      "name": "password",
+                      "databaseName": "password",
+                      "type": "varchar",
+                      "jsType": "string",
+                      "isPrimary": false,
+                      "isGenerated": false,
+                      "isNullable": false,
+                      "isArray": false,
+                      "length": "255",
+                      "zerofill": false,
+                      "unsigned": false,
+                      "metadata": {
+                        "type": "varchar",
+                        "jsType": "string",
+                        "isEnum": false,
+                        "isNullable": false,
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "length": "255"
+                      }
+                    },
+                    {
+                      "name": "refreshToken",
+                      "databaseName": "refreshToken",
+                      "type": "varchar",
+                      "jsType": "string",
+                      "isPrimary": false,
+                      "isGenerated": false,
+                      "isNullable": true,
+                      "isArray": false,
+                      "length": "255",
+                      "zerofill": false,
+                      "unsigned": false,
+                      "metadata": {
+                        "type": "varchar",
+                        "jsType": "string",
+                        "isEnum": false,
+                        "isNullable": true,
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "length": "255"
+                      }
+                    },
+                    {
+                      "name": "createdAt",
+                      "databaseName": "createdAt",
+                      "type": "timestamp",
+                      "jsType": "Date",
+                      "isPrimary": false,
+                      "isGenerated": false,
+                      "isNullable": false,
+                      "isArray": false,
+                      "default": "now()",
+                      "length": "",
+                      "zerofill": false,
+                      "unsigned": false,
+                      "metadata": {
+                        "type": "timestamp",
+                        "jsType": "Date",
+                        "isEnum": false,
+                        "isNullable": false,
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "length": "",
+                        "default": "now()"
+                      }
+                    },
+                    {
+                      "name": "updatedAt",
+                      "databaseName": "updatedAt",
+                      "type": "timestamp",
+                      "jsType": "Date",
+                      "isPrimary": false,
+                      "isGenerated": false,
+                      "isNullable": false,
+                      "isArray": false,
+                      "default": "now()",
+                      "length": "",
+                      "zerofill": false,
+                      "unsigned": false,
+                      "metadata": {
+                        "type": "timestamp",
+                        "jsType": "Date",
+                        "isEnum": false,
+                        "isNullable": false,
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "length": "",
+                        "default": "now()"
+                      }
+                    }
+                  ],
+                  "relations": [],
+                  "indices": [],
+                  "checks": [],
+                  "uniques": [
+                    {
+                      "name": "UQ_051db7d37d478a69a7432df1479",
+                      "columns": [
+                        "email"
+                      ]
+                    }
+                  ],
+                  "foreignKeys": [],
+                  "synchronize": true,
+                  "withoutRowid": false
+                }
+              ],
               "metadata": {
-                "timestamp": "2025-08-10T23:51:02.129Z",
-                "affectedCount": 0,
+                "timestamp": "2025-08-11T05:07:18.474Z",
+                "affectedCount": 1,
                 "pagination": {
                   "type": "offset",
-                  "total": 0,
+                  "total": 1,
                   "page": 1,
-                  "pages": 0,
-                  "offset": 0,
-                  "nextCursor": "eyJuZXh0Q3Vyc29yIjoiTUE9PSIsInRvdGFsIjowfQ=="
+                  "pages": 1,
+                  "offset": 1,
+                  "nextCursor": "eyJuZXh0Q3Vyc29yIjoiTVE9PSIsInRvdGFsIjoxfQ=="
                 }
               }
             }
@@ -277,19 +1270,632 @@
               "properties": {
                 "data": {
                   "type": "array",
-                  "items": {},
-                  "example": []
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "entityName": {
+                        "type": "string",
+                        "example": "Admin"
+                      },
+                      "tableName": {
+                        "type": "string",
+                        "example": "admins"
+                      },
+                      "targetName": {
+                        "type": "string",
+                        "example": "Admin"
+                      },
+                      "primaryKeys": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "example": "id"
+                            },
+                            "databaseName": {
+                              "type": "string",
+                              "example": "id"
+                            },
+                            "type": {
+                              "type": "integer",
+                              "example": 0
+                            },
+                            "isGenerated": {
+                              "type": "boolean",
+                              "example": true
+                            },
+                            "generationStrategy": {
+                              "type": "string",
+                              "example": "increment"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "databaseName",
+                            "type",
+                            "isGenerated",
+                            "generationStrategy"
+                          ],
+                          "example": {
+                            "name": "id",
+                            "databaseName": "id",
+                            "type": 0,
+                            "isGenerated": true,
+                            "generationStrategy": "increment"
+                          }
+                        },
+                        "example": [
+                          {
+                            "name": "id",
+                            "databaseName": "id",
+                            "type": 0,
+                            "isGenerated": true,
+                            "generationStrategy": "increment"
+                          }
+                        ]
+                      },
+                      "columns": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "example": "id"
+                            },
+                            "databaseName": {
+                              "type": "string",
+                              "example": "id"
+                            },
+                            "type": {
+                              "type": "integer",
+                              "example": 0
+                            },
+                            "jsType": {
+                              "type": "string",
+                              "example": "unknown"
+                            },
+                            "isPrimary": {
+                              "type": "boolean",
+                              "example": true
+                            },
+                            "isGenerated": {
+                              "type": "boolean",
+                              "example": true
+                            },
+                            "generationStrategy": {
+                              "type": "string",
+                              "example": "increment"
+                            },
+                            "isNullable": {
+                              "type": "boolean",
+                              "example": false
+                            },
+                            "isArray": {
+                              "type": "boolean",
+                              "example": false
+                            },
+                            "length": {
+                              "type": "string",
+                              "example": ""
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "databaseName",
+                            "type",
+                            "jsType",
+                            "isPrimary",
+                            "isGenerated",
+                            "generationStrategy",
+                            "isNullable",
+                            "isArray",
+                            "length"
+                          ],
+                          "example": {
+                            "name": "id",
+                            "databaseName": "id",
+                            "type": 0,
+                            "jsType": "unknown",
+                            "isPrimary": true,
+                            "isGenerated": true,
+                            "generationStrategy": "increment",
+                            "isNullable": false,
+                            "isArray": false,
+                            "length": ""
+                          }
+                        },
+                        "example": [
+                          {
+                            "name": "id",
+                            "databaseName": "id",
+                            "type": 0,
+                            "jsType": "unknown",
+                            "isPrimary": true,
+                            "isGenerated": true,
+                            "generationStrategy": "increment",
+                            "isNullable": false,
+                            "isArray": false,
+                            "length": "",
+                            "zerofill": false,
+                            "unsigned": false,
+                            "metadata": {
+                              "type": 0,
+                              "jsType": "unknown",
+                              "isEnum": false,
+                              "isNullable": false,
+                              "isPrimary": true,
+                              "isGenerated": true,
+                              "length": ""
+                            }
+                          }
+                        ]
+                      },
+                      "relations": {
+                        "type": "array",
+                        "items": {},
+                        "example": []
+                      },
+                      "indices": {
+                        "type": "array",
+                        "items": {},
+                        "example": []
+                      },
+                      "checks": {
+                        "type": "array",
+                        "items": {},
+                        "example": []
+                      },
+                      "uniques": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "example": "UQ_051db7d37d478a69a7432df1479"
+                            },
+                            "columns": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "example": "email"
+                              },
+                              "example": [
+                                "email"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "columns"
+                          ],
+                          "example": {
+                            "name": "UQ_051db7d37d478a69a7432df1479",
+                            "columns": [
+                              "email"
+                            ]
+                          }
+                        },
+                        "example": [
+                          {
+                            "name": "UQ_051db7d37d478a69a7432df1479",
+                            "columns": [
+                              "email"
+                            ]
+                          }
+                        ]
+                      },
+                      "foreignKeys": {
+                        "type": "array",
+                        "items": {},
+                        "example": []
+                      }
+                    },
+                    "required": [
+                      "entityName",
+                      "tableName",
+                      "targetName",
+                      "primaryKeys",
+                      "columns",
+                      "relations",
+                      "indices",
+                      "checks",
+                      "uniques",
+                      "foreignKeys"
+                    ],
+                    "example": {
+                      "entityName": "Admin",
+                      "tableName": "admins",
+                      "targetName": "Admin",
+                      "primaryKeys": [
+                        {
+                          "name": "id",
+                          "databaseName": "id",
+                          "type": 0,
+                          "isGenerated": true,
+                          "generationStrategy": "increment"
+                        }
+                      ],
+                      "columns": [
+                        {
+                          "name": "id",
+                          "databaseName": "id",
+                          "type": 0,
+                          "jsType": "unknown",
+                          "isPrimary": true,
+                          "isGenerated": true,
+                          "generationStrategy": "increment",
+                          "isNullable": false,
+                          "isArray": false,
+                          "length": "",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": 0,
+                            "jsType": "unknown",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": true,
+                            "isGenerated": true,
+                            "length": ""
+                          }
+                        },
+                        {
+                          "name": "name",
+                          "databaseName": "name",
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "length": "100",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "varchar",
+                            "jsType": "string",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "100"
+                          }
+                        },
+                        {
+                          "name": "email",
+                          "databaseName": "email",
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "length": "200",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "varchar",
+                            "jsType": "string",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "200"
+                          }
+                        },
+                        {
+                          "name": "password",
+                          "databaseName": "password",
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "length": "255",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "varchar",
+                            "jsType": "string",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "255"
+                          }
+                        },
+                        {
+                          "name": "refreshToken",
+                          "databaseName": "refreshToken",
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": true,
+                          "isArray": false,
+                          "length": "255",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "varchar",
+                            "jsType": "string",
+                            "isEnum": false,
+                            "isNullable": true,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "255"
+                          }
+                        },
+                        {
+                          "name": "createdAt",
+                          "databaseName": "createdAt",
+                          "type": "timestamp",
+                          "jsType": "Date",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "default": "now()",
+                          "length": "",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "timestamp",
+                            "jsType": "Date",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "",
+                            "default": "now()"
+                          }
+                        },
+                        {
+                          "name": "updatedAt",
+                          "databaseName": "updatedAt",
+                          "type": "timestamp",
+                          "jsType": "Date",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "default": "now()",
+                          "length": "",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "timestamp",
+                            "jsType": "Date",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "",
+                            "default": "now()"
+                          }
+                        }
+                      ],
+                      "relations": [],
+                      "indices": [],
+                      "checks": [],
+                      "uniques": [
+                        {
+                          "name": "UQ_051db7d37d478a69a7432df1479",
+                          "columns": [
+                            "email"
+                          ]
+                        }
+                      ],
+                      "foreignKeys": []
+                    }
+                  },
+                  "example": [
+                    {
+                      "entityName": "Admin",
+                      "tableName": "admins",
+                      "targetName": "Admin",
+                      "primaryKeys": [
+                        {
+                          "name": "id",
+                          "databaseName": "id",
+                          "type": 0,
+                          "isGenerated": true,
+                          "generationStrategy": "increment"
+                        }
+                      ],
+                      "columns": [
+                        {
+                          "name": "id",
+                          "databaseName": "id",
+                          "type": 0,
+                          "jsType": "unknown",
+                          "isPrimary": true,
+                          "isGenerated": true,
+                          "generationStrategy": "increment",
+                          "isNullable": false,
+                          "isArray": false,
+                          "length": "",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": 0,
+                            "jsType": "unknown",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": true,
+                            "isGenerated": true,
+                            "length": ""
+                          }
+                        },
+                        {
+                          "name": "name",
+                          "databaseName": "name",
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "length": "100",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "varchar",
+                            "jsType": "string",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "100"
+                          }
+                        },
+                        {
+                          "name": "email",
+                          "databaseName": "email",
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "length": "200",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "varchar",
+                            "jsType": "string",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "200"
+                          }
+                        },
+                        {
+                          "name": "password",
+                          "databaseName": "password",
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "length": "255",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "varchar",
+                            "jsType": "string",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "255"
+                          }
+                        },
+                        {
+                          "name": "refreshToken",
+                          "databaseName": "refreshToken",
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": true,
+                          "isArray": false,
+                          "length": "255",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "varchar",
+                            "jsType": "string",
+                            "isEnum": false,
+                            "isNullable": true,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "255"
+                          }
+                        },
+                        {
+                          "name": "createdAt",
+                          "databaseName": "createdAt",
+                          "type": "timestamp",
+                          "jsType": "Date",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "default": "now()",
+                          "length": "",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "timestamp",
+                            "jsType": "Date",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "",
+                            "default": "now()"
+                          }
+                        },
+                        {
+                          "name": "updatedAt",
+                          "databaseName": "updatedAt",
+                          "type": "timestamp",
+                          "jsType": "Date",
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "isNullable": false,
+                          "isArray": false,
+                          "default": "now()",
+                          "length": "",
+                          "zerofill": false,
+                          "unsigned": false,
+                          "metadata": {
+                            "type": "timestamp",
+                            "jsType": "Date",
+                            "isEnum": false,
+                            "isNullable": false,
+                            "isPrimary": false,
+                            "isGenerated": false,
+                            "length": "",
+                            "default": "now()"
+                          }
+                        }
+                      ],
+                      "relations": [],
+                      "indices": [],
+                      "checks": [],
+                      "uniques": [
+                        {
+                          "name": "UQ_051db7d37d478a69a7432df1479",
+                          "columns": [
+                            "email"
+                          ]
+                        }
+                      ],
+                      "foreignKeys": [],
+                      "synchronize": true,
+                      "withoutRowid": false
+                    }
+                  ]
                 },
                 "metadata": {
                   "type": "object",
                   "properties": {
                     "timestamp": {
                       "type": "string",
-                      "example": "2025-08-10T23:51:02.129Z"
+                      "example": "2025-08-11T05:07:18.474Z"
                     },
                     "affectedCount": {
                       "type": "integer",
-                      "example": 0
+                      "example": 1
                     },
                     "pagination": {
                       "type": "object",
@@ -300,7 +1906,7 @@
                         },
                         "total": {
                           "type": "integer",
-                          "example": 0
+                          "example": 1
                         },
                         "page": {
                           "type": "integer",
@@ -308,15 +1914,15 @@
                         },
                         "pages": {
                           "type": "integer",
-                          "example": 0
+                          "example": 1
                         },
                         "offset": {
                           "type": "integer",
-                          "example": 0
+                          "example": 1
                         },
                         "nextCursor": {
                           "type": "string",
-                          "example": "eyJuZXh0Q3Vyc29yIjoiTUE9PSIsInRvdGFsIjowfQ=="
+                          "example": "eyJuZXh0Q3Vyc29yIjoiTVE9PSIsInRvdGFsIjoxfQ=="
                         }
                       },
                       "required": [
@@ -329,11 +1935,11 @@
                       ],
                       "example": {
                         "type": "offset",
-                        "total": 0,
+                        "total": 1,
                         "page": 1,
-                        "pages": 0,
-                        "offset": 0,
-                        "nextCursor": "eyJuZXh0Q3Vyc29yIjoiTUE9PSIsInRvdGFsIjowfQ=="
+                        "pages": 1,
+                        "offset": 1,
+                        "nextCursor": "eyJuZXh0Q3Vyc29yIjoiTVE9PSIsInRvdGFsIjoxfQ=="
                       }
                     }
                   },
@@ -343,15 +1949,15 @@
                     "pagination"
                   ],
                   "example": {
-                    "timestamp": "2025-08-10T23:51:02.129Z",
-                    "affectedCount": 0,
+                    "timestamp": "2025-08-11T05:07:18.474Z",
+                    "affectedCount": 1,
                     "pagination": {
                       "type": "offset",
-                      "total": 0,
+                      "total": 1,
                       "page": 1,
-                      "pages": 0,
-                      "offset": 0,
-                      "nextCursor": "eyJuZXh0Q3Vyc29yIjoiTUE9PSIsInRvdGFsIjowfQ=="
+                      "pages": 1,
+                      "offset": 1,
+                      "nextCursor": "eyJuZXh0Q3Vyc29yIjoiTVE9PSIsInRvdGFsIjoxfQ=="
                     }
                   }
                 }
@@ -361,33 +1967,413 @@
                 "metadata"
               ],
               "example": {
-                "data": [],
+                "data": [
+                  {
+                    "entityName": "Admin",
+                    "tableName": "admins",
+                    "targetName": "Admin",
+                    "primaryKeys": [
+                      {
+                        "name": "id",
+                        "databaseName": "id",
+                        "type": 0,
+                        "isGenerated": true,
+                        "generationStrategy": "increment"
+                      }
+                    ],
+                    "columns": [
+                      {
+                        "name": "id",
+                        "databaseName": "id",
+                        "type": 0,
+                        "jsType": "unknown",
+                        "isPrimary": true,
+                        "isGenerated": true,
+                        "generationStrategy": "increment",
+                        "isNullable": false,
+                        "isArray": false,
+                        "length": "",
+                        "zerofill": false,
+                        "unsigned": false,
+                        "metadata": {
+                          "type": 0,
+                          "jsType": "unknown",
+                          "isEnum": false,
+                          "isNullable": false,
+                          "isPrimary": true,
+                          "isGenerated": true,
+                          "length": ""
+                        }
+                      },
+                      {
+                        "name": "name",
+                        "databaseName": "name",
+                        "type": "varchar",
+                        "jsType": "string",
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "isNullable": false,
+                        "isArray": false,
+                        "length": "100",
+                        "zerofill": false,
+                        "unsigned": false,
+                        "metadata": {
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isEnum": false,
+                          "isNullable": false,
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "length": "100"
+                        }
+                      },
+                      {
+                        "name": "email",
+                        "databaseName": "email",
+                        "type": "varchar",
+                        "jsType": "string",
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "isNullable": false,
+                        "isArray": false,
+                        "length": "200",
+                        "zerofill": false,
+                        "unsigned": false,
+                        "metadata": {
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isEnum": false,
+                          "isNullable": false,
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "length": "200"
+                        }
+                      },
+                      {
+                        "name": "password",
+                        "databaseName": "password",
+                        "type": "varchar",
+                        "jsType": "string",
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "isNullable": false,
+                        "isArray": false,
+                        "length": "255",
+                        "zerofill": false,
+                        "unsigned": false,
+                        "metadata": {
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isEnum": false,
+                          "isNullable": false,
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "length": "255"
+                        }
+                      },
+                      {
+                        "name": "refreshToken",
+                        "databaseName": "refreshToken",
+                        "type": "varchar",
+                        "jsType": "string",
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "isNullable": true,
+                        "isArray": false,
+                        "length": "255",
+                        "zerofill": false,
+                        "unsigned": false,
+                        "metadata": {
+                          "type": "varchar",
+                          "jsType": "string",
+                          "isEnum": false,
+                          "isNullable": true,
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "length": "255"
+                        }
+                      },
+                      {
+                        "name": "createdAt",
+                        "databaseName": "createdAt",
+                        "type": "timestamp",
+                        "jsType": "Date",
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "isNullable": false,
+                        "isArray": false,
+                        "default": "now()",
+                        "length": "",
+                        "zerofill": false,
+                        "unsigned": false,
+                        "metadata": {
+                          "type": "timestamp",
+                          "jsType": "Date",
+                          "isEnum": false,
+                          "isNullable": false,
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "length": "",
+                          "default": "now()"
+                        }
+                      },
+                      {
+                        "name": "updatedAt",
+                        "databaseName": "updatedAt",
+                        "type": "timestamp",
+                        "jsType": "Date",
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "isNullable": false,
+                        "isArray": false,
+                        "default": "now()",
+                        "length": "",
+                        "zerofill": false,
+                        "unsigned": false,
+                        "metadata": {
+                          "type": "timestamp",
+                          "jsType": "Date",
+                          "isEnum": false,
+                          "isNullable": false,
+                          "isPrimary": false,
+                          "isGenerated": false,
+                          "length": "",
+                          "default": "now()"
+                        }
+                      }
+                    ],
+                    "relations": [],
+                    "indices": [],
+                    "checks": [],
+                    "uniques": [
+                      {
+                        "name": "UQ_051db7d37d478a69a7432df1479",
+                        "columns": [
+                          "email"
+                        ]
+                      }
+                    ],
+                    "foreignKeys": [],
+                    "synchronize": true,
+                    "withoutRowid": false
+                  }
+                ],
                 "metadata": {
-                  "timestamp": "2025-08-10T23:51:02.129Z",
-                  "affectedCount": 0,
+                  "timestamp": "2025-08-11T05:07:18.474Z",
+                  "affectedCount": 1,
                   "pagination": {
                     "type": "offset",
-                    "total": 0,
+                    "total": 1,
                     "page": 1,
-                    "pages": 0,
-                    "offset": 0,
-                    "nextCursor": "eyJuZXh0Q3Vyc29yIjoiTUE9PSIsInRvdGFsIjowfQ=="
+                    "pages": 1,
+                    "offset": 1,
+                    "nextCursor": "eyJuZXh0Q3Vyc29yIjoiTVE9PSIsInRvdGFsIjoxfQ=="
                   }
                 }
               }
             },
             "example": {
-              "data": [],
+              "data": [
+                {
+                  "entityName": "Admin",
+                  "tableName": "admins",
+                  "targetName": "Admin",
+                  "primaryKeys": [
+                    {
+                      "name": "id",
+                      "databaseName": "id",
+                      "type": 0,
+                      "isGenerated": true,
+                      "generationStrategy": "increment"
+                    }
+                  ],
+                  "columns": [
+                    {
+                      "name": "id",
+                      "databaseName": "id",
+                      "type": 0,
+                      "jsType": "unknown",
+                      "isPrimary": true,
+                      "isGenerated": true,
+                      "generationStrategy": "increment",
+                      "isNullable": false,
+                      "isArray": false,
+                      "length": "",
+                      "zerofill": false,
+                      "unsigned": false,
+                      "metadata": {
+                        "type": 0,
+                        "jsType": "unknown",
+                        "isEnum": false,
+                        "isNullable": false,
+                        "isPrimary": true,
+                        "isGenerated": true,
+                        "length": ""
+                      }
+                    },
+                    {
+                      "name": "name",
+                      "databaseName": "name",
+                      "type": "varchar",
+                      "jsType": "string",
+                      "isPrimary": false,
+                      "isGenerated": false,
+                      "isNullable": false,
+                      "isArray": false,
+                      "length": "100",
+                      "zerofill": false,
+                      "unsigned": false,
+                      "metadata": {
+                        "type": "varchar",
+                        "jsType": "string",
+                        "isEnum": false,
+                        "isNullable": false,
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "length": "100"
+                      }
+                    },
+                    {
+                      "name": "email",
+                      "databaseName": "email",
+                      "type": "varchar",
+                      "jsType": "string",
+                      "isPrimary": false,
+                      "isGenerated": false,
+                      "isNullable": false,
+                      "isArray": false,
+                      "length": "200",
+                      "zerofill": false,
+                      "unsigned": false,
+                      "metadata": {
+                        "type": "varchar",
+                        "jsType": "string",
+                        "isEnum": false,
+                        "isNullable": false,
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "length": "200"
+                      }
+                    },
+                    {
+                      "name": "password",
+                      "databaseName": "password",
+                      "type": "varchar",
+                      "jsType": "string",
+                      "isPrimary": false,
+                      "isGenerated": false,
+                      "isNullable": false,
+                      "isArray": false,
+                      "length": "255",
+                      "zerofill": false,
+                      "unsigned": false,
+                      "metadata": {
+                        "type": "varchar",
+                        "jsType": "string",
+                        "isEnum": false,
+                        "isNullable": false,
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "length": "255"
+                      }
+                    },
+                    {
+                      "name": "refreshToken",
+                      "databaseName": "refreshToken",
+                      "type": "varchar",
+                      "jsType": "string",
+                      "isPrimary": false,
+                      "isGenerated": false,
+                      "isNullable": true,
+                      "isArray": false,
+                      "length": "255",
+                      "zerofill": false,
+                      "unsigned": false,
+                      "metadata": {
+                        "type": "varchar",
+                        "jsType": "string",
+                        "isEnum": false,
+                        "isNullable": true,
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "length": "255"
+                      }
+                    },
+                    {
+                      "name": "createdAt",
+                      "databaseName": "createdAt",
+                      "type": "timestamp",
+                      "jsType": "Date",
+                      "isPrimary": false,
+                      "isGenerated": false,
+                      "isNullable": false,
+                      "isArray": false,
+                      "default": "now()",
+                      "length": "",
+                      "zerofill": false,
+                      "unsigned": false,
+                      "metadata": {
+                        "type": "timestamp",
+                        "jsType": "Date",
+                        "isEnum": false,
+                        "isNullable": false,
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "length": "",
+                        "default": "now()"
+                      }
+                    },
+                    {
+                      "name": "updatedAt",
+                      "databaseName": "updatedAt",
+                      "type": "timestamp",
+                      "jsType": "Date",
+                      "isPrimary": false,
+                      "isGenerated": false,
+                      "isNullable": false,
+                      "isArray": false,
+                      "default": "now()",
+                      "length": "",
+                      "zerofill": false,
+                      "unsigned": false,
+                      "metadata": {
+                        "type": "timestamp",
+                        "jsType": "Date",
+                        "isEnum": false,
+                        "isNullable": false,
+                        "isPrimary": false,
+                        "isGenerated": false,
+                        "length": "",
+                        "default": "now()"
+                      }
+                    }
+                  ],
+                  "relations": [],
+                  "indices": [],
+                  "checks": [],
+                  "uniques": [
+                    {
+                      "name": "UQ_051db7d37d478a69a7432df1479",
+                      "columns": [
+                        "email"
+                      ]
+                    }
+                  ],
+                  "foreignKeys": [],
+                  "synchronize": true,
+                  "withoutRowid": false
+                }
+              ],
               "metadata": {
-                "timestamp": "2025-08-10T23:51:02.129Z",
-                "affectedCount": 0,
+                "timestamp": "2025-08-11T05:07:18.474Z",
+                "affectedCount": 1,
                 "pagination": {
                   "type": "offset",
-                  "total": 0,
+                  "total": 1,
                   "page": 1,
-                  "pages": 0,
-                  "offset": 0,
-                  "nextCursor": "eyJuZXh0Q3Vyc29yIjoiTUE9PSIsInRvdGFsIjowfQ=="
+                  "pages": 1,
+                  "offset": 1,
+                  "nextCursor": "eyJuZXh0Q3Vyc29yIjoiTVE9PSIsInRvdGFsIjoxfQ=="
                 }
               }
             }
