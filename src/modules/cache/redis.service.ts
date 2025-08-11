@@ -369,4 +369,68 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       return false;
     }
   }
+
+  /**
+   * Redis INFO 명령어 실행
+   */
+  async getInfo(section?: string): Promise<any> {
+    if (!this.checkConnection()) {
+      return {};
+    }
+
+    try {
+      const info = section
+        ? await this.redis.info(section)
+        : await this.redis.info();
+      const parsed: any = {};
+
+      info.split('\r\n').forEach((line) => {
+        if (line && !line.startsWith('#')) {
+          const [key, value] = line.split(':');
+          if (key && value) {
+            parsed[key] = value;
+          }
+        }
+      });
+
+      return parsed;
+    } catch (error) {
+      this.logger.warn(`Failed to get Redis info: ${error.message}`);
+      return {};
+    }
+  }
+
+  /**
+   * Redis 키 개수 조회
+   */
+  async getKeyCount(pattern: string = '*'): Promise<number> {
+    if (!this.checkConnection()) {
+      return 0;
+    }
+
+    try {
+      const keys = await this.redis.keys(pattern);
+      return keys.length;
+    } catch (error) {
+      this.logger.warn(`Failed to get key count: ${error.message}`);
+      return 0;
+    }
+  }
+
+  /**
+   * Redis 메모리 사용량 조회
+   */
+  async getMemoryUsage(): Promise<string> {
+    if (!this.checkConnection()) {
+      return 'N/A';
+    }
+
+    try {
+      const info = await this.getInfo('memory');
+      return info.used_memory_human || 'N/A';
+    } catch (error) {
+      this.logger.warn(`Failed to get memory usage: ${error.message}`);
+      return 'N/A';
+    }
+  }
 }
