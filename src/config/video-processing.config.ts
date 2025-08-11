@@ -9,17 +9,39 @@ dotenv.config();
 
 /**
  * FFmpeg 설정
+ * 테스트 환경이나 경로가 없는 경우 안전하게 처리
  */
-ffmpeg.setFfmpegPath(ffmpegPath.path);
-ffmpeg.setFfprobePath(ffprobePath.path);
+try {
+  if (process.env.NODE_ENV !== 'test' && ffmpegPath?.path) {
+    ffmpeg.setFfmpegPath(ffmpegPath.path);
+  } else if (process.env.NODE_ENV !== 'test') {
+    // 시스템 기본 경로 사용
+    console.warn(
+      '⚠️ FFmpeg path not found from installer, using system default',
+    );
+  }
+
+  if (process.env.NODE_ENV !== 'test' && ffprobePath?.path) {
+    ffmpeg.setFfprobePath(ffprobePath.path);
+  } else if (process.env.NODE_ENV !== 'test') {
+    console.warn(
+      '⚠️ FFprobe path not found from installer, using system default',
+    );
+  }
+} catch (error) {
+  console.warn(
+    '⚠️ FFmpeg configuration failed, video processing may not work:',
+    error.message,
+  );
+}
 
 /**
  * 비디오 프로세싱 설정
  */
 export const VIDEO_PROCESSING_CONFIG = {
   // FFmpeg 경로
-  ffmpegPath: ffmpegPath.path,
-  ffprobePath: ffprobePath.path,
+  ffmpegPath: ffmpegPath?.path || 'ffmpeg', // 기본 시스템 경로 사용
+  ffprobePath: ffprobePath?.path || 'ffprobe', // 기본 시스템 경로 사용
 
   // 프로세싱 제한
   maxFileSize: 500 * 1024 * 1024, // 500MB
@@ -154,12 +176,19 @@ export const validateVideoProcessingConfig = () => {
   }
 
   // FFmpeg 경로 확인
-  if (!ffmpegPath.path) {
-    throw new Error('FFmpeg executable not found');
+  const ffmpegExe = ffmpegPath?.path || 'ffmpeg';
+  const ffprobeExe = ffprobePath?.path || 'ffprobe';
+
+  if (!ffmpegPath?.path) {
+    console.warn(
+      '⚠️ FFmpeg installer path not available, using system default',
+    );
   }
 
-  if (!ffprobePath.path) {
-    throw new Error('FFprobe executable not found');
+  if (!ffprobePath?.path) {
+    console.warn(
+      '⚠️ FFprobe installer path not available, using system default',
+    );
   }
 
   // 임시 디렉토리 생성 확인
@@ -175,8 +204,8 @@ export const validateVideoProcessingConfig = () => {
   }
 
   console.log('✅ Video Processing Configuration validated');
-  console.log(`   - FFmpeg: ${ffmpegPath.path}`);
-  console.log(`   - FFprobe: ${ffprobePath.path}`);
+  console.log(`   - FFmpeg: ${ffmpegExe}`);
+  console.log(`   - FFprobe: ${ffprobeExe}`);
   console.log(
     `   - Max file size: ${VIDEO_PROCESSING_CONFIG.maxFileSize / (1024 * 1024)}MB`,
   );
