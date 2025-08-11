@@ -23,7 +23,7 @@ export class AdminController {
 
   @BeforeCreate()
   @BeforeUpdate()
-  async hashPassword(body: any) {
+  async hashPassword(body: any, context: any) {
     if (body.password) {
       body.password = await bcrypt.hash(
         body.password,

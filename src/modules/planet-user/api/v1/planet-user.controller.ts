@@ -10,7 +10,6 @@ import {
   ForbiddenException,
   Logger,
   NotFoundException,
-  Request,
   UseGuards,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -118,8 +117,8 @@ export class PlanetUserController {
    * 1:1 Planet 초대 전 검증 및 Planet 생성
    */
   @BeforeCreate()
-  async beforeCreate(body: any, @Request() req: any): Promise<any> {
-    const user: User = req.user;
+  async beforeCreate(body: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
 
     // 대상 사용자 확인
     if (!body.targetUserId) {
@@ -242,9 +241,11 @@ export class PlanetUserController {
    * 초대 수락/거절 전 검증
    */
   @BeforeUpdate()
-  async beforeUpdate(body: any, @Request() req: any): Promise<any> {
-    const user: User = req.user;
-    const planetUserId = req.params.id;
+  async beforeUpdate(body: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
+
+    // Update 작업에서는 ID가 context에서 필요
+    const planetUserId = parseInt(context.request?.params?.id);
 
     // 기존 PlanetUser 조회
     const existingPlanetUser = await this.planetUserRepository.findOne({

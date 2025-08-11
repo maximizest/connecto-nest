@@ -107,8 +107,8 @@ export class ReadReceiptController {
    * 읽음 영수증 생성 전 검증 및 전처리
    */
   @BeforeCreate()
-  async beforeCreate(body: any, @Request() req: any): Promise<any> {
-    const user: User = req.user;
+  async beforeCreate(body: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
 
     // 사용자 정보 설정
     body.userId = user.id;
@@ -124,7 +124,7 @@ export class ReadReceiptController {
    * 읽음 영수증 수정 전 검증
    */
   @BeforeUpdate()
-  async beforeUpdate(body: any, @Request() req: any): Promise<any> {
+  async beforeUpdate(body: any, context: any): Promise<any> {
     // 읽음 영수증은 수정 불가 (읽음 상태만 가능)
     const allowedFields = ['isRead', 'metadata'];
     const filteredBody = {};

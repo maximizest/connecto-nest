@@ -135,9 +135,9 @@ export class UserController {
    * 사용자 정보 수정 전 검증
    */
   @BeforeUpdate()
-  async beforeUpdate(body: any, @Request() req: any): Promise<any> {
-    const user: User = req.user;
-    const targetUserId = parseInt(req.params.id);
+  async beforeUpdate(body: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
+    const targetUserId = parseInt(context.request?.params?.id);
 
     // 본인의 정보만 수정 가능
     if (user.id !== targetUserId) {

@@ -160,8 +160,8 @@ export class MessageController {
    * 메시지 생성 전 검증 및 전처리
    */
   @BeforeCreate()
-  async beforeCreate(body: any, @Request() req: any): Promise<any> {
-    const user: User = req.user;
+  async beforeCreate(body: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
 
     // 사용자 정보 설정
     body.senderId = user.id;
@@ -194,11 +194,11 @@ export class MessageController {
 
     // 메타데이터 설정
     if (!body.metadata) body.metadata = {};
-    if (req.clientMessageId) {
-      body.metadata.clientMessageId = req.clientMessageId;
+    if (context.request?.clientMessageId) {
+      body.metadata.clientMessageId = context.request.clientMessageId;
     }
-    body.metadata.ipAddress = req.ip;
-    body.metadata.userAgent = req.get('user-agent');
+    body.metadata.ipAddress = context.request?.ip;
+    body.metadata.userAgent = context.request?.get('user-agent');
 
     this.logger.log(
       `Creating message: type=${body.type}, planetId=${body.planetId}, senderId=${body.senderId}`,
@@ -211,7 +211,7 @@ export class MessageController {
    * 메시지 생성 후 처리
    */
   @AfterCreate()
-  async afterCreate(entity: Message, @Request() req: any): Promise<Message> {
+  async afterCreate(entity: Message): Promise<Message> {
     // 답장인 경우 원본 메시지의 답장 수 증가
     if (entity.replyToMessageId) {
       await this.messageRepository.increment(
@@ -230,9 +230,9 @@ export class MessageController {
    * 메시지 수정 전 검증 (편집 및 소프트 삭제 처리)
    */
   @BeforeUpdate()
-  async beforeUpdate(body: any, @Request() req: any): Promise<any> {
-    const user: User = req.user;
-    const messageId = req.params.id;
+  async beforeUpdate(body: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
+    const messageId = parseInt(context.request?.params?.id);
 
     // 기존 메시지 조회
     const existingMessage = await this.messageRepository.findOne({

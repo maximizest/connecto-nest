@@ -135,8 +135,8 @@ export class TravelUserController {
    * Travel 가입 전 검증 및 전처리
    */
   @BeforeCreate()
-  async beforeCreate(body: any, @Request() req: any): Promise<any> {
-    const user: User = req.user;
+  async beforeCreate(body: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
 
     // 초대코드 필수 확인
     if (!body.inviteCode) {
@@ -320,9 +320,9 @@ export class TravelUserController {
    * Travel 멤버 수정 전 검증 (권한 변경 및 탈퇴 처리)
    */
   @BeforeUpdate()
-  async beforeUpdate(body: any, @Request() req: any): Promise<any> {
-    const user: User = req.user;
-    const travelUserId = req.params.id;
+  async beforeUpdate(body: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
+    const travelUserId = parseInt(context.request?.params?.id);
 
     // 기존 TravelUser 조회
     const existingTravelUser = await this.travelUserRepository.findOne({
