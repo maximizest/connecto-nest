@@ -201,3 +201,4 @@ temp/
 .eslintcache 
 
 test-ai
+test-nestjs-curd
