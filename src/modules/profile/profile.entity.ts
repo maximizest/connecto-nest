@@ -8,6 +8,8 @@ import {
 } from 'class-validator';
 import {
   BaseEntity,
+  BeforeInsert,
+  BeforeUpdate,
   Column,
   Entity,
   Index,
@@ -235,5 +237,75 @@ export class Profile extends BaseEntity {
     }
 
     return publicProfile;
+  }
+
+  // =================================================================
+  // TypeORM Lifecycle Hooks (Entity Level)
+  // =================================================================
+
+  /**
+   * 프로필 생성 전 기본값 설정
+   * - 닉네임이 없으면 이름 사용
+   * - 기본 설정 값 설정
+   * - 나이 유효성 검사
+   */
+  @BeforeInsert()
+  beforeInsert() {
+    // 닉네임이 없으면 이름을 사용
+    if (!this.nickname && this.name) {
+      this.nickname = this.name;
+    }
+
+    // 기본 설정 값 설정
+    if (!this.settings) {
+      this.settings = {
+        showAge: true,
+        showGender: true,
+        showOccupation: true,
+        allowDirectMessage: true,
+        language: 'ko',
+        timezone: 'Asia/Seoul',
+        theme: 'light',
+      };
+    }
+
+    // 나이 유효성 검사
+    if (this.age !== undefined && this.age !== null) {
+      const age = Number(this.age);
+      if (isNaN(age) || age < 1 || age > 150) {
+        throw new Error('나이는 1~150 사이의 숫자여야 합니다.');
+      }
+      this.age = age;
+    }
+
+    console.log(
+      `🟢 Profile creating: userId=${this.userId}, nickname=${this.nickname}`,
+    );
+  }
+
+  /**
+   * 프로필 수정 전 데이터 검증 및 처리
+   * - 닉네임이 비어있으면 이름 사용
+   * - 나이 유효성 검사
+   */
+  @BeforeUpdate()
+  beforeUpdate() {
+    // 닉네임이 비어있으면 이름을 사용
+    if (this.nickname === '' && this.name) {
+      this.nickname = this.name;
+    }
+
+    // 나이 유효성 검사
+    if (this.age !== undefined && this.age !== null) {
+      const age = Number(this.age);
+      if (isNaN(age) || age < 1 || age > 150) {
+        throw new Error('나이는 1~150 사이의 숫자여야 합니다.');
+      }
+      this.age = age;
+    }
+
+    console.log(
+      `🟡 Profile updating: id=${this.id}, nickname=${this.nickname}`,
+    );
   }
 }

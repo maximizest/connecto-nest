@@ -40,7 +40,7 @@ import {
 import { Travel } from '../../../travel/travel.entity';
 import { User } from '../../../user/user.entity';
 import { PlanetAccessGuard } from '../../guards/planet-access.guard';
-import { Message, MessageStatus, MessageType } from '../../message.entity';
+import { Message, MessageType } from '../../message.entity';
 import { MessageService } from '../../message.service';
 import { MessagePaginationService } from '../../services/message-pagination.service';
 
@@ -182,15 +182,10 @@ export class MessageController {
       await this.validateReplyMessage(body.replyToMessageId, body.planetId);
     }
 
-    // 검색용 텍스트 생성
+    // 검색용 텍스트 생성 (복잡한 로직이므로 컨트롤러에서 유지)
     body.searchableText = this.generateSearchableText(body);
 
-    // 기본 상태 설정
-    body.status = MessageStatus.SENT;
-    body.isDeleted = false;
-    body.isEdited = false;
-    body.readCount = 0;
-    body.replyCount = 0;
+    // 기본 상태 설정은 Message 엔티티에서 자동 처리됨
 
     // 메타데이터 설정
     if (!body.metadata) body.metadata = {};

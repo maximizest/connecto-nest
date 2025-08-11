@@ -10,6 +10,8 @@ import {
 } from 'class-validator';
 import {
   BaseEntity,
+  BeforeInsert,
+  BeforeUpdate,
   Column,
   CreateDateColumn,
   Entity,
@@ -565,5 +567,44 @@ export class Message extends BaseEntity {
     return !!(
       this.metadata?.mentions && this.metadata.mentions.includes(userId)
     );
+  }
+
+  // =================================================================
+  // TypeORM Lifecycle Hooks (Entity Level)
+  // =================================================================
+
+  /**
+   * 메시지 생성 전 기본값 설정
+   * - 검색용 텍스트 생성
+   * - 기본 상태 설정
+   */
+  @BeforeInsert()
+  beforeInsert() {
+    // 기본 상태 설정
+    this.status = this.status || MessageStatus.SENT;
+    this.isDeleted = this.isDeleted || false;
+    this.isEdited = this.isEdited || false;
+    this.readCount = this.readCount || 0;
+    this.replyCount = this.replyCount || 0;
+
+    // 검색용 텍스트 생성
+    this.updateSearchableText();
+
+    console.log(
+      `🟢 Message creating: type=${this.type}, planetId=${this.planetId}`,
+    );
+  }
+
+  /**
+   * 메시지 수정 전 처리
+   * - 편집 정보 업데이트
+   * - 검색용 텍스트 재생성
+   */
+  @BeforeUpdate()
+  beforeUpdate() {
+    // 검색용 텍스트 재생성 (내용이 변경된 경우)
+    this.updateSearchableText();
+
+    console.log(`🟡 Message updating: id=${this.id}, type=${this.type}`);
   }
 }

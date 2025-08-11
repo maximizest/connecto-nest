@@ -10,6 +10,8 @@ import {
 } from 'class-validator';
 import {
   BaseEntity,
+  BeforeInsert,
+  BeforeUpdate,
   Column,
   CreateDateColumn,
   Entity,
@@ -329,5 +331,39 @@ export class User extends BaseEntity {
   getOnlineDuration(): number {
     if (!this.lastSeenAt) return 0;
     return Date.now() - this.lastSeenAt.getTime();
+  }
+
+  // =================================================================
+  // TypeORM Lifecycle Hooks (Entity Level)
+  // =================================================================
+
+  /**
+   * 사용자 생성 전 기본값 설정
+   */
+  @BeforeInsert()
+  beforeInsert() {
+    // 기본 프로필 설정
+    if (!this.status) {
+      this.status = UserStatus.OFFLINE;
+    }
+
+    if (this.isOnline === undefined) {
+      this.isOnline = false;
+    }
+
+    console.log(`🟢 User creating: ${this.email}`);
+  }
+
+  /**
+   * 사용자 정보 수정 전 처리
+   */
+  @BeforeUpdate()
+  beforeUpdate() {
+    // 온라인 상태 변경 시 lastSeenAt 업데이트
+    if (!this.isOnline) {
+      this.lastSeenAt = new Date();
+    }
+
+    console.log(`🟡 User updating: ${this.email}`);
   }
 }

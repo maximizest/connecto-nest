@@ -9,6 +9,8 @@ import {
 } from 'class-validator';
 import {
   BaseEntity,
+  BeforeInsert,
+  BeforeUpdate,
   Column,
   CreateDateColumn,
   Entity,
@@ -342,5 +344,47 @@ export class FileUpload extends BaseEntity {
       createdAt: this.createdAt,
       completedAt: this.completedAt,
     };
+  }
+
+  // =================================================================
+  // TypeORM Lifecycle Hooks (Entity Level)
+  // =================================================================
+
+  /**
+   * 파일 업로드 레코드 생성 전 기본값 설정
+   * - 기본 상태 및 진행률 설정
+   * - 초기 카운터 값 설정
+   */
+  @BeforeInsert()
+  beforeInsert() {
+    // 기본값 설정
+    this.status = this.status || FileUploadStatus.PENDING;
+    this.totalChunks = this.totalChunks || 0;
+    this.completedChunks = this.completedChunks || 0;
+    this.uploadedBytes = this.uploadedBytes || 0;
+    this.progress = this.progress || 0;
+    this.retryCount = this.retryCount || 0;
+
+    console.log(
+      `🟢 FileUpload creating: ${this.originalFileName}, userId=${this.userId}`,
+    );
+  }
+
+  /**
+   * 파일 업로드 레코드 수정 전 처리
+   * - 진행률 재계산
+   */
+  @BeforeUpdate()
+  beforeUpdate() {
+    // 진행률 재계산 (청크 업로드의 경우)
+    if (this.completedChunks !== undefined && this.totalChunks > 0) {
+      this.progress = Math.round(
+        (this.completedChunks / this.totalChunks) * 100,
+      );
+    }
+
+    console.log(
+      `🟡 FileUpload updating: id=${this.id}, progress=${this.progress}%`,
+    );
   }
 }

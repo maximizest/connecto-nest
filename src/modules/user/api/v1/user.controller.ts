@@ -132,14 +132,14 @@ export class UserController {
   ) {}
 
   /**
-   * 사용자 정보 수정 전 검증
+   * 사용자 정보 수정 전 권한 검증 (온라인 상태 처리는 User 엔티티에서 자동 처리)
    */
   @BeforeUpdate()
   async beforeUpdate(entity: User, context: any): Promise<User> {
     const user: User = context.request?.user;
     const targetUserId = entity.id;
 
-    // 본인의 정보만 수정 가능
+    // 본인의 정보만 수정 가능 - 엔티티에서 처리하기 어려운 비즈니스 로직
     if (user.id !== targetUserId) {
       throw new ForbiddenException('본인의 정보만 수정할 수 있습니다.');
     }
@@ -148,16 +148,7 @@ export class UserController {
       throw new ForbiddenException('비활성화된 계정입니다.');
     }
 
-    // 온라인 상태 업데이트 시 lastSeenAt 갱신
-    if (entity.isOnline !== undefined) {
-      entity.lastSeenAt = new Date();
-
-      // 온라인 상태가 false로 변경되면 현재 시간을 lastSeenAt으로 설정
-      if (!entity.isOnline) {
-        entity.lastSeenAt = new Date();
-      }
-    }
-
+    // lastSeenAt 갱신은 User 엔티티에서 자동 처리됨
     this.logger.log(`User profile updating: userId=${user.id}`);
 
     return entity;

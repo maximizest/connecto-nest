@@ -75,7 +75,7 @@ export class ProfileController {
   constructor(public readonly crudService: ProfileService) {}
 
   /**
-   * 프로필 생성 전 데이터 전처리
+   * 프로필 생성 전 사용자 ID 설정 (나머지는 Profile 엔티티에서 자동 처리)
    */
   @BeforeCreate()
   async preprocessCreate(body: any, context: any) {
@@ -85,56 +85,16 @@ export class ProfileController {
       body.userId = userId;
     }
 
-    // 닉네임이 없으면 이름을 사용
-    if (!body.nickname && body.name) {
-      body.nickname = body.name;
-    }
-
-    // 기본 설정 값 설정
-    if (!body.settings) {
-      body.settings = {
-        showAge: true,
-        showGender: true,
-        showOccupation: true,
-        allowDirectMessage: true,
-        language: 'ko',
-        timezone: 'Asia/Seoul',
-        theme: 'light',
-      };
-    }
-
-    // 나이 유효성 검사
-    if (body.age !== undefined) {
-      const age = Number(body.age);
-      if (isNaN(age) || age < 1 || age > 150) {
-        throw new Error('나이는 1~150 사이의 숫자여야 합니다.');
-      }
-      body.age = age;
-    }
-
+    // 기본값 설정, 닉네임/나이 검증은 Profile 엔티티에서 자동 처리됨
     return body;
   }
 
   /**
-   * 프로필 수정 전 데이터 전처리
+   * 프로필 수정 전 설정 값 병합 (나머지는 Profile 엔티티에서 자동 처리)
    */
   @BeforeUpdate()
   async preprocessUpdate(entity: Profile, context: any) {
-    // 닉네임이 비어있으면 이름을 사용
-    if (entity.nickname === '' && entity.name) {
-      entity.nickname = entity.name;
-    }
-
-    // 나이 유효성 검사
-    if (entity.age !== undefined && entity.age !== null) {
-      const age = Number(entity.age);
-      if (isNaN(age) || age < 1 || age > 150) {
-        throw new Error('나이는 1~150 사이의 숫자여야 합니다.');
-      }
-      entity.age = age;
-    }
-
-    // 설정 값 병합 (기존 설정 유지)
+    // 설정 값 병합 (기존 설정 유지) - 엔티티에서 처리하기 어려운 로직
     if (entity.settings && context.currentEntity?.settings) {
       entity.settings = {
         ...context.currentEntity.settings,
@@ -142,6 +102,7 @@ export class ProfileController {
       };
     }
 
+    // 닉네임/나이 검증은 Profile 엔티티에서 자동 처리됨
     return entity;
   }
 }

@@ -94,7 +94,7 @@ export class FileUploadController {
   ) {}
 
   /**
-   * 파일 업로드 레코드 생성 전 전처리
+   * 파일 업로드 레코드 생성 전 사용자 ID 설정 (나머지는 FileUpload 엔티티에서 자동 처리)
    */
   @BeforeCreate()
   async preprocessCreateUpload(body: any, context: any) {
@@ -105,14 +105,7 @@ export class FileUploadController {
       body.userId = user.id;
     }
 
-    // 기본값 설정
-    body.status = body.status || 'pending';
-    body.totalChunks = body.totalChunks || 0;
-    body.completedChunks = 0;
-    body.uploadedBytes = 0;
-    body.progress = 0;
-    body.retryCount = 0;
-
+    // 기본값 설정은 FileUpload 엔티티에서 자동 처리됨
     this.logger.log(
       `Creating upload record for user ${user?.id}: ${body.originalFileName}`,
     );
@@ -120,24 +113,18 @@ export class FileUploadController {
   }
 
   /**
-   * 파일 업로드 레코드 업데이트 전 전처리
+   * 파일 업로드 레코드 업데이트 전 권한 확인 (진행률 계산은 FileUpload 엔티티에서 자동 처리)
    */
   @BeforeUpdate()
   async preprocessUpdateUpload(entity: FileUpload, context: any) {
     const user: User = context.request?.user;
 
-    // 사용자 권한 확인
+    // 사용자 권한 확인 - 엔티티에서 처리하기 어려운 비즈니스 로직
     if (context.currentEntity && context.currentEntity.userId !== user?.id) {
       throw new Error('파일 업로드 수정 권한이 없습니다.');
     }
 
-    // 진행률 재계산 (청크 업로드의 경우)
-    if (entity.completedChunks !== undefined && entity.totalChunks > 0) {
-      entity.progress = Math.round(
-        (entity.completedChunks / entity.totalChunks) * 100,
-      );
-    }
-
+    // 진행률 재계산은 FileUpload 엔티티에서 자동 처리됨
     this.logger.log(
       `Updating upload record ${context.currentEntity?.id} for user ${user?.id}`,
     );
