@@ -7,11 +7,15 @@ import {
   Param,
   Patch,
   Post,
-  Request,
   UseGuards,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import {
+  CurrentUser,
+  CurrentUserData,
+} from '../../../../common/decorators/current-user.decorator';
+import { getCurrentUserIdFromContext } from '../../../../common/helpers/current-user.helper';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { User } from '../../../user/user.entity';
 import {
@@ -86,12 +90,11 @@ export class NotificationController {
   @BeforeCreate()
   @BeforeUpdate()
   async preprocessData(entity: Notification, context: any) {
-    const user: User = context.request?.user;
+    // 헬퍼 함수를 사용하여 현재 사용자 ID 추출
+    const userId = getCurrentUserIdFromContext(context);
 
-    if (user) {
-      // 생성/수정 시 userId 자동 설정
-      entity.userId = user.id;
-    }
+    // 생성/수정 시 userId 자동 설정
+    entity.userId = userId;
 
     return entity;
   }
@@ -105,8 +108,8 @@ export class NotificationController {
    * GET /api/v1/notifications/unread-count
    */
   @Get('unread-count')
-  async getUnreadCount(@Request() req: any) {
-    const user: User = req.user;
+  async getUnreadCount(@CurrentUser() currentUser: CurrentUserData) {
+    const user: User = currentUser as User;
 
     try {
       const stats = await this.crudService.getUserNotificationStats(user.id);
@@ -138,8 +141,11 @@ export class NotificationController {
    * PATCH /api/v1/notifications/:id/read
    */
   @Patch(':id/read')
-  async markAsRead(@Param('id') notificationId: number, @Request() req: any) {
-    const user: User = req.user;
+  async markAsRead(
+    @Param('id') notificationId: number,
+    @CurrentUser() currentUser: CurrentUserData,
+  ) {
+    const user: User = currentUser as User;
 
     try {
       const notification = await this.crudService.markAsRead(
@@ -174,9 +180,9 @@ export class NotificationController {
   @Patch('read-multiple')
   async markMultipleAsRead(
     @Body() body: { notificationIds: number[] },
-    @Request() req: any,
+    @CurrentUser() currentUser: CurrentUserData,
   ) {
-    const user: User = req.user;
+    const user: User = currentUser as User;
 
     try {
       const { notificationIds } = body;
@@ -217,8 +223,8 @@ export class NotificationController {
    * PATCH /api/v1/notifications/read-all
    */
   @Patch('read-all')
-  async markAllAsRead(@Request() req: any) {
-    const user: User = req.user;
+  async markAllAsRead(@CurrentUser() currentUser: CurrentUserData) {
+    const user: User = currentUser as User;
 
     try {
       const affectedCount = await this.crudService.markAllAsRead(user.id);
@@ -245,8 +251,8 @@ export class NotificationController {
    * GET /api/v1/notifications/stats
    */
   @Get('stats')
-  async getNotificationStats(@Request() req: any) {
-    const user: User = req.user;
+  async getNotificationStats(@CurrentUser() currentUser: CurrentUserData) {
+    const user: User = currentUser as User;
 
     try {
       const stats = await this.crudService.getUserNotificationStats(user.id);
@@ -281,9 +287,9 @@ export class NotificationController {
       deviceId: string;
       appVersion?: string;
     },
-    @Request() req: any,
+    @CurrentUser() currentUser: CurrentUserData,
   ) {
-    const user: User = req.user;
+    const user: User = currentUser as User;
 
     try {
       const { token, platform, deviceId, appVersion } = body;
@@ -325,9 +331,9 @@ export class NotificationController {
   @Post('push-token/unregister')
   async unregisterPushToken(
     @Body() body: { deviceId: string },
-    @Request() req: any,
+    @CurrentUser() currentUser: CurrentUserData,
   ) {
-    const user: User = req.user;
+    const user: User = currentUser as User;
 
     try {
       const { deviceId } = body;
@@ -360,8 +366,8 @@ export class NotificationController {
    * GET /api/v1/notifications/push-tokens
    */
   @Get('push-tokens')
-  async getMyPushTokens(@Request() req: any) {
-    const user: User = req.user;
+  async getMyPushTokens(@CurrentUser() currentUser: CurrentUserData) {
+    const user: User = currentUser as User;
 
     try {
       const pushTokens = await this.pushNotificationService.getUserPushTokens(
@@ -408,9 +414,9 @@ export class NotificationController {
       priority?: NotificationPriority;
       channels?: NotificationChannel[];
     },
-    @Request() req: any,
+    @CurrentUser() currentUser: CurrentUserData,
   ) {
-    const user: User = req.user;
+    const user: User = currentUser as User;
 
     try {
       const {

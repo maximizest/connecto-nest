@@ -13,12 +13,19 @@ import {
   Post,
   Put,
   Query,
-  Request,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  CurrentUser,
+  CurrentUserData,
+} from '../../../../common/decorators/current-user.decorator';
+import {
+  getCurrentUserFromContext,
+  getCurrentUserIdFromContext,
+} from '../../../../common/helpers/current-user.helper';
 import { STORAGE_SETTINGS } from '../../../../config/storage.config';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { StorageService } from '../../../storage/storage.service';
@@ -98,16 +105,15 @@ export class FileUploadController {
    */
   @BeforeCreate()
   async preprocessCreateUpload(body: any, context: any) {
-    const user: User = context.request?.user;
+    // 헬퍼 함수를 사용하여 현재 사용자 ID 추출
+    const userId = getCurrentUserIdFromContext(context);
 
     // 사용자 정보 자동 설정
-    if (user) {
-      body.userId = user.id;
-    }
+    body.userId = userId;
 
     // 기본값 설정은 FileUpload 엔티티에서 자동 처리됨
     this.logger.log(
-      `Creating upload record for user ${user?.id}: ${body.originalFileName}`,
+      `Creating upload record for user ${userId}: ${body.originalFileName}`,
     );
     return body;
   }
@@ -117,16 +123,17 @@ export class FileUploadController {
    */
   @BeforeUpdate()
   async preprocessUpdateUpload(entity: FileUpload, context: any) {
-    const user: User = context.request?.user;
+    // 헬퍼 함수를 사용하여 현재 사용자 정보 추출
+    const user = getCurrentUserFromContext(context);
 
     // 사용자 권한 확인 - 엔티티에서 처리하기 어려운 비즈니스 로직
-    if (context.currentEntity && context.currentEntity.userId !== user?.id) {
+    if (context.currentEntity && context.currentEntity.userId !== user.id) {
       throw new Error('파일 업로드 수정 권한이 없습니다.');
     }
 
     // 진행률 재계산은 FileUpload 엔티티에서 자동 처리됨
     this.logger.log(
-      `Updating upload record ${context.currentEntity?.id} for user ${user?.id}`,
+      `Updating upload record ${context.currentEntity?.id} for user ${user.id}`,
     );
     return entity;
   }
@@ -155,9 +162,9 @@ export class FileUploadController {
     file: Express.Multer.File,
     @Body('folder') folder?: keyof typeof STORAGE_SETTINGS.folders,
     @Body('metadata') metadata?: string,
-    @Request() req?: any,
+    @CurrentUser() currentUser?: CurrentUserData,
   ) {
-    const user: User = req.user;
+    const user: User = currentUser as User;
 
     try {
       // 메타데이터 파싱
@@ -241,9 +248,9 @@ export class FileUploadController {
     @Body('fileSize') fileSize: number,
     @Body('folder') folder?: keyof typeof STORAGE_SETTINGS.folders,
     @Body('metadata') metadata?: Record<string, string>,
-    @Request() req?: any,
+    @CurrentUser() currentUser?: CurrentUserData,
   ) {
-    const user: User = req.user;
+    const user: User = currentUser as User;
 
     try {
       // 파일 크기 검증 (500MB 제한)
@@ -350,9 +357,9 @@ export class FileUploadController {
     @Body('key') key: string,
     @Body('uploadId') uploadId: string,
     @Body('partNumber') partNumber: string,
-    @Request() req?: any,
+    @CurrentUser() currentUser?: CurrentUserData,
   ) {
-    const user: User = req.user;
+    const user: User = currentUser as User;
 
     try {
       const partNum = parseInt(partNumber);
@@ -413,9 +420,9 @@ export class FileUploadController {
     @Body('key') key: string,
     @Body('uploadId') uploadId: string,
     @Body('parts') parts: { partNumber: number; etag: string }[],
-    @Request() req?: any,
+    @CurrentUser() currentUser?: CurrentUserData,
   ) {
-    const user: User = req.user;
+    const user: User = currentUser as User;
 
     try {
       // Parts 검증
@@ -486,9 +493,9 @@ export class FileUploadController {
   async abortMultipartUpload(
     @Body('key') key: string,
     @Body('uploadId') uploadId: string,
-    @Request() req?: any,
+    @CurrentUser() currentUser?: CurrentUserData,
   ) {
-    const user: User = req.user;
+    const user: User = currentUser as User;
 
     try {
       // 업로드 레코드 찾기
@@ -542,9 +549,9 @@ export class FileUploadController {
   @Get('upload/progress/:recordId')
   async getUploadProgress(
     @Param('recordId') recordId: string,
-    @Request() req?: any,
+    @CurrentUser() currentUser?: CurrentUserData,
   ) {
-    const user: User = req.user;
+    const user: User = currentUser as User;
 
     try {
       const uploadRecord = await this.crudService.findById(parseInt(recordId));
@@ -580,8 +587,8 @@ export class FileUploadController {
    * GET /api/v1/files/uploads/stats
    */
   @Get('uploads/stats')
-  async getUploadStats(@Request() req?: any) {
-    const user: User = req.user;
+  async getUploadStats(@CurrentUser() currentUser?: CurrentUserData) {
+    const user: User = currentUser as User;
 
     try {
       const stats = await this.crudService.getUploadStats(user.id);
@@ -690,8 +697,11 @@ export class FileUploadController {
    * DELETE /api/v1/files/:key
    */
   @Delete(':key')
-  async deleteFile(@Param('key') key: string, @Request() req?: any) {
-    const user: User = req.user;
+  async deleteFile(
+    @Param('key') key: string,
+    @CurrentUser() currentUser?: CurrentUserData,
+  ) {
+    const user: User = currentUser as User;
 
     try {
       // 파일 정보 확인 (권한 체크용)

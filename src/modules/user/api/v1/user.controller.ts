@@ -8,11 +8,15 @@ import {
   NotFoundException,
   Param,
   Post,
-  Request,
   UseGuards,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import {
+  CurrentUser,
+  CurrentUserData,
+} from '../../../../common/decorators/current-user.decorator';
+import { getCurrentUserFromContext } from '../../../../common/helpers/current-user.helper';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import {
   PlanetUser,
@@ -140,7 +144,8 @@ export class UserController {
    */
   @BeforeUpdate()
   async beforeUpdate(entity: User, context: any): Promise<User> {
-    const user: User = context.request?.user;
+    // 헬퍼 함수를 사용하여 현재 사용자 정보 추출
+    const user = getCurrentUserFromContext(context);
     const targetUserId = entity.id;
 
     // 본인의 정보만 수정 가능 - 엔티티에서 처리하기 어려운 비즈니스 로직
@@ -276,8 +281,8 @@ export class UserController {
    * GET /api/v1/users/me
    */
   @Get('me')
-  async getMyProfile(@Request() req: any) {
-    const user: User = req.user;
+  async getMyProfile(@CurrentUser() currentUser: CurrentUserData) {
+    const user: User = currentUser as User;
 
     // 사용자 기본 정보
     const fullUser = await this.userRepository.findOne({
@@ -339,8 +344,8 @@ export class UserController {
    * GET /api/v1/users/me/travels
    */
   @Get('me/travels')
-  async getMyTravels(@Request() req: any) {
-    const user: User = req.user;
+  async getMyTravels(@CurrentUser() currentUser: CurrentUserData) {
+    const user: User = currentUser as User;
     const travels = await this.getUserTravels(user.id);
 
     return {
@@ -368,8 +373,10 @@ export class UserController {
    * GET /api/v1/users/me/planets
    */
   @Get('me/planets')
-  async getMyPlanets(@Request() req: any): Promise<any> {
-    const user: User = req.user;
+  async getMyPlanets(
+    @CurrentUser() currentUser: CurrentUserData,
+  ): Promise<any> {
+    const user: User = currentUser as User;
     const planets = await this.getUserPlanets(user.id);
 
     return {
@@ -396,8 +403,8 @@ export class UserController {
    * GET /api/v1/users/me/stats
    */
   @Get('me/stats')
-  async getMyStats(@Request() req: any) {
-    const user: User = req.user;
+  async getMyStats(@CurrentUser() currentUser: CurrentUserData) {
+    const user: User = currentUser as User;
     const stats = await this.getUserStats(user.id);
 
     return {
@@ -412,8 +419,8 @@ export class UserController {
    * GET /api/v1/users/me/online
    */
   @Get('me/online')
-  async updateOnlineStatus(@Request() req: any) {
-    const user: User = req.user;
+  async updateOnlineStatus(@CurrentUser() currentUser: CurrentUserData) {
+    const user: User = currentUser as User;
 
     // 온라인 상태 및 lastSeenAt 업데이트
     await this.userRepository.update(user.id, {
@@ -483,8 +490,8 @@ export class UserController {
    * 사용자가 삭제할 데이터의 양과 영향을 확인할 수 있습니다.
    */
   @Get('me/deletion-impact')
-  async getMyDeletionImpact(@Request() req: any) {
-    const user: User = req.user;
+  async getMyDeletionImpact(@CurrentUser() currentUser: CurrentUserData) {
+    const user: User = currentUser as User;
 
     this.logger.log(`User ${user.id} is checking deletion impact`);
 
@@ -508,8 +515,8 @@ export class UserController {
    * 한국 개인정보보호법에 따라 개인정보를 즉시 완전 삭제합니다.
    */
   @Delete('me')
-  async deleteMyAccount(@Request() req: any) {
-    const user: User = req.user;
+  async deleteMyAccount(@CurrentUser() currentUser: CurrentUserData) {
+    const user: User = currentUser as User;
 
     this.logger.log(
       `🔥 User ${user.id} (${user.name}) requested account deletion`,
@@ -575,8 +582,11 @@ export class UserController {
    * 관리자가 특정 사용자의 삭제 준수성을 검증할 때 사용
    */
   @Post(':id/validate-deletion')
-  async validateUserDeletion(@Param('id') userId: string, @Request() req: any) {
-    const user: User = req.user;
+  async validateUserDeletion(
+    @Param('id') userId: string,
+    @CurrentUser() currentUser: CurrentUserData,
+  ) {
+    const user: User = currentUser as User;
 
     // 본인 계정만 검증 가능
     if (user.id !== parseInt(userId)) {

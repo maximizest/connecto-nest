@@ -6,11 +6,14 @@ import {
   NotFoundException,
   Param,
   Query,
-  Request,
   UseGuards,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import {
+  CurrentUser,
+  CurrentUserData,
+} from '../../../../common/decorators/current-user.decorator';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { Planet } from '../../../planet/planet.entity';
 import { TravelUser } from '../../../travel-user/travel-user.entity';
@@ -97,8 +100,8 @@ export class AnalyticsController {
    * GET /api/v1/analytics/my-activity
    */
   @Get('my-activity')
-  async getMyActivityStats(@Request() req: any) {
-    const user: User = req.user;
+  async getMyActivityStats(@CurrentUser() currentUser: CurrentUserData) {
+    const user: User = currentUser as User;
 
     try {
       // 사용자 활동 통계 수집
@@ -128,9 +131,9 @@ export class AnalyticsController {
   async getTravelMemberStats(
     @Param('travelId') travelId: number,
     @Query('limit') limit: number = 10,
-    @Request() req: any,
+    @CurrentUser() currentUser: CurrentUserData,
   ) {
-    const user: User = req.user;
+    const user: User = currentUser as User;
 
     try {
       // 사용자가 Travel 멤버인지 확인
@@ -196,9 +199,9 @@ export class AnalyticsController {
   @Get('travel/:travelId/planets')
   async getTravelPlanetStats(
     @Param('travelId') travelId: number,
-    @Request() req: any,
+    @CurrentUser() currentUser: CurrentUserData,
   ) {
-    const user: User = req.user;
+    const user: User = currentUser as User;
 
     try {
       // 사용자가 Travel 멤버인지 확인
@@ -257,8 +260,8 @@ export class AnalyticsController {
    * GET /api/v1/analytics/dashboard
    */
   @Get('dashboard')
-  async getDashboardData(@Request() req: any) {
-    const user: User = req.user;
+  async getDashboardData(@CurrentUser() currentUser: CurrentUserData) {
+    const user: User = currentUser as User;
 
     try {
       // 사용자의 Travel 목록 조회
@@ -333,7 +336,7 @@ export class AnalyticsController {
    */
   @Get('timeseries')
   async getTimeSeriesData(
-    @Request() req: any,
+    @CurrentUser() currentUser: CurrentUserData,
     @Query('type') type: AnalyticsType,
     @Query('entityType') entityType: string,
     @Query('entityId') entityId: number,
@@ -341,7 +344,7 @@ export class AnalyticsController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    const user: User = req.user;
+    const user: User = currentUser as User;
 
     try {
       // 권한 확인 (entityType에 따라)
@@ -434,12 +437,12 @@ export class AnalyticsController {
    */
   @Get('compare')
   async getComparisonData(
-    @Request() req: any,
+    @CurrentUser() currentUser: CurrentUserData,
     @Query('entities') entities: string, // JSON string of entity array
     @Query('metric') metric: string,
     @Query('period') period: AggregationPeriod = AggregationPeriod.DAILY,
   ) {
-    const user: User = req.user;
+    const user: User = currentUser as User;
 
     try {
       // entities 파싱 (예: '[{"type":"travel","id":1},{"type":"planet","id":5}]')

@@ -1,5 +1,6 @@
 import { BeforeCreate, BeforeUpdate, Crud } from '@foryourdev/nestjs-crud';
 import { Controller } from '@nestjs/common';
+import { getCurrentUserIdFromContext } from '../../../../common/helpers/current-user.helper';
 import { Profile } from '../../profile.entity';
 import { ProfileService } from '../../profile.service';
 
@@ -79,11 +80,9 @@ export class ProfileController {
    */
   @BeforeCreate()
   async preprocessCreate(body: any, context: any) {
-    // 현재 인증된 사용자 ID를 자동 설정
-    const userId = context.request?.user?.id;
-    if (userId) {
-      body.userId = userId;
-    }
+    // 헬퍼 함수를 사용하여 현재 사용자 ID 추출
+    const userId = getCurrentUserIdFromContext(context);
+    body.userId = userId;
 
     // 기본값 설정, 닉네임/나이 검증은 Profile 엔티티에서 자동 처리됨
     return body;
