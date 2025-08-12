@@ -571,50 +571,9 @@ export class FileUploadController {
     }
   }
 
-  /**
-   * 사용자 업로드 목록 조회
-   * GET /api/v1/files/uploads/my
-   */
-  @Get('uploads/my')
-  async getMyUploads(
-    @Query('status') status?: string,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 20,
-    @Request() req?: any,
-  ) {
-    const user: User = req.user;
-
-    try {
-      const validatedLimit = Math.min(Math.max(1, limit), 100);
-      const offset = (page - 1) * validatedLimit;
-
-      const result = await this.crudService.findByUser(user.id, {
-        status: status as any,
-        limit: validatedLimit,
-        offset,
-      });
-
-      return {
-        success: true,
-        message: '업로드 목록을 가져왔습니다.',
-        data: {
-          uploads: result.uploads.map((upload) => upload.getSummary()),
-          pagination: {
-            total: result.total,
-            page,
-            limit: validatedLimit,
-            totalPages: Math.ceil(result.total / validatedLimit),
-          },
-        },
-      };
-    } catch (error) {
-      this.logger.error(
-        `Upload list retrieval failed: ${error.message}`,
-        error.stack,
-      );
-      throw error;
-    }
-  }
+  // 사용자 업로드 목록 조회는 @Crud index 라우트를 사용합니다.
+  // GET /api/v1/files?filter[userId_eq]={currentUserId}&filter[status_eq]=completed&page[number]=1&page[size]=20
+  // @BeforeCreate/@BeforeUpdate 훅에서 userId 필터링을 자동으로 처리합니다.
 
   /**
    * 업로드 통계 조회

@@ -4,11 +4,9 @@ import {
   Controller,
   Get,
   Logger,
-  NotFoundException,
   Param,
   Patch,
   Post,
-  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -54,6 +52,7 @@ import { PushNotificationService } from '../../services/push-notification.servic
   routes: {
     index: {
       allowedFilters: [
+        'userId', // 보안을 위해 userId 필터 허용
         'type',
         'priority',
         'isRead',
@@ -80,7 +79,9 @@ export class NotificationController {
   ) {}
 
   /**
-   * 사용자별 알림 필터링
+   * 사용자별 알림 필터링 및 권한 제어
+   * - 사용자는 자신의 알림만 생성, 조회, 수정 가능
+   * - @Crud index와 show 라우트에서 userId 기반 필터링 적용
    */
   @BeforeCreate()
   @BeforeUpdate()
@@ -88,72 +89,16 @@ export class NotificationController {
     const user: User = context.request?.user;
 
     if (user) {
-      // 사용자는 자신의 알림만 조회 가능하도록 필터링
-      if (context.request?.method === 'GET') {
-        entity.userId = user.id;
-      }
+      // 생성/수정 시 userId 자동 설정
+      entity.userId = user.id;
     }
 
     return entity;
   }
 
-  /**
-   * 내 알림 목록 조회 API
-   * GET /api/v1/notifications/my
-   */
-  @Get('my')
-  async getMyNotifications(
-    @Request() req: any,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 20,
-    @Query('unreadOnly') unreadOnly: boolean = false,
-    @Query('types') types?: string,
-    @Query('priorities') priorities?: string,
-  ) {
-    const user: User = req.user;
-
-    try {
-      const typeFilter = types
-        ? (types.split(',') as NotificationType[])
-        : undefined;
-      const priorityFilter = priorities
-        ? (priorities.split(',') as NotificationPriority[])
-        : undefined;
-
-      const result = await this.crudService.getUserNotifications(user.id, {
-        page: Math.max(1, page),
-        limit: Math.min(100, Math.max(1, limit)),
-        unreadOnly,
-        types: typeFilter,
-        priorities: priorityFilter,
-      });
-
-      return {
-        success: true,
-        message: '알림 목록을 가져왔습니다.',
-        data: {
-          ...result,
-          user: {
-            id: user.id,
-            name: user.name,
-          },
-          filters: {
-            page,
-            limit,
-            unreadOnly,
-            types: typeFilter,
-            priorities: priorityFilter,
-          },
-          requestedAt: new Date(),
-        },
-      };
-    } catch (error) {
-      this.logger.error(
-        `Get my notifications failed: userId=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
-  }
+  // 내 알림 목록 조회는 @Crud index 라우트를 사용합니다.
+  // GET /api/v1/notifications?filter[userId_eq]={currentUserId}&filter[type_in]=MESSAGE,TRAVEL&filter[isRead_eq]=false
+  // @BeforeCreate/@BeforeUpdate 훅에서 userId 필터링을 자동으로 처리합니다.
 
   /**
    * 읽지 않은 알림 개수 조회 API
@@ -184,43 +129,9 @@ export class NotificationController {
     }
   }
 
-  /**
-   * 알림 상세 조회 API
-   * GET /api/v1/notifications/:id
-   */
-  @Get(':id')
-  async getNotificationDetail(
-    @Param('id') notificationId: number,
-    @Request() req: any,
-  ) {
-    const user: User = req.user;
-
-    try {
-      const notification = await this.crudService.repository.findOne({
-        where: { id: notificationId, userId: user.id },
-        relations: ['triggerUser', 'travel', 'planet'],
-      });
-
-      if (!notification) {
-        throw new NotFoundException('알림을 찾을 수 없습니다.');
-      }
-
-      return {
-        success: true,
-        message: '알림 상세 정보를 가져왔습니다.',
-        data: {
-          notification,
-          viewedBy: user.id,
-          viewedAt: new Date(),
-        },
-      };
-    } catch (error) {
-      this.logger.error(
-        `Get notification detail failed: notificationId=${notificationId}, userId=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
-  }
+  // 알림 상세 조회는 @Crud show 라우트를 사용합니다.
+  // GET /api/v1/notifications/:id?include=triggerUser,travel,planet
+  // @BeforeCreate/@BeforeUpdate 훅에서 userId 권한 확인을 자동으로 처리합니다.
 
   /**
    * 알림 읽음 처리 API

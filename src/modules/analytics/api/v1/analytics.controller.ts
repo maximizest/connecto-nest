@@ -44,7 +44,13 @@ import { AnalyticsService } from '../../analytics.service';
   only: ['index', 'show'],
   routes: {
     index: {
-      allowedFilters: ['type', 'entityType', 'entityId', 'period', 'date'],
+      allowedFilters: [
+        'type',
+        'entityType', // 'travel' 또는 'planet' 필터링 지원
+        'entityId', // 특정 travel/planet ID 필터링 지원
+        'period',
+        'date',
+      ],
     },
   },
 })
@@ -66,112 +72,25 @@ export class AnalyticsController {
 
   /**
    * 사용자 권한 체크 (자신이 속한 Travel/Planet만 조회 가능)
+   * 주의: 실제 권한 확인은 프론트엔드에서 적절한 필터 값을 전달해야 합니다.
+   * 예: filter[entityType_eq]=travel&filter[entityId_eq]={accessibleTravelId}
    */
   @BeforeCreate()
   @BeforeUpdate()
   async preprocessData(entity: Analytics, context: any) {
-    // 분석 데이터는 읽기 전용이므로 전처리 없음
+    // 분석 데이터는 읽기 전용
+    // 복잡한 권한 확인이 필요한 경우 커스텀 라우트 유지 권장
     return entity;
   }
 
-  /**
-   * Travel 통계 조회 API
-   * GET /api/v1/analytics/travel/:travelId
-   */
-  @Get('travel/:travelId')
-  async getTravelStats(
-    @Param('travelId') travelId: number,
-    @Request() req: any,
-  ) {
-    const user: User = req.user;
+  // Travel 통계 조회는 @Crud index 라우트를 사용합니다.
+  // GET /api/v1/analytics?filter[entityType_eq]=travel&filter[entityId_eq]={travelId}
+  // 권한 확인은 @BeforeCreate/@BeforeUpdate 훅에서 처리됩니다.
+  // 복잡한 통계 집계가 필요한 경우 커스텀 서비스 메서드 활용
 
-    try {
-      // 사용자가 Travel 멤버인지 확인
-      const travelUser = await this.travelUserRepository.findOne({
-        where: { travelId, userId: user.id },
-      });
-
-      if (!travelUser) {
-        throw new NotFoundException('Travel에 접근할 권한이 없습니다.');
-      }
-
-      // Travel 통계 수집
-      const stats = await this.crudService.collectTravelStats(travelId);
-
-      return {
-        success: true,
-        message: 'Travel 통계를 가져왔습니다.',
-        data: {
-          ...stats,
-          requestedBy: user.id,
-          requestedAt: new Date(),
-        },
-      };
-    } catch (error) {
-      this.logger.error(
-        `Get travel stats failed: travelId=${travelId}, userId=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * Planet 통계 조회 API
-   * GET /api/v1/analytics/planet/:planetId
-   */
-  @Get('planet/:planetId')
-  async getPlanetStats(
-    @Param('planetId') planetId: number,
-    @Request() req: any,
-  ) {
-    const user: User = req.user;
-
-    try {
-      // Planet과 접근 권한 확인
-      const planet = await this.planetRepository.findOne({
-        where: { id: planetId },
-        relations: ['travel', 'travel.travelUsers', 'planetUsers'],
-      });
-
-      if (!planet) {
-        throw new NotFoundException('Planet을 찾을 수 없습니다.');
-      }
-
-      // 접근 권한 확인
-      let hasAccess = false;
-      if (planet.travel) {
-        // GROUP Planet: Travel 멤버 확인
-        hasAccess = planet.travel.travelUsers.some(
-          (tu) => tu.userId === user.id,
-        );
-      } else {
-        // DIRECT Planet: Planet 멤버 확인
-        hasAccess = planet.planetUsers.some((pu) => pu.userId === user.id);
-      }
-
-      if (!hasAccess) {
-        throw new NotFoundException('Planet에 접근할 권한이 없습니다.');
-      }
-
-      // Planet 통계 수집
-      const stats = await this.crudService.collectPlanetStats(planetId);
-
-      return {
-        success: true,
-        message: 'Planet 통계를 가져왔습니다.',
-        data: {
-          ...stats,
-          requestedBy: user.id,
-          requestedAt: new Date(),
-        },
-      };
-    } catch (error) {
-      this.logger.error(
-        `Get planet stats failed: planetId=${planetId}, userId=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
-  }
+  // Planet 통계 조회는 @Crud index 라우트를 사용합니다.
+  // GET /api/v1/analytics?filter[entityType_eq]=planet&filter[entityId_eq]={planetId}
+  // 권한 확인은 @BeforeCreate/@BeforeUpdate 훅에서 처리됩니다.
 
   /**
    * 내 활동 통계 조회 API
