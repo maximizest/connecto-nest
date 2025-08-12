@@ -113,14 +113,37 @@ export class Message extends BaseEntity {
   @JoinColumn({ name: 'planetId' })
   planet: Planet;
 
-  @Column({ comment: '메시지 발신자 ID' })
+  @Column({ comment: '메시지 발신자 ID', nullable: true })
+  @IsOptional()
   @IsNumber()
   @Index() // 발신자별 조회
-  senderId: number;
+  senderId?: number;
 
-  @ManyToOne(() => User, { eager: false })
+  @ManyToOne(() => User, { eager: false, nullable: true })
   @JoinColumn({ name: 'senderId' })
-  sender: User;
+  sender?: User;
+
+  /**
+   * 하드 삭제 익명화 필드들
+   */
+  @Column({
+    type: 'boolean',
+    default: false,
+    comment: '탈퇴한 사용자의 메시지 여부',
+  })
+  @IsBoolean()
+  @Index() // 탈퇴한 사용자 메시지 필터링
+  isFromDeletedUser: boolean;
+
+  @Column({
+    type: 'varchar',
+    length: 20,
+    nullable: true,
+    comment: '탈퇴한 사용자 타입 (user | admin)',
+  })
+  @IsOptional()
+  @IsString()
+  deletedUserType?: 'user' | 'admin';
 
   /**
    * 메시지 내용
@@ -567,6 +590,44 @@ export class Message extends BaseEntity {
     return !!(
       this.metadata?.mentions && this.metadata.mentions.includes(userId)
     );
+  }
+
+  /**
+   * 발신자 표시 이름 반환 (탈퇴한 사용자 처리)
+   */
+  getSenderDisplayName(fallbackName?: string): string {
+    if (this.isFromDeletedUser) {
+      return this.deletedUserType === 'admin'
+        ? '탈퇴한 관리자'
+        : '탈퇴한 사용자';
+    }
+
+    return this.sender?.name || fallbackName || '알 수 없음';
+  }
+
+  /**
+   * 발신자 아바터 URL 반환 (탈퇴한 사용자 처리)
+   */
+  getSenderAvatarUrl(): string | null {
+    if (this.isFromDeletedUser) {
+      return null; // 기본 아바터 사용
+    }
+
+    return this.sender?.avatar || null;
+  }
+
+  /**
+   * 메시지가 탈퇴한 사용자의 것인지 확인
+   */
+  isFromDeletedUserAccount(): boolean {
+    return this.isFromDeletedUser;
+  }
+
+  /**
+   * 탈퇴한 사용자 타입 확인
+   */
+  getDeletedUserType(): 'user' | 'admin' | null {
+    return this.isFromDeletedUser ? this.deletedUserType || null : null;
   }
 
   // =================================================================

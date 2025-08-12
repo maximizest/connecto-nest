@@ -67,14 +67,27 @@ export class TravelUser extends BaseEntity {
   @JoinColumn({ name: 'travelId' })
   travel: Travel;
 
-  @Column({ comment: '사용자 ID' })
+  @Column({ comment: '사용자 ID', nullable: true })
+  @IsOptional()
   @IsNumber()
   @Index() // 사용자별 Travel 조회 최적화
-  userId: number;
+  userId?: number;
 
-  @ManyToOne(() => User, { eager: false, onDelete: 'CASCADE' })
+  @ManyToOne(() => User, { eager: false, onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'userId' })
-  user: User;
+  user?: User;
+
+  /**
+   * 하드 삭제 익명화 필드
+   */
+  @Column({
+    type: 'boolean',
+    default: false,
+    comment: '탈퇴한 사용자의 기록 여부',
+  })
+  @IsBoolean()
+  @Index() // 탈퇴한 사용자 필터링
+  isDeletedUser: boolean;
 
   /**
    * 역할 및 권한
@@ -531,5 +544,34 @@ export class TravelUser extends BaseEntity {
   getParticipationScore(totalMessages: number): number {
     if (totalMessages === 0) return 0;
     return Math.round((this.messageCount / totalMessages) * 100);
+  }
+
+  /**
+   * 사용자 표시 이름 반환 (탈퇴한 사용자 처리)
+   */
+  getUserDisplayName(fallbackName?: string): string {
+    if (this.isDeletedUser) {
+      return '탈퇴한 사용자';
+    }
+
+    return this.user?.name || fallbackName || '알 수 없음';
+  }
+
+  /**
+   * 사용자 아바터 URL 반환 (탈퇴한 사용자 처리)
+   */
+  getUserAvatarUrl(): string | null {
+    if (this.isDeletedUser) {
+      return null; // 기본 아바터 사용
+    }
+
+    return this.user?.avatar || null;
+  }
+
+  /**
+   * 탈퇴한 사용자의 기록인지 확인
+   */
+  isFromDeletedUserAccount(): boolean {
+    return this.isDeletedUser;
   }
 }

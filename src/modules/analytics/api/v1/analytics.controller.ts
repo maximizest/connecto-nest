@@ -234,6 +234,10 @@ export class AnalyticsController {
       const memberStats = await Promise.all(
         travelUsers.map(async (tu) => {
           try {
+            // 탈퇴한 사용자는 스킵
+            if (!tu.userId) {
+              return null;
+            }
             return await this.crudService.collectUserActivityStats(tu.userId);
           } catch (error) {
             this.logger.warn(

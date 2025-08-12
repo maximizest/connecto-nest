@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsJSON,
@@ -67,14 +68,27 @@ export class VideoProcessing extends BaseEntity {
   /**
    * 연관 관계
    */
-  @Column({ comment: '요청한 사용자 ID' })
+  @Column({ comment: '요청한 사용자 ID', nullable: true })
+  @IsOptional()
   @IsNumber()
   @Index() // 사용자별 작업 조회
-  userId: number;
+  userId?: number;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user?: User;
+
+  /**
+   * 하드 삭제 익명화 필드
+   */
+  @Column({
+    type: 'boolean',
+    default: false,
+    comment: '탈퇴한 사용자의 작업 여부',
+  })
+  @IsBoolean()
+  @Index() // 탈퇴한 사용자 작업 필터링
+  isFromDeletedUser: boolean;
 
   @Column({ nullable: true, comment: '원본 파일 업로드 ID' })
   @IsNumber()
@@ -493,5 +507,23 @@ export class VideoProcessing extends BaseEntity {
     } catch (error) {
       return [];
     }
+  }
+
+  /**
+   * 요청 사용자 표시 이름 반환 (탈퇴한 사용자 처리)
+   */
+  getRequesterDisplayName(fallbackName?: string): string {
+    if (this.isFromDeletedUser) {
+      return '탈퇴한 사용자';
+    }
+
+    return this.user?.name || fallbackName || '알 수 없음';
+  }
+
+  /**
+   * 탈퇴한 사용자의 작업인지 확인
+   */
+  isFromDeletedUserAccount(): boolean {
+    return this.isFromDeletedUser;
   }
 }

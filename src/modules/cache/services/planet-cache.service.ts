@@ -513,7 +513,7 @@ export class PlanetCacheService {
     isOnline: boolean = false,
   ): CachedPlanetMember {
     return {
-      userId: planetUser.userId,
+      userId: planetUser.userId || -1, // 탈퇴한 사용자는 -1로 처리
       role: planetUser.role,
       status: planetUser.status,
       joinedAt: planetUser.joinedAt,
@@ -534,7 +534,7 @@ export class PlanetCacheService {
       id: message.id,
       type: message.type,
       content: message.content,
-      senderId: message.senderId,
+      senderId: message.senderId || -1, // 탈퇴한 사용자는 -1로 처리
       senderName,
       fileUrl: message.fileMetadata?.url,
       fileName: message.fileMetadata?.fileName,

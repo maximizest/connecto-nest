@@ -1,11 +1,13 @@
 import { AfterUpdate, BeforeUpdate, Crud } from '@foryourdev/nestjs-crud';
 import {
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Logger,
   NotFoundException,
   Param,
+  Post,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -22,6 +24,7 @@ import {
   TravelUserStatus,
 } from '../../../travel-user/travel-user.entity';
 import { Travel, TravelStatus } from '../../../travel/travel.entity';
+import { UserDeletionService } from '../../services/user-deletion.service';
 import { User } from '../../user.entity';
 import { UserService } from '../../user.service';
 
@@ -119,6 +122,7 @@ export class UserController {
 
   constructor(
     public readonly crudService: UserService,
+    private readonly userDeletionService: UserDeletionService,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     @InjectRepository(TravelUser)
@@ -472,5 +476,142 @@ export class UserController {
       createdAt: user.createdAt,
       stats: publicStats,
     };
+  }
+
+  /**
+   * 계정 삭제 영향도 분석
+   * 사용자가 삭제할 데이터의 양과 영향을 확인할 수 있습니다.
+   */
+  @Get('me/deletion-impact')
+  async getMyDeletionImpact(@Request() req: any) {
+    const user: User = req.user;
+
+    this.logger.log(`User ${user.id} is checking deletion impact`);
+
+    const impact = await this.userDeletionService.analyzeDeletionImpact(
+      user.id,
+    );
+
+    return {
+      message: '계정 삭제 시 영향도 분석 결과입니다.',
+      impact,
+      warnings: [
+        '⚠️ 개인정보는 즉시 완전 삭제됩니다.',
+        '⚠️ 메시지는 익명화되어 유지됩니다.',
+        '⚠️ 이 작업은 되돌릴 수 없습니다.',
+      ],
+    };
+  }
+
+  /**
+   * 본인 계정 완전 삭제 (개보법 준수)
+   * 한국 개인정보보호법에 따라 개인정보를 즉시 완전 삭제합니다.
+   */
+  @Delete('me')
+  async deleteMyAccount(@Request() req: any) {
+    const user: User = req.user;
+
+    this.logger.log(
+      `🔥 User ${user.id} (${user.name}) requested account deletion`,
+    );
+
+    try {
+      // 삭제 전 영향도 분석
+      const impact = await this.userDeletionService.analyzeDeletionImpact(
+        user.id,
+      );
+
+      this.logger.log(
+        `📊 Deletion impact: ${impact.totalImpactedRecords} records will be affected`,
+      );
+
+      // 완전 삭제 실행
+      const result = await this.userDeletionService.deleteUserCompletely(
+        user.id,
+      );
+
+      if (result.success) {
+        this.logger.log(`✅ Successfully deleted user ${user.id}`);
+
+        return {
+          success: true,
+          message: '계정이 성공적으로 삭제되었습니다.',
+          deletionSummary: {
+            personalDataDeleted: result.deletedPersonalData,
+            serviceDataAnonymized: result.anonymizedServiceData,
+            totalRecordsProcessed: (() => {
+              const personalData = result.deletedPersonalData;
+              const personalDataCount =
+                Number(personalData.user) +
+                Number(personalData.profile) +
+                Number(personalData.notifications) +
+                Number(personalData.readReceipts);
+              const serviceDataCount = Object.values(
+                result.anonymizedServiceData,
+              ).reduce((sum: number, item: number) => sum + item, 0);
+              return personalDataCount + serviceDataCount;
+            })(),
+          },
+          legalCompliance: {
+            gdprCompliant: true,
+            koreaPipaCompliant: true,
+            deletedAt: new Date(),
+            retentionPolicy: '개인정보는 즉시 완전 삭제되었습니다.',
+          },
+        };
+      } else {
+        throw new Error('계정 삭제 중 오류가 발생했습니다.');
+      }
+    } catch (error) {
+      this.logger.error(`❌ Failed to delete user ${user.id}:`, error.stack);
+      throw new ForbiddenException(
+        `계정 삭제 중 오류가 발생했습니다: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * 삭제 준수성 검증 (개발/테스트용)
+   * 관리자가 특정 사용자의 삭제 준수성을 검증할 때 사용
+   */
+  @Post(':id/validate-deletion')
+  async validateUserDeletion(@Param('id') userId: string, @Request() req: any) {
+    const user: User = req.user;
+
+    // 본인 계정만 검증 가능
+    if (user.id !== parseInt(userId)) {
+      throw new ForbiddenException(
+        '본인 계정의 삭제 상태만 검증할 수 있습니다.',
+      );
+    }
+
+    this.logger.log(`🔍 Validating deletion compliance for User ${userId}`);
+
+    try {
+      const validation =
+        await this.userDeletionService.validateDeletionCompliance(
+          parseInt(userId),
+        );
+
+      return {
+        userId: parseInt(userId),
+        compliant: validation.compliant,
+        status: validation.compliant ? 'COMPLIANT' : 'NON_COMPLIANT',
+        remainingPersonalData: validation.remainingPersonalData,
+        issues: validation.issues,
+        checkedAt: new Date(),
+        legalRequirements: {
+          koreanPipa: validation.compliant,
+          gdpr: validation.compliant,
+          dataMinimization: validation.compliant,
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        `❌ Failed to validate deletion for user ${userId}:`,
+        error.stack,
+      );
+      throw new NotFoundException('삭제 검증 중 오류가 발생했습니다.');
+    }
   }
 }

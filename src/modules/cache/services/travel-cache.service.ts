@@ -384,7 +384,7 @@ export class TravelCacheService {
     isOnline: boolean = false,
   ): CachedTravelMember {
     return {
-      userId: travelUser.userId,
+      userId: travelUser.userId || -1, // 탈퇴한 사용자는 -1로 처리
       role: travelUser.role,
       status: travelUser.status,
       joinedAt: travelUser.joinedAt,

@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsJSON,
@@ -56,14 +57,27 @@ export class FileUpload extends BaseEntity {
   /**
    * 업로드한 사용자
    */
-  @Column({ comment: '업로드한 사용자 ID' })
+  @Column({ comment: '업로드한 사용자 ID', nullable: true })
+  @IsOptional()
   @IsNumber()
   @Index() // 사용자별 업로드 조회
-  userId: number;
+  userId?: number;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user?: User;
+
+  /**
+   * 하드 삭제 익명화 필드
+   */
+  @Column({
+    type: 'boolean',
+    default: false,
+    comment: '탈퇴한 사용자의 파일 여부',
+  })
+  @IsBoolean()
+  @Index() // 탈퇴한 사용자 파일 필터링
+  isFromDeletedUser: boolean;
 
   /**
    * 파일 기본 정보
@@ -386,5 +400,23 @@ export class FileUpload extends BaseEntity {
     console.log(
       `🟡 FileUpload updating: id=${this.id}, progress=${this.progress}%`,
     );
+  }
+
+  /**
+   * 업로드 사용자 표시 이름 반환 (탈퇴한 사용자 처리)
+   */
+  getUploaderDisplayName(fallbackName?: string): string {
+    if (this.isFromDeletedUser) {
+      return '탈퇴한 사용자';
+    }
+
+    return this.user?.name || fallbackName || '알 수 없음';
+  }
+
+  /**
+   * 탈퇴한 사용자의 파일인지 확인
+   */
+  isFromDeletedUserAccount(): boolean {
+    return this.isFromDeletedUser;
   }
 }
