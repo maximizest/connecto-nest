@@ -14,8 +14,8 @@ export function setupGlobalConfiguration(app: INestApplication): void {
 
   // 전역 필터 설정 (순서 중요: 구체적인 필터부터)
   app.useGlobalFilters(
-    new GlobalExceptionFilter(), // 가장 일반적인 필터 (최우선)
-    new CrudExceptionFilter(), // CRUD 전용 필터
+    new CrudExceptionFilter(), // CRUD 전용 필터 (최우선)
+    new GlobalExceptionFilter(), // 가장 일반적인 필터
   );
 
   // 전역 인터셉터 설정 (로깅)
