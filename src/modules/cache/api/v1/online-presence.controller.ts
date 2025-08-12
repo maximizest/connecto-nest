@@ -15,8 +15,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthGuard } from '../../../../guards/auth.guard';
-import { Planet } from '../../../planet/planet.entity';
-import { Travel } from '../../../travel/travel.entity';
+
 import { User } from '../../../user/user.entity';
 import {
   OnlinePresenceService,
@@ -44,10 +43,6 @@ export class OnlinePresenceController {
     private readonly onlinePresenceService: OnlinePresenceService,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(Travel)
-    private readonly travelRepository: Repository<Travel>,
-    @InjectRepository(Planet)
-    private readonly planetRepository: Repository<Planet>,
   ) {}
 
   /**
@@ -188,176 +183,11 @@ export class OnlinePresenceController {
     }
   }
 
-  /**
-   * Travel의 온라인 사용자 조회 API
-   * GET /api/v1/online-presence/travel/:travelId/users
-   */
-  @Get('travel/:travelId/users')
-  async getTravelOnlineUsers(
-    @Param('travelId') travelId: number,
-    @Request() req: any,
-  ) {
-    const user: User = req.user;
+  // Travel 온라인 상태는 travel.controller.ts에서 include 사용하여 조회
 
-    try {
-      // Travel 접근 권한 확인
-      const travel = await this.travelRepository.findOne({
-        where: { id: travelId },
-        relations: ['admin', 'travelUsers'],
-      });
+  // Planet 온라인 상태는 planet.controller.ts에서 include 사용하여 조회
 
-      if (!travel) {
-        throw new NotFoundException('Travel을 찾을 수 없습니다.');
-      }
-
-      // 사용자가 Travel 멤버인지 확인
-      const isMember = travel.travelUsers.some((tu) => tu.userId === user.id);
-      if (!isMember) {
-        throw new NotFoundException('Travel에 접근할 권한이 없습니다.');
-      }
-
-      // Travel 온라인 상태 조회
-      const totalMembers = travel.travelUsers.length;
-      const travelStatus =
-        await this.onlinePresenceService.getTravelOnlineStatus(
-          travelId,
-          travel.name,
-          totalMembers,
-        );
-
-      return {
-        success: true,
-        message: 'Travel 온라인 사용자 정보를 가져왔습니다.',
-        data: travelStatus,
-      };
-    } catch (error) {
-      this.logger.error(
-        `Get travel online users failed: travelId=${travelId}, userId=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * Planet의 온라인 사용자 조회 API
-   * GET /api/v1/online-presence/planet/:planetId/users
-   */
-  @Get('planet/:planetId/users')
-  async getPlanetOnlineUsers(
-    @Param('planetId') planetId: number,
-    @Request() req: any,
-  ) {
-    const user: User = req.user;
-
-    try {
-      // Planet 접근 권한 확인
-      const planet = await this.planetRepository.findOne({
-        where: { id: planetId },
-        relations: ['travel', 'travel.travelUsers', 'planetUsers'],
-      });
-
-      if (!planet) {
-        throw new NotFoundException('Planet을 찾을 수 없습니다.');
-      }
-
-      // 사용자가 Planet 접근 권한이 있는지 확인
-      let hasAccess = false;
-      let totalMembers = 0;
-
-      if (planet.travel) {
-        // GROUP Planet: Travel 멤버 확인
-        hasAccess = planet.travel.travelUsers.some(
-          (tu) => tu.userId === user.id,
-        );
-        totalMembers = planet.travel.travelUsers.length;
-      } else {
-        // DIRECT Planet: Planet 멤버 확인
-        hasAccess = planet.planetUsers.some((pu) => pu.userId === user.id);
-        totalMembers = planet.planetUsers.length;
-      }
-
-      if (!hasAccess) {
-        throw new NotFoundException('Planet에 접근할 권한이 없습니다.');
-      }
-
-      // Planet 온라인 상태 조회
-      const planetStatus =
-        await this.onlinePresenceService.getPlanetOnlineStatus(
-          planetId,
-          planet.name,
-          totalMembers,
-          planet.travel?.id,
-        );
-
-      return {
-        success: true,
-        message: 'Planet 온라인 사용자 정보를 가져왔습니다.',
-        data: planetStatus,
-      };
-    } catch (error) {
-      this.logger.error(
-        `Get planet online users failed: planetId=${planetId}, userId=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * Travel과 모든 Planet 온라인 상태 조회 API
-   * GET /api/v1/online-presence/travel/:travelId/full-status
-   */
-  @Get('travel/:travelId/full-status')
-  async getTravelFullOnlineStatus(
-    @Param('travelId') travelId: number,
-    @Request() req: any,
-  ) {
-    const user: User = req.user;
-
-    try {
-      // Travel 접근 권한 확인
-      const travel = await this.travelRepository.findOne({
-        where: { id: travelId },
-        relations: ['admin', 'travelUsers', 'planets'],
-      });
-
-      if (!travel) {
-        throw new NotFoundException('Travel을 찾을 수 없습니다.');
-      }
-
-      // 사용자가 Travel 멤버인지 확인
-      const isMember = travel.travelUsers.some((tu) => tu.userId === user.id);
-      if (!isMember) {
-        throw new NotFoundException('Travel에 접근할 권한이 없습니다.');
-      }
-
-      // Travel과 모든 Planet의 온라인 상태 조회
-      const totalMembers = travel.travelUsers.length;
-      const planets = travel.planets.map((planet) => ({
-        planetId: planet.id,
-        planetName: planet.name,
-        totalMembers: totalMembers, // GROUP Planet이므로 같은 멤버 수
-      }));
-
-      const fullStatus =
-        await this.onlinePresenceService.getTravelWithPlanetsOnlineStatus(
-          travelId,
-          travel.name,
-          totalMembers,
-          planets,
-        );
-
-      return {
-        success: true,
-        message: 'Travel 전체 온라인 상태 정보를 가져왔습니다.',
-        data: fullStatus,
-      };
-    } catch (error) {
-      this.logger.error(
-        `Get travel full online status failed: travelId=${travelId}, userId=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
-  }
+  // Travel 전체 상태는 travel.controller.ts에서 관리
 
   /**
    * 사용자 활동 기록 조회 API
@@ -373,15 +203,17 @@ export class OnlinePresenceController {
         Math.min(limit, 50), // 최대 50개로 제한
       );
 
-      return {
-        success: true,
-        message: '사용자 활동 기록을 가져왔습니다.',
-        data: {
-          userId: user.id,
+      // Return User entity with activity data
+      const userWithActivity = Object.assign(new User(), {
+        ...user,
+        metadata: {
           totalActivities: activities.length,
           activities: activities,
+          retrievedAt: new Date(),
         },
-      };
+      });
+
+      return crudResponse(userWithActivity);
     } catch (error) {
       this.logger.error(
         `Get my activity failed: userId=${user.id}, error=${error.message}`,
@@ -402,15 +234,17 @@ export class OnlinePresenceController {
       const stats = await this.onlinePresenceService.collectOnlineStatistics();
       const globalStats = await this.onlinePresenceService.getGlobalStats();
 
-      return {
-        success: true,
-        message: '전역 온라인 통계를 가져왔습니다.',
-        data: {
+      // Return User entity with global stats data
+      const userWithStats = Object.assign(new User(), {
+        ...user,
+        metadata: {
           ...stats,
           lastUpdated: new Date(),
           detailedStats: globalStats,
         },
-      };
+      });
+
+      return crudResponse(userWithStats);
     } catch (error) {
       this.logger.error(
         `Get global online stats failed: userId=${user.id}, error=${error.message}`,
@@ -509,15 +343,17 @@ export class OnlinePresenceController {
 
       this.logger.log(`User set offline: userId=${user.id}`);
 
-      return {
-        success: true,
-        message: '오프라인 상태로 설정되었습니다.',
-        data: {
-          userId: user.id,
-          isOnline: false,
+      // Return User entity with offline status
+      const offlineUser = Object.assign(new User(), {
+        ...user,
+        isOnline: false,
+        lastSeenAt: new Date(),
+        metadata: {
           disconnectedAt: new Date(),
         },
-      };
+      });
+
+      return crudResponse(offlineUser);
     } catch (error) {
       this.logger.error(
         `Set offline failed: userId=${user.id}, error=${error.message}`,
@@ -553,26 +389,24 @@ export class OnlinePresenceController {
       const isOnline =
         await this.onlinePresenceService.isUserOnline(targetUserId);
 
-      return {
-        success: true,
-        message: '사용자 온라인 상태를 가져왔습니다.',
-        data: {
-          userId: targetUserId,
-          name: targetUser.name,
-          avatarUrl: targetUser.avatar,
-          isOnline,
+      // Return target User entity with online status
+      const targetUserWithStatus = Object.assign(new User(), {
+        ...targetUser,
+        isOnline,
+        lastSeenAt: onlineInfo?.lastSeenAt || new Date(),
+        metadata: {
           onlineInfo: onlineInfo
             ? {
                 status: onlineInfo.status,
-                lastSeenAt: onlineInfo.lastSeenAt,
                 deviceType: onlineInfo.deviceType,
                 currentTravelId: onlineInfo.currentTravelId,
                 currentPlanetId: onlineInfo.currentPlanetId,
-                // 민감한 정보는 제외
               }
             : null,
         },
-      };
+      });
+
+      return crudResponse(targetUserWithStatus);
     } catch (error) {
       this.logger.error(
         `Get user online status failed: targetUserId=${targetUserId}, userId=${user.id}, error=${error.message}`,
@@ -581,50 +415,5 @@ export class OnlinePresenceController {
     }
   }
 
-  /**
-   * Planet의 타이핑 중인 사용자 조회 API
-   * GET /api/v1/online-presence/planet/:planetId/typing
-   */
-  @Get('planet/:planetId/typing')
-  async getPlanetTypingUsers(
-    @Param('planetId') planetId: number,
-    @Request() req: any,
-  ) {
-    const user: User = req.user;
-
-    try {
-      // Planet 접근 권한 확인 (간단히 구현)
-      const planet = await this.planetRepository.findOne({
-        where: { id: planetId },
-      });
-
-      if (!planet) {
-        throw new NotFoundException('Planet을 찾을 수 없습니다.');
-      }
-
-      // 타이핑 중인 사용자 목록 조회
-      const typingUsers =
-        await this.onlinePresenceService.getPlanetTypingUsers(planetId);
-
-      return {
-        success: true,
-        message: 'Planet 타이핑 사용자 정보를 가져왔습니다.',
-        data: {
-          planetId,
-          typingCount: typingUsers.length,
-          typingUsers: typingUsers.map((user) => ({
-            userId: user.userId,
-            name: user.name,
-            avatarUrl: user.avatarUrl,
-            deviceType: user.deviceType,
-          })),
-        },
-      };
-    } catch (error) {
-      this.logger.error(
-        `Get planet typing users failed: planetId=${planetId}, userId=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
-  }
+  // Planet 타이핑 사용자는 planet.controller.ts에서 include 사용하여 조회
 }

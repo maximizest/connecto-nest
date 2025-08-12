@@ -1,3 +1,4 @@
+import { crudResponse } from '@foryourdev/nestjs-crud';
 import {
   Controller,
   Get,
@@ -40,42 +41,45 @@ export class SchedulerController {
     try {
       const status = await this.schedulerService.getSchedulerStatus();
 
-      return {
-        success: true,
-        message: '스케줄러 상태를 가져왔습니다.',
-        data: {
-          system: {
-            name: 'Travel/Planet Scheduler',
-            version: '1.0',
-            status: 'running',
-            uptime: process.uptime(),
+      // Return User entity with scheduler status data
+      const userWithSchedulerStatus = Object.assign(new User(), {
+        ...user,
+        metadata: {
+          schedulerStatus: {
+            system: {
+              name: 'Travel/Planet Scheduler',
+              version: '1.0',
+              status: 'running',
+              uptime: process.uptime(),
+            },
+            tasks: {
+              summary: status.summary,
+              recentTasks: status.tasks.slice(0, 10).map((task) => ({
+                name: task.taskName,
+                status: task.status,
+                lastRun: task.lastRunAt,
+                duration: task.duration,
+                processedItems: task.processedItems,
+                success: task.status === 'success',
+              })),
+            },
+            performance: {
+              averageTaskDuration: status.summary.averageDuration,
+              successRate:
+                status.summary.totalTasks > 0
+                  ? Math.round(
+                      (status.summary.successfulTasks /
+                        status.summary.totalTasks) *
+                        100,
+                    )
+                  : 100,
+            },
+            requestedAt: new Date(),
           },
-          tasks: {
-            summary: status.summary,
-            recentTasks: status.tasks.slice(0, 10).map((task) => ({
-              name: task.taskName,
-              status: task.status,
-              lastRun: task.lastRunAt,
-              duration: task.duration,
-              processedItems: task.processedItems,
-              success: task.status === 'success',
-            })),
-          },
-          performance: {
-            averageTaskDuration: status.summary.averageDuration,
-            successRate:
-              status.summary.totalTasks > 0
-                ? Math.round(
-                    (status.summary.successfulTasks /
-                      status.summary.totalTasks) *
-                      100,
-                  )
-                : 100,
-          },
-          requestedBy: user.id,
-          requestedAt: new Date(),
         },
-      };
+      });
+
+      return crudResponse(userWithSchedulerStatus);
     } catch (error) {
       this.logger.error(
         `Get scheduler status failed: userId=${user.id}, error=${error.message}`,
@@ -123,57 +127,62 @@ export class SchedulerController {
             ? 'warning'
             : 'critical';
 
-      return {
-        success: true,
-        message: '시스템 건강성 상태를 가져왔습니다.',
-        data: {
-          overall: {
-            status: healthStatus,
-            score: Math.max(0, healthScore),
-            message: this.getHealthMessage(healthScore),
+      // Return User entity with system health data
+      const userWithHealth = Object.assign(new User(), {
+        ...user,
+        metadata: {
+          systemHealth: {
+            overall: {
+              status: healthStatus,
+              score: Math.max(0, healthScore),
+              message: this.getHealthMessage(healthScore),
+            },
+            indicators: {
+              recentFailures,
+              timeSinceLastTask: Math.round(timeSinceLastTask / 1000 / 60), // minutes
+              totalTasks: status.summary.totalTasks,
+              successRate:
+                status.summary.totalTasks > 0
+                  ? Math.round(
+                      (status.summary.successfulTasks /
+                        status.summary.totalTasks) *
+                        100,
+                    )
+                  : 100,
+            },
+            recommendations: this.getHealthRecommendations(
+              healthScore,
+              recentFailures,
+              timeSinceLastTask,
+            ),
+            checkedAt: new Date(),
           },
-          indicators: {
-            recentFailures,
-            timeSinceLastTask: Math.round(timeSinceLastTask / 1000 / 60), // minutes
-            totalTasks: status.summary.totalTasks,
-            successRate:
-              status.summary.totalTasks > 0
-                ? Math.round(
-                    (status.summary.successfulTasks /
-                      status.summary.totalTasks) *
-                      100,
-                  )
-                : 100,
-          },
-          recommendations: this.getHealthRecommendations(
-            healthScore,
-            recentFailures,
-            timeSinceLastTask,
-          ),
-          checkedBy: user.id,
-          checkedAt: new Date(),
         },
-      };
+      });
+
+      return crudResponse(userWithHealth);
     } catch (error) {
       this.logger.error(
         `Get system health failed: userId=${user.id}, error=${error.message}`,
       );
 
       // 에러 시에도 기본적인 상태 정보 제공
-      return {
-        success: true,
-        message: '시스템 건강성 체크 중 오류가 발생했습니다.',
-        data: {
-          overall: {
-            status: 'unknown',
-            score: 50,
-            message: '상태 확인 중 오류 발생',
+      const userWithHealthError = Object.assign(new User(), {
+        ...user,
+        metadata: {
+          systemHealth: {
+            overall: {
+              status: 'unknown',
+              score: 50,
+              message: '상태 확인 중 오류 발생',
+            },
+            error: error.message,
+            checkedAt: new Date(),
           },
-          error: error.message,
-          checkedBy: user.id,
-          checkedAt: new Date(),
         },
-      };
+      });
+
+      return crudResponse(userWithHealthError);
     }
   }
 
@@ -234,27 +243,30 @@ export class SchedulerController {
         },
       );
 
-      return {
-        success: true,
-        message: '작업 히스토리를 가져왔습니다.',
-        data: {
-          summary: {
-            totalTasks: Object.keys(taskGroups).length,
-            totalExecutions: status.tasks.length,
-            overallSuccessRate:
-              status.summary.totalTasks > 0
-                ? Math.round(
-                    (status.summary.successfulTasks /
-                      status.summary.totalTasks) *
-                      100,
-                  )
-                : 100,
+      // Return User entity with task history data
+      const userWithHistory = Object.assign(new User(), {
+        ...user,
+        metadata: {
+          taskHistory: {
+            summary: {
+              totalTasks: Object.keys(taskGroups).length,
+              totalExecutions: status.tasks.length,
+              overallSuccessRate:
+                status.summary.totalTasks > 0
+                  ? Math.round(
+                      (status.summary.successfulTasks /
+                        status.summary.totalTasks) *
+                        100,
+                    )
+                  : 100,
+            },
+            tasks: taskSummaries,
+            requestedAt: new Date(),
           },
-          tasks: taskSummaries,
-          requestedBy: user.id,
-          requestedAt: new Date(),
         },
-      };
+      });
+
+      return crudResponse(userWithHistory);
     } catch (error) {
       this.logger.error(
         `Get task history failed: userId=${user.id}, error=${error.message}`,
@@ -276,63 +288,66 @@ export class SchedulerController {
       const memUsage = process.memoryUsage();
       const cpuUsage = process.cpuUsage();
 
-      return {
-        success: true,
-        message: '시스템 정보를 가져왔습니다.',
-        data: {
-          application: {
-            name: 'Connecto-Nest Scheduler',
-            version: process.env.npm_package_version || '1.0.0',
-            environment: process.env.NODE_ENV || 'development',
-            uptime: Math.round(process.uptime()),
-            pid: process.pid,
+      // Return User entity with system info data
+      const userWithSystemInfo = Object.assign(new User(), {
+        ...user,
+        metadata: {
+          systemInfo: {
+            application: {
+              name: 'Connecto-Nest Scheduler',
+              version: process.env.npm_package_version || '1.0.0',
+              environment: process.env.NODE_ENV || 'development',
+              uptime: Math.round(process.uptime()),
+              pid: process.pid,
+            },
+            runtime: {
+              nodeVersion: process.version,
+              platform: process.platform,
+              architecture: process.arch,
+            },
+            memory: {
+              totalMemory: Math.round(memUsage.rss / 1024 / 1024), // MB
+              heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024), // MB
+              heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024), // MB
+              external: Math.round(memUsage.external / 1024 / 1024), // MB
+            },
+            cpu: {
+              user: cpuUsage.user,
+              system: cpuUsage.system,
+            },
+            scheduledTasks: [
+              {
+                name: 'processExpiredTravels',
+                schedule: 'Daily at midnight',
+                description: 'Travel 만료 처리 및 Planet 비활성화',
+              },
+              {
+                name: 'sendExpiryWarnings',
+                schedule: 'Daily at 9 AM',
+                description: 'Travel 만료 경고 알림 전송',
+              },
+              {
+                name: 'cleanupLargeFiles',
+                schedule: 'Daily at 2 AM',
+                description: '대용량 파일 및 임시 파일 정리',
+              },
+              {
+                name: 'cleanupOldData',
+                schedule: 'Weekly on Sunday at 3 AM',
+                description: '오래된 데이터 정리 (읽음 영수증, 알림 등)',
+              },
+              {
+                name: 'optimizeCache',
+                schedule: 'Every hour',
+                description: 'Redis 캐시 최적화 및 만료된 키 정리',
+              },
+            ],
+            requestedAt: new Date(),
           },
-          runtime: {
-            nodeVersion: process.version,
-            platform: process.platform,
-            architecture: process.arch,
-          },
-          memory: {
-            totalMemory: Math.round(memUsage.rss / 1024 / 1024), // MB
-            heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024), // MB
-            heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024), // MB
-            external: Math.round(memUsage.external / 1024 / 1024), // MB
-          },
-          cpu: {
-            user: cpuUsage.user,
-            system: cpuUsage.system,
-          },
-          scheduledTasks: [
-            {
-              name: 'processExpiredTravels',
-              schedule: 'Daily at midnight',
-              description: 'Travel 만료 처리 및 Planet 비활성화',
-            },
-            {
-              name: 'sendExpiryWarnings',
-              schedule: 'Daily at 9 AM',
-              description: 'Travel 만료 경고 알림 전송',
-            },
-            {
-              name: 'cleanupLargeFiles',
-              schedule: 'Daily at 2 AM',
-              description: '대용량 파일 및 임시 파일 정리',
-            },
-            {
-              name: 'cleanupOldData',
-              schedule: 'Weekly on Sunday at 3 AM',
-              description: '오래된 데이터 정리 (읽음 영수증, 알림 등)',
-            },
-            {
-              name: 'optimizeCache',
-              schedule: 'Every hour',
-              description: 'Redis 캐시 최적화 및 만료된 키 정리',
-            },
-          ],
-          requestedBy: user.id,
-          requestedAt: new Date(),
         },
-      };
+      });
+
+      return crudResponse(userWithSystemInfo);
     } catch (error) {
       this.logger.error(
         `Get system info failed: userId=${user.id}, error=${error.message}`,
@@ -357,16 +372,19 @@ export class SchedulerController {
         this.logger.error(`Manual cache optimization failed: ${error.message}`);
       });
 
-      return {
-        success: true,
-        message: '캐시 최적화 작업이 시작되었습니다.',
-        data: {
-          taskName: 'optimizeCache',
-          triggeredBy: user.id,
-          triggeredAt: new Date(),
-          note: '작업이 백그라운드에서 실행됩니다.',
+      // Return User entity with cache optimization task data
+      const userWithOptimizationTask = Object.assign(new User(), {
+        ...user,
+        metadata: {
+          cacheOptimization: {
+            taskName: 'optimizeCache',
+            triggeredAt: new Date(),
+            note: '작업이 백그라운드에서 실행됩니다.',
+          },
         },
-      };
+      });
+
+      return crudResponse(userWithOptimizationTask);
     } catch (error) {
       this.logger.error(
         `Manual cache optimization trigger failed: userId=${user.id}, error=${error.message}`,
