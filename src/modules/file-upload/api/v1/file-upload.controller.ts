@@ -214,20 +214,11 @@ export class FileUploadController {
 
         this.logger.log(`File uploaded: ${result.key}, user: ${user.id}`);
 
-        return crudResponse({
-          success: true,
-          message: '파일이 성공적으로 업로드되었습니다.',
-          data: {
-            uploadId: uploadRecord.id,
-            key: result.key,
-            url: result.url,
-            size: result.size,
-            contentType: result.contentType,
-            fileName: file.originalname,
-            uploadedAt: new Date().toISOString(),
-            uploadedBy: user.id,
-          },
-        });
+        // Return the completed FileUpload entity
+        const completedUpload = await this.crudService.findById(
+          uploadRecord.id,
+        );
+        return crudResponse(completedUpload);
       } catch (uploadError) {
         // 업로드 실패 시 레코드 업데이트
         await this.crudService.markAsFailed(
@@ -319,19 +310,8 @@ export class FileUploadController {
         `Multipart upload initiated: ${result.key}, chunks: ${totalChunks}, user: ${user.id}`,
       );
 
-      return crudResponse({
-        success: true,
-        message: '대용량 파일 업로드가 초기화되었습니다.',
-        data: {
-          recordId: uploadRecord.id,
-          uploadId: result.uploadId,
-          key: result.key,
-          chunkSize: CHUNK_SIZE,
-          totalChunks,
-          fileName,
-          fileSize,
-        },
-      });
+      // Return the initialized FileUpload entity
+      return crudResponse(uploadRecord);
     } catch (error) {
       this.logger.error(
         `Multipart upload init failed: ${error.message}`,
@@ -400,16 +380,9 @@ export class FileUploadController {
         `Chunk uploaded: ${key}, part: ${partNum}, user: ${user.id}`,
       );
 
-      return crudResponse({
-        success: true,
-        message: `청크 ${partNum}이 성공적으로 업로드되었습니다.`,
-        data: {
-          partNumber: result.partNumber,
-          etag: result.etag,
-          chunkSize: chunk.size,
-          progress: uploadRecord.progress,
-        },
-      });
+      // Return the updated FileUpload entity with chunk progress
+      const updatedRecord = await this.crudService.findById(uploadRecord.id);
+      return crudResponse(updatedRecord);
     } catch (error) {
       this.logger.error(`Chunk upload failed: ${error.message}`, error.stack);
       throw error;
@@ -464,23 +437,9 @@ export class FileUploadController {
         `Multipart upload completed: ${key}, parts: ${parts.length}, user: ${user.id}`,
       );
 
-      return crudResponse({
-        success: true,
-        message: '대용량 파일 업로드가 완료되었습니다.',
-        data: {
-          recordId: uploadRecord.id,
-          key: result.key,
-          url: result.url,
-          size: result.size,
-          contentType: result.contentType,
-          etag: result.etag,
-          completedAt: new Date().toISOString(),
-          totalParts: parts.length,
-          uploadDuration: uploadRecord.getUploadDuration(),
-          averageSpeed: uploadRecord.getAverageSpeed(),
-          uploadedBy: user.id,
-        },
-      });
+      // Return the completed FileUpload entity
+      const completedRecord = await this.crudService.findById(uploadRecord.id);
+      return crudResponse(completedRecord);
     } catch (error) {
       this.logger.error(
         `Multipart upload completion failed: ${error.message}`,
@@ -528,16 +487,9 @@ export class FileUploadController {
 
       this.logger.log(`Multipart upload aborted: ${key}, user: ${user.id}`);
 
-      return crudResponse({
-        success: true,
-        message: '대용량 파일 업로드가 취소되었습니다.',
-        data: {
-          recordId: uploadRecord.id,
-          key,
-          uploadId,
-          abortedAt: new Date().toISOString(),
-        },
-      });
+      // Return the cancelled FileUpload entity
+      const cancelledRecord = await this.crudService.findById(uploadRecord.id);
+      return crudResponse(cancelledRecord);
     } catch (error) {
       this.logger.error(
         `Multipart upload abort failed: ${error.message}`,
@@ -569,11 +521,8 @@ export class FileUploadController {
         throw new Error('업로드 진행 상황 조회 권한이 없습니다.');
       }
 
-      return crudResponse({
-        success: true,
-        message: '업로드 진행 상황을 가져왔습니다.',
-        data: uploadRecord.getSummary(),
-      });
+      // Return the FileUpload entity with current progress
+      return crudResponse(uploadRecord);
     } catch (error) {
       this.logger.error(
         `Upload progress retrieval failed: ${error.message}`,
@@ -598,18 +547,27 @@ export class FileUploadController {
     try {
       const stats = await this.crudService.getUploadStats(user.id);
 
-      return crudResponse({
-        success: true,
-        message: '업로드 통계를 가져왔습니다.',
-        data: {
+      // Create virtual FileUpload entity with stats data
+      const statsEntity = Object.assign(new FileUpload(), {
+        id: 0,
+        userId: user.id,
+        originalFileName: 'upload_stats',
+        storageKey: 'stats',
+        mimeType: 'application/json',
+        fileSize: 0,
+        uploadType: FileUploadType.SINGLE,
+        folder: 'files' as any,
+        status: 'completed' as any,
+        metadata: {
           ...stats,
-          // 사용자 친화적인 단위로 변환
           totalSizeMB:
             Math.round((stats.totalSize / (1024 * 1024)) * 100) / 100,
           averageSpeedMBps:
             Math.round((stats.averageSpeed / (1024 * 1024)) * 100) / 100,
         },
       });
+
+      return crudResponse(statsEntity);
     } catch (error) {
       this.logger.error(
         `Upload stats retrieval failed: ${error.message}`,
@@ -629,24 +587,31 @@ export class FileUploadController {
       const fileInfo = await this.storageService.getFileInfo(key);
 
       if (!fileInfo) {
-        return crudResponse({
-          success: false,
-          message: '파일을 찾을 수 없습니다.',
-          data: null,
+        // Return empty FileUpload entity
+        const emptyEntity = Object.assign(new FileUpload(), {
+          id: 0,
+          originalFileName: key,
+          storageKey: key,
+          status: 'failed' as any,
         });
+        return crudResponse(emptyEntity);
       }
 
-      return crudResponse({
-        success: true,
-        message: '파일 정보를 가져왔습니다.',
-        data: {
-          key,
-          size: fileInfo.size,
-          contentType: fileInfo.contentType,
-          lastModified: fileInfo.lastModified,
-          metadata: fileInfo.metadata,
-        },
+      // Create FileUpload entity with file info
+      const fileEntity = Object.assign(new FileUpload(), {
+        id: 0,
+        originalFileName: key,
+        storageKey: key,
+        mimeType: fileInfo.contentType,
+        fileSize: fileInfo.size,
+        uploadType: FileUploadType.SINGLE,
+        folder: 'files' as any,
+        status: 'completed' as any,
+        metadata: fileInfo.metadata,
+        updatedAt: fileInfo.lastModified,
       });
+
+      return crudResponse(fileEntity);
     } catch (error) {
       this.logger.error(
         `File info retrieval failed: ${error.message}`,
@@ -678,16 +643,22 @@ export class FileUploadController {
         expiresIn,
       );
 
-      return crudResponse({
-        success: true,
-        message: '다운로드 URL이 생성되었습니다.',
-        data: {
-          key,
+      // Create FileUpload entity with download info
+      const downloadEntity = Object.assign(new FileUpload(), {
+        id: 0,
+        originalFileName: key,
+        storageKey: key,
+        uploadType: FileUploadType.SINGLE,
+        folder: 'files' as any,
+        status: 'completed' as any,
+        metadata: {
           downloadUrl,
           expiresIn,
           expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
         },
       });
+
+      return crudResponse(downloadEntity);
     } catch (error) {
       this.logger.error(
         `Download URL generation failed: ${error.message}`,
@@ -713,10 +684,14 @@ export class FileUploadController {
       const fileInfo = await this.storageService.getFileInfo(key);
 
       if (!fileInfo) {
-        return crudResponse({
-          success: false,
-          message: '파일을 찾을 수 없습니다.',
+        // Return empty FileUpload entity for not found
+        const notFoundEntity = Object.assign(new FileUpload(), {
+          id: 0,
+          originalFileName: key,
+          storageKey: key,
+          status: 'failed' as any,
         });
+        return crudResponse(notFoundEntity);
       }
 
       // 업로더 권한 확인 (메타데이터에서 확인)
@@ -729,15 +704,22 @@ export class FileUploadController {
 
       this.logger.log(`File deleted: ${key}, user: ${user.id}`);
 
-      return crudResponse({
-        success: true,
-        message: '파일이 성공적으로 삭제되었습니다.',
-        data: {
-          key,
+      // Create FileUpload entity for deleted file
+      const deletedEntity = Object.assign(new FileUpload(), {
+        id: 0,
+        userId: user.id,
+        originalFileName: key,
+        storageKey: key,
+        uploadType: FileUploadType.SINGLE,
+        folder: 'files' as any,
+        status: 'deleted' as any,
+        metadata: {
           deletedAt: new Date().toISOString(),
           deletedBy: user.id,
         },
       });
+
+      return crudResponse(deletedEntity);
     } catch (error) {
       this.logger.error(`File deletion failed: ${error.message}`, error.stack);
       throw error;
@@ -762,16 +744,22 @@ export class FileUploadController {
 
       const files = await this.storageService.listFiles(folder, limit);
 
-      return crudResponse({
-        success: true,
-        message: `${folder} 폴더의 파일 목록을 가져왔습니다.`,
-        data: {
-          folder,
+      // Create FileUpload entity with folder listing
+      const folderEntity = Object.assign(new FileUpload(), {
+        id: 0,
+        originalFileName: `folder_${folder}`,
+        storageKey: folder,
+        uploadType: FileUploadType.SINGLE,
+        folder: folder as any,
+        status: 'completed' as any,
+        metadata: {
           files,
           count: files.length,
           maxKeys: limit,
         },
       });
+
+      return crudResponse(folderEntity);
     } catch (error) {
       this.logger.error(`File listing failed: ${error.message}`, error.stack);
       throw error;
@@ -787,31 +775,43 @@ export class FileUploadController {
     try {
       const isHealthy = await this.storageService.healthCheck();
 
-      return crudResponse({
-        success: isHealthy,
-        message: isHealthy
-          ? '스토리지가 정상 작동 중입니다.'
-          : '스토리지 연결에 문제가 있습니다.',
-        data: {
+      // Create FileUpload entity with health status
+      const healthEntity = Object.assign(new FileUpload(), {
+        id: 0,
+        originalFileName: 'health_check',
+        storageKey: 'health',
+        uploadType: FileUploadType.SINGLE,
+        folder: 'files' as any,
+        status: isHealthy ? ('completed' as any) : ('failed' as any),
+        metadata: {
           status: isHealthy ? 'healthy' : 'unhealthy',
           timestamp: new Date().toISOString(),
         },
       });
+
+      return crudResponse(healthEntity);
     } catch (error) {
       this.logger.error(
         `Storage health check failed: ${error.message}`,
         error.stack,
       );
 
-      return crudResponse({
-        success: false,
-        message: '스토리지 상태 확인에 실패했습니다.',
-        data: {
+      // Create FileUpload entity with error status
+      const errorEntity = Object.assign(new FileUpload(), {
+        id: 0,
+        originalFileName: 'health_check_error',
+        storageKey: 'health_error',
+        uploadType: FileUploadType.SINGLE,
+        folder: 'files' as any,
+        status: 'failed' as any,
+        metadata: {
           status: 'error',
           error: error.message,
           timestamp: new Date().toISOString(),
         },
       });
+
+      return crudResponse(errorEntity);
     }
   }
 }

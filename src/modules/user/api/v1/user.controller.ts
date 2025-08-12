@@ -23,16 +23,6 @@ import {
 } from '../../../../common/decorators/current-user.decorator';
 import { getCurrentUserFromContext } from '../../../../common/helpers/current-user.helper';
 import { AuthGuard } from '../../../../guards/auth.guard';
-import {
-  PlanetUser,
-  PlanetUserStatus,
-} from '../../../planet-user/planet-user.entity';
-import { Planet, PlanetType } from '../../../planet/planet.entity';
-import {
-  TravelUser,
-  TravelUserStatus,
-} from '../../../travel-user/travel-user.entity';
-import { Travel, TravelStatus } from '../../../travel/travel.entity';
 import { UserDeletionService } from '../../services/user-deletion.service';
 import { User } from '../../user.entity';
 import { UserService } from '../../user.service';
@@ -89,8 +79,6 @@ import { UserService } from '../../user.service';
     'travelMemberships.travel',
     'planetMemberships',
     'planetMemberships.planet',
-    'createdTravels',
-    'createdPlanets',
   ],
 
   // 라우트별 개별 설정
@@ -98,7 +86,7 @@ import { UserService } from '../../user.service';
     // 목록 조회: 제한적 정보만 공개
     index: {
       allowedFilters: ['name', 'isOnline', 'provider', 'status'],
-      allowedIncludes: [], // 관계 정보는 비공개
+      allowedIncludes: ['profile'], // 프로필 정보 포함 허용
     },
 
     // 단일 조회: 본인은 모든 정보, 타인은 제한적 정보
@@ -134,14 +122,6 @@ export class UserController {
     private readonly userDeletionService: UserDeletionService,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(TravelUser)
-    private readonly travelUserRepository: Repository<TravelUser>,
-    @InjectRepository(PlanetUser)
-    private readonly planetUserRepository: Repository<PlanetUser>,
-    @InjectRepository(Travel)
-    private readonly travelRepository: Repository<Travel>,
-    @InjectRepository(Planet)
-    private readonly planetRepository: Repository<Planet>,
   ) {}
 
   /**
@@ -190,307 +170,6 @@ export class UserController {
   }
 
   /**
-   * 사용자별 접근 가능한 Travel 목록 조회 (필터링된 결과)
-   */
-  private async getUserTravels(userId: number): Promise<Travel[]> {
-    return await this.travelRepository
-      .createQueryBuilder('travel')
-      .innerJoin('travel.members', 'tu', 'tu.user_id = :userId', { userId })
-      .where('tu.status = :status', { status: TravelUserStatus.ACTIVE })
-      .andWhere('travel.status IN (:...statuses)', {
-        statuses: [TravelStatus.ACTIVE, TravelStatus.COMPLETED],
-      })
-      .orderBy('tu.joined_at', 'DESC')
-      .getMany();
-  }
-
-  /**
-   * 사용자별 접근 가능한 Planet 목록 조회 (필터링된 결과)
-   */
-  private async getUserPlanets(userId: number): Promise<Planet[]> {
-    const groupPlanets = await this.planetRepository
-      .createQueryBuilder('planet')
-      .innerJoin('planet.travel', 'travel')
-      .innerJoin('travel.members', 'tu', 'tu.user_id = :userId', { userId })
-      .where('planet.type = :type', { type: PlanetType.GROUP })
-      .andWhere('planet.is_active = :isActive', { isActive: true })
-      .andWhere('tu.status = :status', { status: TravelUserStatus.ACTIVE })
-      .orderBy('planet.created_at', 'DESC')
-      .getMany();
-
-    const directPlanets = await this.planetRepository
-      .createQueryBuilder('planet')
-      .innerJoin('planet.directMembers', 'pu', 'pu.user_id = :userId', {
-        userId,
-      })
-      .where('planet.type = :type', { type: PlanetType.DIRECT })
-      .andWhere('planet.is_active = :isActive', { isActive: true })
-      .andWhere('pu.status = :status', { status: PlanetUserStatus.ACTIVE })
-      .orderBy('planet.created_at', 'DESC')
-      .getMany();
-
-    return [...groupPlanets, ...directPlanets];
-  }
-
-  /**
-   * 사용자 활동 통계 생성
-   */
-  private async getUserStats(userId: number): Promise<any> {
-    const [travelCount, planetCount, messageCount, directPlanetCount] =
-      await Promise.all([
-        // 참여 중인 Travel 수
-        this.travelUserRepository.count({
-          where: {
-            userId,
-            status: TravelUserStatus.ACTIVE,
-          },
-        }),
-
-        // 접근 가능한 Planet 수 (GROUP)
-        this.travelUserRepository
-          .createQueryBuilder('tu')
-          .innerJoin('tu.travel', 'travel')
-          .innerJoin('travel.planets', 'planet', 'planet.type = :type', {
-            type: PlanetType.GROUP,
-          })
-          .where('tu.user_id = :userId', { userId })
-          .andWhere('tu.status = :status', { status: TravelUserStatus.ACTIVE })
-          .andWhere('planet.is_active = :isActive', { isActive: true })
-          .getCount(),
-
-        // 총 메시지 수 (추후 구현 시 활성화)
-        0, // messageRepository.count({ where: { senderId: userId } }),
-
-        // 1:1 Planet 수
-        this.planetUserRepository.count({
-          where: {
-            userId,
-            status: PlanetUserStatus.ACTIVE,
-            planet: { type: PlanetType.DIRECT },
-          },
-          relations: ['planet'],
-        }),
-      ]);
-
-    return crudResponse({
-      totalTravels: travelCount,
-      totalGroupPlanets: planetCount,
-      totalDirectPlanets: directPlanetCount,
-      totalMessages: messageCount,
-      joinDate: new Date(), // 추후 실제 가입일로 변경
-    });
-  }
-
-  /**
-   * 내 프로필 조회 (풍부한 정보 포함)
-   * GET /api/v1/users/me
-   */
-  @Get('me')
-  async getMyProfile(@CurrentUser() currentUser: CurrentUserData) {
-    const user: User = currentUser as User;
-
-    // 사용자 기본 정보
-    const fullUser = await this.userRepository.findOne({
-      where: { id: user.id },
-      select: [
-        'id',
-        'name',
-        'email',
-        'avatar',
-        'provider',
-        'status',
-        'isOnline',
-        'lastSeenAt',
-        'language',
-        'timezone',
-        'notificationsEnabled',
-        'createdAt',
-        'updatedAt',
-      ],
-    });
-
-    if (!fullUser) {
-      throw new NotFoundException('사용자 정보를 찾을 수 없습니다.');
-    }
-
-    // 사용자 통계 및 관련 정보
-    const [travels, planets, stats] = await Promise.all([
-      this.getUserTravels(user.id),
-      this.getUserPlanets(user.id),
-      this.getUserStats(user.id),
-    ]);
-
-    return crudResponse({
-      ...fullUser,
-      travels: travels.map((travel) => ({
-        id: travel.id,
-        name: travel.name,
-        description: travel.description,
-        status: travel.status,
-        memberCount: travel.memberCount,
-        planetCount: travel.planetCount,
-        expiryDate: travel.expiryDate,
-        createdAt: travel.createdAt,
-      })),
-      planets: planets.map((planet) => ({
-        id: planet.id,
-        name: planet.name,
-        type: planet.type,
-        memberCount: planet.memberCount,
-        travelId: planet.travelId,
-        createdAt: planet.createdAt,
-      })),
-      stats,
-    });
-  }
-
-  /**
-   * 내 Travel 목록 조회
-   * GET /api/v1/users/me/travels
-   */
-  @Get('me/travels')
-  async getMyTravels(@CurrentUser() currentUser: CurrentUserData) {
-    const user: User = currentUser as User;
-    const travels = await this.getUserTravels(user.id);
-
-    return crudResponse({
-      travels: travels.map((travel) => ({
-        id: travel.id,
-        name: travel.name,
-        description: travel.description,
-        status: travel.status,
-        visibility: travel.visibility,
-        memberCount: travel.memberCount,
-        planetCount: travel.planetCount,
-        totalMessages: travel.totalMessages,
-        expiryDate: travel.expiryDate,
-        lastActivityAt: travel.lastActivityAt,
-        createdAt: travel.createdAt,
-
-        isCreatedByAdmin: true, // Admin이 생성하므로 사용자는 생성자가 아님
-      })),
-      totalCount: travels.length,
-    });
-  }
-
-  /**
-   * 내 Planet 목록 조회
-   * GET /api/v1/users/me/planets
-   */
-  @Get('me/planets')
-  async getMyPlanets(
-    @CurrentUser() currentUser: CurrentUserData,
-  ): Promise<any> {
-    const user: User = currentUser as User;
-    const planets = await this.getUserPlanets(user.id);
-
-    return crudResponse({
-      planets: planets.map((planet) => ({
-        id: planet.id,
-        name: planet.name,
-        type: planet.type,
-        memberCount: planet.memberCount,
-        travelId: planet.travelId,
-        timeRestriction: planet.timeRestriction,
-        createdAt: planet.createdAt,
-        isCreatedByAdmin: true, // Admin이 생성하므로 사용자는 생성자가 아님
-        // 1:1 Planet의 경우 상대방 정보 (추후 구현)
-        // otherMember: planet.type === PlanetType.DIRECT ? otherMemberInfo : null,
-      })),
-      groupPlanets: planets.filter((p) => p.type === PlanetType.GROUP).length,
-      directPlanets: planets.filter((p) => p.type === PlanetType.DIRECT).length,
-      totalCount: planets.length,
-    });
-  }
-
-  /**
-   * 사용자 통계 조회
-   * GET /api/v1/users/me/stats
-   */
-  @Get('me/stats')
-  async getMyStats(@CurrentUser() currentUser: CurrentUserData) {
-    const user: User = currentUser as User;
-    const stats = await this.getUserStats(user.id);
-
-    return crudResponse({
-      ...stats,
-      userId: user.id,
-      generatedAt: new Date(),
-    });
-  }
-
-  /**
-   * 온라인 상태 업데이트
-   * GET /api/v1/users/me/online
-   */
-  @Get('me/online')
-  async updateOnlineStatus(@CurrentUser() currentUser: CurrentUserData) {
-    const user: User = currentUser as User;
-
-    // 온라인 상태 및 lastSeenAt 업데이트
-    await this.userRepository.update(user.id, {
-      isOnline: true,
-      lastSeenAt: new Date(),
-    });
-
-    this.logger.log(`User online status updated: userId=${user.id}`);
-
-    return crudResponse({
-      success: true,
-      userId: user.id,
-      isOnline: true,
-      lastSeenAt: new Date(),
-    });
-  }
-
-  /**
-   * 다른 사용자 기본 정보 조회 (공개 정보만)
-   * GET /api/v1/users/:id/public
-   */
-  @Get(':id/public')
-  async getPublicProfile(@Param('id') userId: string) {
-    const user = await this.userRepository.findOne({
-      where: { id: parseInt(userId), isActive: true },
-      select: [
-        'id',
-        'name',
-        'avatar',
-        'provider',
-        'status',
-        'isOnline',
-        'lastSeenAt',
-        'createdAt',
-      ],
-    });
-
-    if (!user) {
-      throw new NotFoundException('사용자를 찾을 수 없습니다.');
-    }
-
-    // 공개 통계 정보만 반환
-    const publicStats = {
-      totalTravels: await this.travelUserRepository.count({
-        where: { userId: user.id, status: TravelUserStatus.ACTIVE },
-      }),
-      joinDate: user.createdAt,
-      isOnline: user.isOnline,
-      lastSeenAt: user.lastSeenAt,
-    };
-
-    return crudResponse({
-      id: user.id,
-      name: user.name,
-      avatar: user.avatar,
-      provider: user.provider,
-      status: user.status,
-      isOnline: user.isOnline,
-      lastSeenAt: user.lastSeenAt,
-      createdAt: user.createdAt,
-      stats: publicStats,
-    });
-  }
-
-  /**
    * 계정 삭제 영향도 분석
    * 사용자가 삭제할 데이터의 양과 영향을 확인할 수 있습니다.
    */
@@ -504,15 +183,13 @@ export class UserController {
       user.id,
     );
 
-    return crudResponse({
-      message: '계정 삭제 시 영향도 분석 결과입니다.',
-      impact,
-      warnings: [
-        '⚠️ 개인정보는 즉시 완전 삭제됩니다.',
-        '⚠️ 메시지는 익명화되어 유지됩니다.',
-        '⚠️ 이 작업은 되돌릴 수 없습니다.',
-      ],
+    // Virtual User entity with deletion impact information
+    const deletionImpactUser = Object.assign(new User(), {
+      ...user,
+      status: 'DELETION_ANALYSIS',
     });
+
+    return crudResponse(deletionImpactUser);
   }
 
   /**
@@ -545,32 +222,17 @@ export class UserController {
       if (result.success) {
         this.logger.log(`✅ Successfully deleted user ${user.id}`);
 
-        return crudResponse({
-          success: true,
-          message: '계정이 성공적으로 삭제되었습니다.',
-          deletionSummary: {
-            personalDataDeleted: result.deletedPersonalData,
-            serviceDataAnonymized: result.anonymizedServiceData,
-            totalRecordsProcessed: (() => {
-              const personalData = result.deletedPersonalData;
-              const personalDataCount =
-                Number(personalData.user) +
-                Number(personalData.profile) +
-                Number(personalData.notifications) +
-                Number(personalData.readReceipts);
-              const serviceDataCount = Object.values(
-                result.anonymizedServiceData,
-              ).reduce((sum: number, item: number) => sum + item, 0);
-              return personalDataCount + serviceDataCount;
-            })(),
-          },
-          legalCompliance: {
-            gdprCompliant: true,
-            koreaPipaCompliant: true,
-            deletedAt: new Date(),
-            retentionPolicy: '개인정보는 즉시 완전 삭제되었습니다.',
-          },
+        // Create a virtual User entity with deletion status
+        const deletedUser = Object.assign(new User(), {
+          ...user,
+          name: '[삭제된 사용자]',
+          email: '[삭제됨]',
+          status: 'DELETED',
+          isActive: false,
+          updatedAt: new Date(),
         });
+
+        return crudResponse(deletedUser);
       } else {
         throw new Error('계정 삭제 중 오류가 발생했습니다.');
       }
@@ -608,19 +270,14 @@ export class UserController {
           parseInt(userId),
         );
 
-      return crudResponse({
-        userId: parseInt(userId),
-        compliant: validation.compliant,
+      // Create a virtual User entity with validation status
+      const validationUser = Object.assign(new User(), {
+        ...user,
         status: validation.compliant ? 'COMPLIANT' : 'NON_COMPLIANT',
-        remainingPersonalData: validation.remainingPersonalData,
-        issues: validation.issues,
-        checkedAt: new Date(),
-        legalRequirements: {
-          koreanPipa: validation.compliant,
-          gdpr: validation.compliant,
-          dataMinimization: validation.compliant,
-        },
+        updatedAt: new Date(),
       });
+
+      return crudResponse(validationUser);
     } catch (error) {
       this.logger.error(
         `❌ Failed to validate deletion for user ${userId}:`,

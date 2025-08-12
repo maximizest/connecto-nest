@@ -112,14 +112,24 @@ export class AnalyticsController {
       // 사용자 활동 통계 수집
       const stats = await this.crudService.collectUserActivityStats(user.id);
 
-      return crudResponse({
-        success: true,
-        message: '내 활동 통계를 가져왔습니다.',
-        data: {
-          ...stats,
+      // Create Analytics entity with user activity stats
+      const analyticsEntity = Object.assign(new Analytics(), {
+        type: AnalyticsType.USER_ACTIVITY,
+        entityType: 'user',
+        entityId: user.id,
+        period: AggregationPeriod.DAILY,
+        date: new Date(),
+        metrics: stats,
+        label: '내 활동 통계',
+        description: '사용자 개인 활동 통계 데이터',
+        metadata: {
           requestedAt: new Date(),
+          generatedBy: 'api_request',
+          dataSource: 'user_activity',
         },
       });
+
+      return crudResponse(analyticsEntity);
     } catch (error) {
       this.logger.error(
         `Get user activity stats failed: userId=${user.id}, error=${error.message}`,
@@ -177,18 +187,29 @@ export class AnalyticsController {
 
       const validStats = memberStats.filter(Boolean);
 
-      return crudResponse({
-        success: true,
-        message: 'Travel 멤버 활동 통계를 가져왔습니다.',
-        data: {
-          travelId,
+      // Create Analytics entity with travel member stats
+      const analyticsEntity = Object.assign(new Analytics(), {
+        type: AnalyticsType.TRAVEL_MEMBERS,
+        entityType: 'travel',
+        entityId: travelId,
+        period: AggregationPeriod.DAILY,
+        date: new Date(),
+        metrics: {
           totalMembers: travelUsers.length,
           statsCollected: validStats.length,
           memberStats: validStats,
+        },
+        label: 'Travel 멤버 활동 통계',
+        description: `Travel ${travelId}의 멤버 활동 통계 데이터`,
+        metadata: {
           requestedBy: user.id,
           requestedAt: new Date(),
+          generatedBy: 'api_request',
+          dataSource: 'travel_members',
         },
       });
+
+      return crudResponse(analyticsEntity);
     } catch (error) {
       this.logger.error(
         `Get travel member stats failed: travelId=${travelId}, userId=${user.id}, error=${error.message}`,
@@ -240,18 +261,29 @@ export class AnalyticsController {
 
       const validStats = planetStats.filter(Boolean);
 
-      return crudResponse({
-        success: true,
-        message: 'Travel Planet 통계를 가져왔습니다.',
-        data: {
-          travelId,
+      // Create Analytics entity with travel planet stats
+      const analyticsEntity = Object.assign(new Analytics(), {
+        type: AnalyticsType.TRAVEL_OVERVIEW,
+        entityType: 'travel',
+        entityId: travelId,
+        period: AggregationPeriod.DAILY,
+        date: new Date(),
+        metrics: {
           totalPlanets: planets.length,
           statsCollected: validStats.length,
           planetStats: validStats,
+        },
+        label: 'Travel Planet 통계',
+        description: `Travel ${travelId}의 Planet 통계 데이터`,
+        metadata: {
           requestedBy: user.id,
           requestedAt: new Date(),
+          generatedBy: 'api_request',
+          dataSource: 'travel_planets',
         },
       });
+
+      return crudResponse(analyticsEntity);
     } catch (error) {
       this.logger.error(
         `Get travel planet stats failed: travelId=${travelId}, userId=${user.id}, error=${error.message}`,
@@ -276,22 +308,32 @@ export class AnalyticsController {
       });
 
       if (userTravels.length === 0) {
-        return crudResponse({
-          success: true,
-          message: '참여 중인 Travel이 없습니다.',
-          data: {
-            overview: {
-              totalTravels: 0,
-              activeTravels: 0,
-              totalPlanets: 0,
-              activePlanets: 0,
-              totalMessages: 0,
-              todayMessages: 0,
-            },
-            trends: [],
-            insights: [],
+        // Create empty dashboard Analytics entity
+        const emptyDashboardEntity = Object.assign(new Analytics(), {
+          type: AnalyticsType.USER_ACTIVITY,
+          entityType: 'user',
+          entityId: user.id,
+          period: AggregationPeriod.DAILY,
+          date: new Date(),
+          metrics: {
+            totalTravels: 0,
+            activeTravels: 0,
+            totalPlanets: 0,
+            activePlanets: 0,
+            totalMessages: 0,
+            todayMessages: 0,
+          },
+          label: '대시보드 데이터',
+          description: '참여 중인 Travel이 없음',
+          metadata: {
+            requestedBy: user.id,
+            requestedAt: new Date(),
+            generatedBy: 'api_request',
+            dataSource: 'dashboard',
           },
         });
+
+        return crudResponse(emptyDashboardEntity);
       }
 
       // 사용자 맞춤 대시보드 데이터 생성
@@ -309,24 +351,33 @@ export class AnalyticsController {
         todayMessages: 0, // 구현 필요
       };
 
-      return crudResponse({
-        success: true,
-        message: '대시보드 데이터를 가져왔습니다.',
-        data: {
-          overview,
+      // Create dashboard Analytics entity
+      const dashboardEntity = Object.assign(new Analytics(), {
+        type: AnalyticsType.USER_ACTIVITY,
+        entityType: 'user',
+        entityId: user.id,
+        period: AggregationPeriod.DAILY,
+        date: new Date(),
+        metrics: {
+          ...overview,
           userTravels: travelIds,
-          trends: {
-            messageVolume: [],
-            engagement: [],
-          },
-          insights: {
-            peakHours: [],
-            activeConversations: [],
-          },
+        },
+        dimensions: {
+          byHour: {},
+          byDayOfWeek: {},
+          byEngagementLevel: {},
+        },
+        label: '대시보드 데이터',
+        description: '사용자 맞춤 대시보드 통계',
+        metadata: {
           requestedBy: user.id,
           requestedAt: new Date(),
+          generatedBy: 'api_request',
+          dataSource: 'dashboard',
         },
       });
+
+      return crudResponse(dashboardEntity);
     } catch (error) {
       this.logger.error(
         `Get dashboard data failed: userId=${user.id}, error=${error.message}`,
@@ -406,28 +457,42 @@ export class AnalyticsController {
       // 시계열 포인트로 변환
       const timeSeriesData = analytics.map((item) => item.toTimeSeriesPoint());
 
-      return crudResponse({
-        success: true,
-        message: '시계열 분석 데이터를 가져왔습니다.',
-        data: {
-          type,
-          entityType,
-          entityId,
-          period,
-          dateRange: { start, end },
+      // Create timeseries Analytics entity
+      const timeseriesEntity = Object.assign(new Analytics(), {
+        type,
+        entityType,
+        entityId,
+        period,
+        date: new Date(),
+        metrics: {
           dataPoints: timeSeriesData.length,
           timeSeries: timeSeriesData,
-          summary: {
-            min: Math.min(...timeSeriesData.map((p) => p.value)),
-            max: Math.max(...timeSeriesData.map((p) => p.value)),
-            average:
-              timeSeriesData.reduce((sum, p) => sum + p.value, 0) /
-                timeSeriesData.length || 0,
-          },
+          minValue:
+            timeSeriesData.length > 0
+              ? Math.min(...timeSeriesData.map((p) => p.value))
+              : 0,
+          maxValue:
+            timeSeriesData.length > 0
+              ? Math.max(...timeSeriesData.map((p) => p.value))
+              : 0,
+          averageValue:
+            timeSeriesData.length > 0
+              ? timeSeriesData.reduce((sum, p) => sum + p.value, 0) /
+                timeSeriesData.length
+              : 0,
+        },
+        label: '시계열 분석 데이터',
+        description: `${entityType} ${entityId}의 ${type} 시계열 데이터`,
+        metadata: {
+          dateRange: { start, end },
           requestedBy: user.id,
           requestedAt: new Date(),
+          generatedBy: 'api_request',
+          dataSource: 'timeseries',
         },
       });
+
+      return crudResponse(timeseriesEntity);
     } catch (error) {
       this.logger.error(
         `Get timeseries data failed: type=${type}, entityType=${entityType}, entityId=${entityId}, userId=${user.id}, error=${error.message}`,
@@ -503,21 +568,32 @@ export class AnalyticsController {
 
       const validResults = comparisonResults.filter(Boolean);
 
-      return crudResponse({
-        success: true,
-        message: '비교 분석 데이터를 가져왔습니다.',
-        data: {
+      // Create comparison Analytics entity
+      const comparisonEntity = Object.assign(new Analytics(), {
+        type: AnalyticsType.SYSTEM_USAGE,
+        entityType: 'comparison',
+        entityId: user.id,
+        period,
+        date: new Date(),
+        metrics: {
           metric,
-          period,
           comparedEntities: validResults.length,
           results: validResults,
           ranking: validResults.sort(
             (a, b) => (b?.metricValue || 0) - (a?.metricValue || 0),
           ),
+        },
+        label: '비교 분석 데이터',
+        description: `${metric} 기준 엔티티 비교 분석`,
+        metadata: {
           requestedBy: user.id,
           requestedAt: new Date(),
+          generatedBy: 'api_request',
+          dataSource: 'comparison',
         },
       });
+
+      return crudResponse(comparisonEntity);
     } catch (error) {
       this.logger.error(
         `Get comparison data failed: entities=${entities}, metric=${metric}, userId=${user.id}, error=${error.message}`,

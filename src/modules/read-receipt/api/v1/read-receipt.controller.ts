@@ -191,11 +191,7 @@ export class ReadReceiptController {
         `Message marked as read: messageId=${messageId}, userId=${user.id}`,
       );
 
-      return crudResponse({
-        success: true,
-        message: '메시지를 읽음으로 표시했습니다.',
-        data: receipt.getSummary(),
-      });
+      return crudResponse(receipt);
     } catch (error) {
       this.logger.error(
         `Mark message as read failed: messageId=${body.messageId}, userId=${user.id}, error=${error.message}`,
@@ -264,14 +260,22 @@ export class ReadReceiptController {
         `Multiple messages marked as read: count=${receipts.length}, userId=${user.id}`,
       );
 
-      return crudResponse({
-        success: true,
-        message: `${receipts.length}개의 메시지를 읽음으로 표시했습니다.`,
-        data: {
+      // Create virtual MessageReadReceipt entity for batch operation
+      const batchReadEntity = Object.assign(new MessageReadReceipt(), {
+        id: 0,
+        messageId: 0,
+        userId: user.id,
+        planetId: 0,
+        isRead: true,
+        readAt: new Date(),
+        metadata: {
           processedCount: receipts.length,
           receipts: receipts.map((r) => r.getSummary()),
+          operationType: 'batch_read',
         },
       });
+
+      return crudResponse(batchReadEntity);
     } catch (error) {
       this.logger.error(
         `Mark multiple messages as read failed: userId=${user.id}, error=${error.message}`,
@@ -324,15 +328,22 @@ export class ReadReceiptController {
         `All messages in planet marked as read: planetId=${planetId}, userId=${user.id}, count=${result.processedCount}`,
       );
 
-      return crudResponse({
-        success: true,
-        message: `Planet의 모든 메시지(${result.processedCount}개)를 읽음으로 표시했습니다.`,
-        data: {
-          planetId,
+      // Create virtual MessageReadReceipt entity for planet all read
+      const planetAllReadEntity = Object.assign(new MessageReadReceipt(), {
+        id: 0,
+        messageId: 0,
+        userId: user.id,
+        planetId,
+        isRead: true,
+        readAt: new Date(),
+        metadata: {
           processedCount: result.processedCount,
           receipts: result.receipts.map((r) => r.getSummary()),
+          operationType: 'planet_all_read',
         },
       });
+
+      return crudResponse(planetAllReadEntity);
     } catch (error) {
       this.logger.error(
         `Mark all messages as read failed: planetId=${planetId}, userId=${user.id}, error=${error.message}`,
@@ -361,15 +372,21 @@ export class ReadReceiptController {
         user.id,
       );
 
-      return crudResponse({
-        success: true,
-        message: 'Planet의 읽지 않은 메시지 카운트를 가져왔습니다.',
-        data: {
-          planetId,
+      // Create virtual MessageReadReceipt entity for unread count
+      const unreadCountEntity = Object.assign(new MessageReadReceipt(), {
+        id: 0,
+        messageId: 0,
+        userId: user.id,
+        planetId,
+        isRead: false,
+        readAt: null,
+        metadata: {
           unreadCount,
-          userId: user.id,
+          operationType: 'unread_count',
         },
       });
+
+      return crudResponse(unreadCountEntity);
     } catch (error) {
       this.logger.error(
         `Get unread count failed: planetId=${planetId}, userId=${user.id}, error=${error.message}`,
@@ -391,19 +408,26 @@ export class ReadReceiptController {
         user.id,
       );
 
-      return crudResponse({
-        success: true,
-        message: '모든 Planet별 읽지 않은 메시지 카운트를 가져왔습니다.',
-        data: {
-          userId: user.id,
+      // Create virtual MessageReadReceipt entity for my unread counts
+      const myUnreadCountsEntity = Object.assign(new MessageReadReceipt(), {
+        id: 0,
+        messageId: 0,
+        userId: user.id,
+        planetId: 0,
+        isRead: false,
+        readAt: null,
+        metadata: {
           totalPlanets: unreadCounts.length,
           totalUnreadCount: unreadCounts.reduce(
             (sum, planet) => sum + planet.unreadCount,
             0,
           ),
           planets: unreadCounts,
+          operationType: 'my_unread_counts',
         },
       });
+
+      return crudResponse(myUnreadCountsEntity);
     } catch (error) {
       this.logger.error(
         `Get my unread counts failed: userId=${user.id}, error=${error.message}`,
@@ -429,11 +453,21 @@ export class ReadReceiptController {
 
       const stats = await this.crudService.getReadStatsByMessage(messageId);
 
-      return crudResponse({
-        success: true,
-        message: '메시지 읽음 상태 통계를 가져왔습니다.',
-        data: stats,
+      // Create virtual MessageReadReceipt entity for message stats
+      const messageStatsEntity = Object.assign(new MessageReadReceipt(), {
+        id: 0,
+        messageId,
+        userId: user.id,
+        planetId: 0,
+        isRead: true,
+        readAt: new Date(),
+        metadata: {
+          stats,
+          operationType: 'message_stats',
+        },
       });
+
+      return crudResponse(messageStatsEntity);
     } catch (error) {
       this.logger.error(
         `Get message read stats failed: messageId=${messageId}, userId=${user.id}, error=${error.message}`,
@@ -459,14 +493,21 @@ export class ReadReceiptController {
 
       const stats = await this.crudService.getReadStatsByPlanet(planetId);
 
-      return crudResponse({
-        success: true,
-        message: 'Planet 읽음 상태 통계를 가져왔습니다.',
-        data: {
-          planetId,
+      // Create virtual MessageReadReceipt entity for planet stats
+      const planetStatsEntity = Object.assign(new MessageReadReceipt(), {
+        id: 0,
+        messageId: 0,
+        userId: user.id,
+        planetId,
+        isRead: true,
+        readAt: new Date(),
+        metadata: {
           ...stats,
+          operationType: 'planet_stats',
         },
       });
+
+      return crudResponse(planetStatsEntity);
     } catch (error) {
       this.logger.error(
         `Get planet read stats failed: planetId=${planetId}, userId=${user.id}, error=${error.message}`,
@@ -518,17 +559,24 @@ export class ReadReceiptController {
       // 분석 데이터 계산
       const analytics = this.calculateReadAnalytics(receipts);
 
-      return crudResponse({
-        success: true,
-        message: '읽음 상태 분석 데이터를 가져왔습니다.',
-        data: {
+      // Create virtual MessageReadReceipt entity for analytics
+      const analyticsEntity = Object.assign(new MessageReadReceipt(), {
+        id: 0,
+        messageId: 0,
+        userId: user.id,
+        planetId: planetId || 0,
+        isRead: true,
+        readAt: new Date(),
+        metadata: {
           timeRange: timeRange || '7d',
           startDate,
           endDate: new Date(),
-          planetId: planetId || null,
           ...analytics,
+          operationType: 'analytics',
         },
       });
+
+      return crudResponse(analyticsEntity);
     } catch (error) {
       this.logger.error(
         `Get read analytics failed: userId=${user.id}, error=${error.message}`,

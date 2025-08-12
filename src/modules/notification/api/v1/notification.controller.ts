@@ -119,16 +119,24 @@ export class NotificationController {
     try {
       const stats = await this.crudService.getUserNotificationStats(user.id);
 
-      return crudResponse({
-        success: true,
-        message: '읽지 않은 알림 개수를 가져왔습니다.',
+      // Create virtual Notification entity with unread count stats
+      const unreadStatsEntity = Object.assign(new Notification(), {
+        id: 0,
+        type: NotificationType.SYSTEM,
+        title: '읽지 않은 알림 개수',
+        content: `읽지 않은 알림 ${stats.unreadNotifications}개`,
+        userId: user.id,
+        priority: NotificationPriority.NORMAL,
+        channels: [NotificationChannel.IN_APP],
+        isRead: true,
         data: {
-          userId: user.id,
           unreadCount: stats.unreadNotifications,
           totalCount: stats.totalNotifications,
           checkedAt: new Date(),
         },
       });
+
+      return crudResponse(unreadStatsEntity);
     } catch (error) {
       this.logger.error(
         `Get unread count failed: userId=${user.id}, error=${error.message}`,
@@ -158,18 +166,7 @@ export class NotificationController {
         user.id,
       );
 
-      return crudResponse({
-        success: true,
-        message: '알림을 읽음으로 처리했습니다.',
-        data: {
-          notification: {
-            id: notification.id,
-            isRead: notification.isRead,
-            readAt: notification.readAt,
-          },
-          readBy: user.id,
-        },
-      });
+      return crudResponse(notification);
     } catch (error) {
       this.logger.error(
         `Mark as read failed: notificationId=${notificationId}, userId=${user.id}, error=${error.message}`,
@@ -205,9 +202,16 @@ export class NotificationController {
         user.id,
       );
 
-      return crudResponse({
-        success: true,
-        message: `${affectedCount}개 알림을 읽음으로 처리했습니다.`,
+      // Create virtual Notification entity with batch read info
+      const batchReadEntity = Object.assign(new Notification(), {
+        id: 0,
+        type: NotificationType.SYSTEM,
+        title: `알림 읽음 처리`,
+        content: `${affectedCount}개 알림 읽음 완료`,
+        userId: user.id,
+        priority: NotificationPriority.NORMAL,
+        channels: [NotificationChannel.IN_APP],
+        isRead: true,
         data: {
           affectedCount,
           requestedIds: notificationIds,
@@ -215,6 +219,8 @@ export class NotificationController {
           readAt: new Date(),
         },
       });
+
+      return crudResponse(batchReadEntity);
     } catch (error) {
       this.logger.error(
         `Mark multiple as read failed: userId=${user.id}, error=${error.message}`,
@@ -234,15 +240,24 @@ export class NotificationController {
     try {
       const affectedCount = await this.crudService.markAllAsRead(user.id);
 
-      return crudResponse({
-        success: true,
-        message: `모든 알림(${affectedCount}개)을 읽음으로 처리했습니다.`,
+      // Create virtual Notification entity with read all info
+      const readAllEntity = Object.assign(new Notification(), {
+        id: 0,
+        type: NotificationType.SYSTEM,
+        title: '모든 알림 읽음 처리',
+        content: `모든 알림 ${affectedCount}개 읽음 완료`,
+        userId: user.id,
+        priority: NotificationPriority.NORMAL,
+        channels: [NotificationChannel.IN_APP],
+        isRead: true,
         data: {
           affectedCount,
           readBy: user.id,
           readAt: new Date(),
         },
       });
+
+      return crudResponse(readAllEntity);
     } catch (error) {
       this.logger.error(
         `Mark all as read failed: userId=${user.id}, error=${error.message}`,
@@ -262,15 +277,23 @@ export class NotificationController {
     try {
       const stats = await this.crudService.getUserNotificationStats(user.id);
 
-      return crudResponse({
-        success: true,
-        message: '알림 통계를 가져왔습니다.',
+      // Create virtual Notification entity with stats
+      const statsEntity = Object.assign(new Notification(), {
+        id: 0,
+        type: NotificationType.SYSTEM,
+        title: '알림 통계',
+        content: `전체 ${stats.totalNotifications}개, 읽지 않음 ${stats.unreadNotifications}개`,
+        userId: user.id,
+        priority: NotificationPriority.NORMAL,
+        channels: [NotificationChannel.IN_APP],
+        isRead: true,
         data: {
           ...stats,
-          userId: user.id,
           generatedAt: new Date(),
         },
       });
+
+      return crudResponse(statsEntity);
     } catch (error) {
       this.logger.error(
         `Get notification stats failed: userId=${user.id}, error=${error.message}`,
@@ -311,16 +334,24 @@ export class NotificationController {
         appVersion,
       );
 
-      return crudResponse({
-        success: true,
-        message: '푸시 토큰이 등록되었습니다.',
+      // Create virtual Notification entity with push token registration
+      const pushTokenEntity = Object.assign(new Notification(), {
+        id: 0,
+        type: NotificationType.SYSTEM,
+        title: '푸시 토큰 등록',
+        content: `${platform} 디바이스에 푸시 토큰 등록 완료`,
+        userId: user.id,
+        priority: NotificationPriority.NORMAL,
+        channels: [NotificationChannel.IN_APP],
+        isRead: true,
         data: {
-          userId: user.id,
           platform,
           deviceId,
           registeredAt: new Date(),
         },
       });
+
+      return crudResponse(pushTokenEntity);
     } catch (error) {
       this.logger.error(
         `Register push token failed: userId=${user.id}, error=${error.message}`,
@@ -349,15 +380,23 @@ export class NotificationController {
 
       await this.pushNotificationService.unregisterPushToken(user.id, deviceId);
 
-      return crudResponse({
-        success: true,
-        message: '푸시 토큰이 해제되었습니다.',
+      // Create virtual Notification entity with push token unregistration
+      const unregisterEntity = Object.assign(new Notification(), {
+        id: 0,
+        type: NotificationType.SYSTEM,
+        title: '푸시 토큰 해제',
+        content: `디바이스 ${deviceId} 푸시 토큰 해제 완료`,
+        userId: user.id,
+        priority: NotificationPriority.NORMAL,
+        channels: [NotificationChannel.IN_APP],
+        isRead: true,
         data: {
-          userId: user.id,
           deviceId,
           unregisteredAt: new Date(),
         },
       });
+
+      return crudResponse(unregisterEntity);
     } catch (error) {
       this.logger.error(
         `Unregister push token failed: userId=${user.id}, error=${error.message}`,
@@ -379,11 +418,17 @@ export class NotificationController {
         user.id,
       );
 
-      return crudResponse({
-        success: true,
-        message: '푸시 토큰 목록을 가져왔습니다.',
+      // Create virtual Notification entity with push token list
+      const tokenListEntity = Object.assign(new Notification(), {
+        id: 0,
+        type: NotificationType.SYSTEM,
+        title: '푸시 토큰 목록',
+        content: `등록된 디바이스 ${pushTokens.length}개 (활성: ${pushTokens.filter((t) => t.isActive).length}개)`,
+        userId: user.id,
+        priority: NotificationPriority.NORMAL,
+        channels: [NotificationChannel.IN_APP],
+        isRead: true,
         data: {
-          userId: user.id,
           tokens: pushTokens.map((token) => ({
             deviceId: token.deviceId,
             platform: token.platform,
@@ -397,6 +442,8 @@ export class NotificationController {
           retrievedAt: new Date(),
         },
       });
+
+      return crudResponse(tokenListEntity);
     } catch (error) {
       this.logger.error(
         `Get my push tokens failed: userId=${user.id}, error=${error.message}`,
@@ -447,22 +494,7 @@ export class NotificationController {
         },
       });
 
-      return crudResponse({
-        success: true,
-        message: '테스트 알림이 전송되었습니다.',
-        data: {
-          notification: {
-            id: notification.id,
-            type: notification.type,
-            title: notification.title,
-            content: notification.content,
-            priority: notification.priority,
-            channels: notification.channels,
-          },
-          sentTo: user.id,
-          sentAt: new Date(),
-        },
-      });
+      return crudResponse(notification);
     } catch (error) {
       this.logger.error(
         `Send test notification failed: userId=${user.id}, error=${error.message}`,

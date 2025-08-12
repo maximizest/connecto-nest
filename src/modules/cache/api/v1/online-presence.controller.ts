@@ -64,24 +64,24 @@ export class OnlinePresenceController {
       );
 
       if (!onlineInfo) {
-        return crudResponse({
-          success: false,
-          message: '온라인 상태 정보를 찾을 수 없습니다.',
-          data: {
-            isOnline: false,
-            userId: user.id,
-          },
+        // Return User entity with offline status
+        const offlineUser = Object.assign(new User(), {
+          ...user,
+          isOnline: false,
+          lastSeenAt: new Date(),
         });
+
+        return crudResponse(offlineUser);
       }
 
-      return {
-        success: true,
-        message: '온라인 상태를 가져왔습니다.',
-        data: {
-          ...onlineInfo,
-          isOnline: true,
-        },
-      };
+      // Return User entity with online info
+      const onlineUser = Object.assign(new User(), {
+        ...user,
+        isOnline: true,
+        lastSeenAt: new Date(),
+      });
+
+      return crudResponse(onlineUser);
     } catch (error) {
       this.logger.error(
         `Get my online status failed: userId=${user.id}, error=${error.message}`,
@@ -172,18 +172,14 @@ export class OnlinePresenceController {
         `Online status updated: userId=${user.id}, travel=${currentTravelId}, planet=${currentPlanetId}`,
       );
 
-      return {
-        success: true,
-        message: '온라인 상태가 성공적으로 업데이트되었습니다.',
-        data: {
-          userId: user.id,
-          currentTravelId,
-          currentPlanetId,
-          deviceType,
-          status,
-          lastActivity: new Date(),
-        },
-      };
+      // Return updated User entity
+      const updatedUser = Object.assign(new User(), {
+        ...user,
+        isOnline: true,
+        lastSeenAt: new Date(),
+      });
+
+      return crudResponse(updatedUser);
     } catch (error) {
       this.logger.error(
         `Update online status failed: userId=${user.id}, error=${error.message}`,

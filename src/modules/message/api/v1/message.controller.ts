@@ -473,11 +473,7 @@ export class MessageController {
 
       // 내용이 동일하면 수정하지 않음
       if (editData.content === message.content) {
-        return crudResponse({
-          success: true,
-          message: '메시지가 이미 동일한 내용입니다.',
-          data: message,
-        });
+        return crudResponse(message);
       }
 
       // 편집 처리
@@ -506,18 +502,7 @@ export class MessageController {
 
       this.logger.log(`Message edited: id=${messageId}, senderId=${user.id}`);
 
-      return crudResponse({
-        success: true,
-        message: '메시지가 성공적으로 편집되었습니다.',
-        data: {
-          id: updatedMessage.id,
-          content: updatedMessage.content,
-          originalContent: updatedMessage.originalContent,
-          isEdited: updatedMessage.isEdited,
-          editedAt: updatedMessage.editedAt,
-          searchableText: updatedMessage.searchableText,
-        },
-      });
+      return crudResponse(updatedMessage);
     } catch (error) {
       this.logger.error(
         `Message edit failed: id=${messageId}, user=${user.id}, error=${error.message}`,
@@ -551,11 +536,7 @@ export class MessageController {
 
       // 이미 삭제된 메시지 확인
       if (message.isDeleted) {
-        return crudResponse({
-          success: true,
-          message: '이미 삭제된 메시지입니다.',
-          data: { id: messageId, isDeleted: true },
-        });
+        return crudResponse(message);
       }
 
       // 삭제 권한 확인 (발신자 또는 Planet 관리자)
@@ -585,16 +566,7 @@ export class MessageController {
 
       this.logger.log(`Message deleted: id=${messageId}, deletedBy=${user.id}`);
 
-      return crudResponse({
-        success: true,
-        message: '메시지가 성공적으로 삭제되었습니다.',
-        data: {
-          id: deletedMessage.id,
-          isDeleted: deletedMessage.isDeleted,
-          deletedAt: deletedMessage.deletedAt,
-          deletedBy: deletedMessage.deletedBy,
-        },
-      });
+      return crudResponse(deletedMessage);
     } catch (error) {
       this.logger.error(
         `Message delete failed: id=${messageId}, user=${user.id}, error=${error.message}`,
@@ -626,24 +598,22 @@ export class MessageController {
       await this.validatePlanetAccess(message.planetId, user.id);
 
       if (!message.isEdited) {
-        return crudResponse({
-          success: true,
-          message: '편집 기록이 없습니다.',
-          data: {
-            id: messageId,
-            isEdited: false,
+        // Create virtual Message entity with no edit history
+        const noEditMessage = Object.assign(new Message(), {
+          ...message,
+          metadata: {
+            ...message.metadata,
             editHistory: [],
           },
         });
+        return crudResponse(noEditMessage);
       }
 
-      return crudResponse({
-        success: true,
-        message: '편집 기록을 가져왔습니다.',
-        data: {
-          id: messageId,
-          isEdited: message.isEdited,
-          editedAt: message.editedAt,
+      // Create Message entity with edit history
+      const messageWithHistory = Object.assign(new Message(), {
+        ...message,
+        metadata: {
+          ...message.metadata,
           editHistory: [
             {
               version: 1,
@@ -660,6 +630,8 @@ export class MessageController {
           ],
         },
       });
+
+      return crudResponse(messageWithHistory);
     } catch (error) {
       this.logger.error(
         `Edit history retrieval failed: id=${messageId}, user=${user.id}, error=${error.message}`,
@@ -691,11 +663,7 @@ export class MessageController {
       await this.validatePlanetAccess(message.planetId, user.id);
 
       if (!message.isDeleted) {
-        return crudResponse({
-          success: true,
-          message: '이미 활성화된 메시지입니다.',
-          data: { id: messageId, isDeleted: false },
-        });
+        return crudResponse(message);
       }
 
       // 복구 권한 확인 (원래 발신자 또는 Planet 관리자)
@@ -739,17 +707,17 @@ export class MessageController {
         `Message restored: id=${messageId}, restoredBy=${user.id}`,
       );
 
-      return crudResponse({
-        success: true,
-        message: '메시지가 성공적으로 복구되었습니다.',
-        data: {
-          id: restoredMessage.id,
-          isDeleted: restoredMessage.isDeleted,
-          content: restoredMessage.content,
+      // Create Message entity with restore info
+      const messageWithRestoreInfo = Object.assign(new Message(), {
+        ...restoredMessage,
+        metadata: {
+          ...restoredMessage.metadata,
           restoredBy: user.id,
           restoredAt: new Date(),
         },
       });
+
+      return crudResponse(messageWithRestoreInfo);
     } catch (error) {
       this.logger.error(
         `Message restore failed: id=${messageId}, user=${user.id}, error=${error.message}`,
