@@ -1,4 +1,9 @@
-import { BeforeCreate, BeforeUpdate, Crud } from '@foryourdev/nestjs-crud';
+import {
+  BeforeCreate,
+  BeforeUpdate,
+  Crud,
+  crudResponse,
+} from '@foryourdev/nestjs-crud';
 import {
   Controller,
   Get,
@@ -107,14 +112,14 @@ export class AnalyticsController {
       // 사용자 활동 통계 수집
       const stats = await this.crudService.collectUserActivityStats(user.id);
 
-      return {
+      return crudResponse({
         success: true,
         message: '내 활동 통계를 가져왔습니다.',
         data: {
           ...stats,
           requestedAt: new Date(),
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Get user activity stats failed: userId=${user.id}, error=${error.message}`,
@@ -172,7 +177,7 @@ export class AnalyticsController {
 
       const validStats = memberStats.filter(Boolean);
 
-      return {
+      return crudResponse({
         success: true,
         message: 'Travel 멤버 활동 통계를 가져왔습니다.',
         data: {
@@ -183,7 +188,7 @@ export class AnalyticsController {
           requestedBy: user.id,
           requestedAt: new Date(),
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Get travel member stats failed: travelId=${travelId}, userId=${user.id}, error=${error.message}`,
@@ -235,7 +240,7 @@ export class AnalyticsController {
 
       const validStats = planetStats.filter(Boolean);
 
-      return {
+      return crudResponse({
         success: true,
         message: 'Travel Planet 통계를 가져왔습니다.',
         data: {
@@ -246,7 +251,7 @@ export class AnalyticsController {
           requestedBy: user.id,
           requestedAt: new Date(),
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Get travel planet stats failed: travelId=${travelId}, userId=${user.id}, error=${error.message}`,
@@ -271,7 +276,7 @@ export class AnalyticsController {
       });
 
       if (userTravels.length === 0) {
-        return {
+        return crudResponse({
           success: true,
           message: '참여 중인 Travel이 없습니다.',
           data: {
@@ -286,7 +291,7 @@ export class AnalyticsController {
             trends: [],
             insights: [],
           },
-        };
+        });
       }
 
       // 사용자 맞춤 대시보드 데이터 생성
@@ -304,7 +309,7 @@ export class AnalyticsController {
         todayMessages: 0, // 구현 필요
       };
 
-      return {
+      return crudResponse({
         success: true,
         message: '대시보드 데이터를 가져왔습니다.',
         data: {
@@ -321,7 +326,7 @@ export class AnalyticsController {
           requestedBy: user.id,
           requestedAt: new Date(),
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Get dashboard data failed: userId=${user.id}, error=${error.message}`,
@@ -401,7 +406,7 @@ export class AnalyticsController {
       // 시계열 포인트로 변환
       const timeSeriesData = analytics.map((item) => item.toTimeSeriesPoint());
 
-      return {
+      return crudResponse({
         success: true,
         message: '시계열 분석 데이터를 가져왔습니다.',
         data: {
@@ -422,7 +427,7 @@ export class AnalyticsController {
           requestedBy: user.id,
           requestedAt: new Date(),
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Get timeseries data failed: type=${type}, entityType=${entityType}, entityId=${entityId}, userId=${user.id}, error=${error.message}`,
@@ -498,7 +503,7 @@ export class AnalyticsController {
 
       const validResults = comparisonResults.filter(Boolean);
 
-      return {
+      return crudResponse({
         success: true,
         message: '비교 분석 데이터를 가져왔습니다.',
         data: {
@@ -512,7 +517,7 @@ export class AnalyticsController {
           requestedBy: user.id,
           requestedAt: new Date(),
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Get comparison data failed: entities=${entities}, metric=${metric}, userId=${user.id}, error=${error.message}`,

@@ -1,3 +1,4 @@
+import { crudResponse } from '@foryourdev/nestjs-crud';
 import {
   Body,
   Controller,
@@ -63,14 +64,14 @@ export class OnlinePresenceController {
       );
 
       if (!onlineInfo) {
-        return {
+        return crudResponse({
           success: false,
           message: '온라인 상태 정보를 찾을 수 없습니다.',
           data: {
             isOnline: false,
             userId: user.id,
           },
-        };
+        });
       }
 
       return {

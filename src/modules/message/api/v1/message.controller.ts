@@ -4,6 +4,7 @@ import {
   BeforeCreate,
   BeforeUpdate,
   Crud,
+  crudResponse,
 } from '@foryourdev/nestjs-crud';
 import {
   Body,
@@ -472,11 +473,11 @@ export class MessageController {
 
       // 내용이 동일하면 수정하지 않음
       if (editData.content === message.content) {
-        return {
+        return crudResponse({
           success: true,
           message: '메시지가 이미 동일한 내용입니다.',
           data: message,
-        };
+        });
       }
 
       // 편집 처리
@@ -505,7 +506,7 @@ export class MessageController {
 
       this.logger.log(`Message edited: id=${messageId}, senderId=${user.id}`);
 
-      return {
+      return crudResponse({
         success: true,
         message: '메시지가 성공적으로 편집되었습니다.',
         data: {
@@ -516,7 +517,7 @@ export class MessageController {
           editedAt: updatedMessage.editedAt,
           searchableText: updatedMessage.searchableText,
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Message edit failed: id=${messageId}, user=${user.id}, error=${error.message}`,
@@ -550,11 +551,11 @@ export class MessageController {
 
       // 이미 삭제된 메시지 확인
       if (message.isDeleted) {
-        return {
+        return crudResponse({
           success: true,
           message: '이미 삭제된 메시지입니다.',
           data: { id: messageId, isDeleted: true },
-        };
+        });
       }
 
       // 삭제 권한 확인 (발신자 또는 Planet 관리자)
@@ -584,7 +585,7 @@ export class MessageController {
 
       this.logger.log(`Message deleted: id=${messageId}, deletedBy=${user.id}`);
 
-      return {
+      return crudResponse({
         success: true,
         message: '메시지가 성공적으로 삭제되었습니다.',
         data: {
@@ -593,7 +594,7 @@ export class MessageController {
           deletedAt: deletedMessage.deletedAt,
           deletedBy: deletedMessage.deletedBy,
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Message delete failed: id=${messageId}, user=${user.id}, error=${error.message}`,
@@ -625,7 +626,7 @@ export class MessageController {
       await this.validatePlanetAccess(message.planetId, user.id);
 
       if (!message.isEdited) {
-        return {
+        return crudResponse({
           success: true,
           message: '편집 기록이 없습니다.',
           data: {
@@ -633,10 +634,10 @@ export class MessageController {
             isEdited: false,
             editHistory: [],
           },
-        };
+        });
       }
 
-      return {
+      return crudResponse({
         success: true,
         message: '편집 기록을 가져왔습니다.',
         data: {
@@ -658,7 +659,7 @@ export class MessageController {
             },
           ],
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Edit history retrieval failed: id=${messageId}, user=${user.id}, error=${error.message}`,
@@ -690,11 +691,11 @@ export class MessageController {
       await this.validatePlanetAccess(message.planetId, user.id);
 
       if (!message.isDeleted) {
-        return {
+        return crudResponse({
           success: true,
           message: '이미 활성화된 메시지입니다.',
           data: { id: messageId, isDeleted: false },
-        };
+        });
       }
 
       // 복구 권한 확인 (원래 발신자 또는 Planet 관리자)
@@ -738,7 +739,7 @@ export class MessageController {
         `Message restored: id=${messageId}, restoredBy=${user.id}`,
       );
 
-      return {
+      return crudResponse({
         success: true,
         message: '메시지가 성공적으로 복구되었습니다.',
         data: {
@@ -748,7 +749,7 @@ export class MessageController {
           restoredBy: user.id,
           restoredAt: new Date(),
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Message restore failed: id=${messageId}, user=${user.id}, error=${error.message}`,

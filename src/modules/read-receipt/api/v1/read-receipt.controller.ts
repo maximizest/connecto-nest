@@ -1,4 +1,9 @@
-import { BeforeCreate, BeforeUpdate, Crud } from '@foryourdev/nestjs-crud';
+import {
+  BeforeCreate,
+  BeforeUpdate,
+  Crud,
+  crudResponse,
+} from '@foryourdev/nestjs-crud';
 import {
   Body,
   Controller,
@@ -186,11 +191,11 @@ export class ReadReceiptController {
         `Message marked as read: messageId=${messageId}, userId=${user.id}`,
       );
 
-      return {
+      return crudResponse({
         success: true,
         message: '메시지를 읽음으로 표시했습니다.',
         data: receipt.getSummary(),
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Mark message as read failed: messageId=${body.messageId}, userId=${user.id}, error=${error.message}`,
@@ -259,14 +264,14 @@ export class ReadReceiptController {
         `Multiple messages marked as read: count=${receipts.length}, userId=${user.id}`,
       );
 
-      return {
+      return crudResponse({
         success: true,
         message: `${receipts.length}개의 메시지를 읽음으로 표시했습니다.`,
         data: {
           processedCount: receipts.length,
           receipts: receipts.map((r) => r.getSummary()),
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Mark multiple messages as read failed: userId=${user.id}, error=${error.message}`,
@@ -319,7 +324,7 @@ export class ReadReceiptController {
         `All messages in planet marked as read: planetId=${planetId}, userId=${user.id}, count=${result.processedCount}`,
       );
 
-      return {
+      return crudResponse({
         success: true,
         message: `Planet의 모든 메시지(${result.processedCount}개)를 읽음으로 표시했습니다.`,
         data: {
@@ -327,7 +332,7 @@ export class ReadReceiptController {
           processedCount: result.processedCount,
           receipts: result.receipts.map((r) => r.getSummary()),
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Mark all messages as read failed: planetId=${planetId}, userId=${user.id}, error=${error.message}`,
@@ -356,7 +361,7 @@ export class ReadReceiptController {
         user.id,
       );
 
-      return {
+      return crudResponse({
         success: true,
         message: 'Planet의 읽지 않은 메시지 카운트를 가져왔습니다.',
         data: {
@@ -364,7 +369,7 @@ export class ReadReceiptController {
           unreadCount,
           userId: user.id,
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Get unread count failed: planetId=${planetId}, userId=${user.id}, error=${error.message}`,
@@ -386,7 +391,7 @@ export class ReadReceiptController {
         user.id,
       );
 
-      return {
+      return crudResponse({
         success: true,
         message: '모든 Planet별 읽지 않은 메시지 카운트를 가져왔습니다.',
         data: {
@@ -398,7 +403,7 @@ export class ReadReceiptController {
           ),
           planets: unreadCounts,
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Get my unread counts failed: userId=${user.id}, error=${error.message}`,
@@ -424,11 +429,11 @@ export class ReadReceiptController {
 
       const stats = await this.crudService.getReadStatsByMessage(messageId);
 
-      return {
+      return crudResponse({
         success: true,
         message: '메시지 읽음 상태 통계를 가져왔습니다.',
         data: stats,
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Get message read stats failed: messageId=${messageId}, userId=${user.id}, error=${error.message}`,
@@ -454,14 +459,14 @@ export class ReadReceiptController {
 
       const stats = await this.crudService.getReadStatsByPlanet(planetId);
 
-      return {
+      return crudResponse({
         success: true,
         message: 'Planet 읽음 상태 통계를 가져왔습니다.',
         data: {
           planetId,
           ...stats,
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Get planet read stats failed: planetId=${planetId}, userId=${user.id}, error=${error.message}`,
@@ -513,7 +518,7 @@ export class ReadReceiptController {
       // 분석 데이터 계산
       const analytics = this.calculateReadAnalytics(receipts);
 
-      return {
+      return crudResponse({
         success: true,
         message: '읽음 상태 분석 데이터를 가져왔습니다.',
         data: {
@@ -523,7 +528,7 @@ export class ReadReceiptController {
           planetId: planetId || null,
           ...analytics,
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Get read analytics failed: userId=${user.id}, error=${error.message}`,

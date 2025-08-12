@@ -1,4 +1,9 @@
-import { BeforeCreate, BeforeUpdate, Crud } from '@foryourdev/nestjs-crud';
+import {
+  BeforeCreate,
+  BeforeUpdate,
+  Crud,
+  crudResponse,
+} from '@foryourdev/nestjs-crud';
 import {
   Body,
   Controller,
@@ -114,7 +119,7 @@ export class NotificationController {
     try {
       const stats = await this.crudService.getUserNotificationStats(user.id);
 
-      return {
+      return crudResponse({
         success: true,
         message: '읽지 않은 알림 개수를 가져왔습니다.',
         data: {
@@ -123,7 +128,7 @@ export class NotificationController {
           totalCount: stats.totalNotifications,
           checkedAt: new Date(),
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Get unread count failed: userId=${user.id}, error=${error.message}`,
@@ -153,7 +158,7 @@ export class NotificationController {
         user.id,
       );
 
-      return {
+      return crudResponse({
         success: true,
         message: '알림을 읽음으로 처리했습니다.',
         data: {
@@ -164,7 +169,7 @@ export class NotificationController {
           },
           readBy: user.id,
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Mark as read failed: notificationId=${notificationId}, userId=${user.id}, error=${error.message}`,
@@ -200,7 +205,7 @@ export class NotificationController {
         user.id,
       );
 
-      return {
+      return crudResponse({
         success: true,
         message: `${affectedCount}개 알림을 읽음으로 처리했습니다.`,
         data: {
@@ -209,7 +214,7 @@ export class NotificationController {
           readBy: user.id,
           readAt: new Date(),
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Mark multiple as read failed: userId=${user.id}, error=${error.message}`,
@@ -229,7 +234,7 @@ export class NotificationController {
     try {
       const affectedCount = await this.crudService.markAllAsRead(user.id);
 
-      return {
+      return crudResponse({
         success: true,
         message: `모든 알림(${affectedCount}개)을 읽음으로 처리했습니다.`,
         data: {
@@ -237,7 +242,7 @@ export class NotificationController {
           readBy: user.id,
           readAt: new Date(),
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Mark all as read failed: userId=${user.id}, error=${error.message}`,
@@ -257,7 +262,7 @@ export class NotificationController {
     try {
       const stats = await this.crudService.getUserNotificationStats(user.id);
 
-      return {
+      return crudResponse({
         success: true,
         message: '알림 통계를 가져왔습니다.',
         data: {
@@ -265,7 +270,7 @@ export class NotificationController {
           userId: user.id,
           generatedAt: new Date(),
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Get notification stats failed: userId=${user.id}, error=${error.message}`,
@@ -306,7 +311,7 @@ export class NotificationController {
         appVersion,
       );
 
-      return {
+      return crudResponse({
         success: true,
         message: '푸시 토큰이 등록되었습니다.',
         data: {
@@ -315,7 +320,7 @@ export class NotificationController {
           deviceId,
           registeredAt: new Date(),
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Register push token failed: userId=${user.id}, error=${error.message}`,
@@ -344,7 +349,7 @@ export class NotificationController {
 
       await this.pushNotificationService.unregisterPushToken(user.id, deviceId);
 
-      return {
+      return crudResponse({
         success: true,
         message: '푸시 토큰이 해제되었습니다.',
         data: {
@@ -352,7 +357,7 @@ export class NotificationController {
           deviceId,
           unregisteredAt: new Date(),
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Unregister push token failed: userId=${user.id}, error=${error.message}`,
@@ -374,7 +379,7 @@ export class NotificationController {
         user.id,
       );
 
-      return {
+      return crudResponse({
         success: true,
         message: '푸시 토큰 목록을 가져왔습니다.',
         data: {
@@ -391,7 +396,7 @@ export class NotificationController {
           activeCount: pushTokens.filter((token) => token.isActive).length,
           retrievedAt: new Date(),
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Get my push tokens failed: userId=${user.id}, error=${error.message}`,
@@ -442,7 +447,7 @@ export class NotificationController {
         },
       });
 
-      return {
+      return crudResponse({
         success: true,
         message: '테스트 알림이 전송되었습니다.',
         data: {
@@ -457,7 +462,7 @@ export class NotificationController {
           sentTo: user.id,
           sentAt: new Date(),
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `Send test notification failed: userId=${user.id}, error=${error.message}`,

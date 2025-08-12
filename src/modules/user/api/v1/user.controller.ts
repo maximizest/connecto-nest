@@ -1,4 +1,9 @@
-import { AfterUpdate, BeforeUpdate, Crud } from '@foryourdev/nestjs-crud';
+import {
+  AfterUpdate,
+  BeforeUpdate,
+  Crud,
+  crudResponse,
+} from '@foryourdev/nestjs-crud';
 import {
   Controller,
   Delete,
@@ -267,13 +272,13 @@ export class UserController {
         }),
       ]);
 
-    return {
+    return crudResponse({
       totalTravels: travelCount,
       totalGroupPlanets: planetCount,
       totalDirectPlanets: directPlanetCount,
       totalMessages: messageCount,
       joinDate: new Date(), // 추후 실제 가입일로 변경
-    };
+    });
   }
 
   /**
@@ -315,7 +320,7 @@ export class UserController {
       this.getUserStats(user.id),
     ]);
 
-    return {
+    return crudResponse({
       ...fullUser,
       travels: travels.map((travel) => ({
         id: travel.id,
@@ -336,7 +341,7 @@ export class UserController {
         createdAt: planet.createdAt,
       })),
       stats,
-    };
+    });
   }
 
   /**
@@ -348,7 +353,7 @@ export class UserController {
     const user: User = currentUser as User;
     const travels = await this.getUserTravels(user.id);
 
-    return {
+    return crudResponse({
       travels: travels.map((travel) => ({
         id: travel.id,
         name: travel.name,
@@ -365,7 +370,7 @@ export class UserController {
         isCreatedByAdmin: true, // Admin이 생성하므로 사용자는 생성자가 아님
       })),
       totalCount: travels.length,
-    };
+    });
   }
 
   /**
@@ -379,7 +384,7 @@ export class UserController {
     const user: User = currentUser as User;
     const planets = await this.getUserPlanets(user.id);
 
-    return {
+    return crudResponse({
       planets: planets.map((planet) => ({
         id: planet.id,
         name: planet.name,
@@ -395,7 +400,7 @@ export class UserController {
       groupPlanets: planets.filter((p) => p.type === PlanetType.GROUP).length,
       directPlanets: planets.filter((p) => p.type === PlanetType.DIRECT).length,
       totalCount: planets.length,
-    };
+    });
   }
 
   /**
@@ -407,11 +412,11 @@ export class UserController {
     const user: User = currentUser as User;
     const stats = await this.getUserStats(user.id);
 
-    return {
+    return crudResponse({
       ...stats,
       userId: user.id,
       generatedAt: new Date(),
-    };
+    });
   }
 
   /**
@@ -430,12 +435,12 @@ export class UserController {
 
     this.logger.log(`User online status updated: userId=${user.id}`);
 
-    return {
+    return crudResponse({
       success: true,
       userId: user.id,
       isOnline: true,
       lastSeenAt: new Date(),
-    };
+    });
   }
 
   /**
@@ -472,7 +477,7 @@ export class UserController {
       lastSeenAt: user.lastSeenAt,
     };
 
-    return {
+    return crudResponse({
       id: user.id,
       name: user.name,
       avatar: user.avatar,
@@ -482,7 +487,7 @@ export class UserController {
       lastSeenAt: user.lastSeenAt,
       createdAt: user.createdAt,
       stats: publicStats,
-    };
+    });
   }
 
   /**
@@ -499,7 +504,7 @@ export class UserController {
       user.id,
     );
 
-    return {
+    return crudResponse({
       message: '계정 삭제 시 영향도 분석 결과입니다.',
       impact,
       warnings: [
@@ -507,7 +512,7 @@ export class UserController {
         '⚠️ 메시지는 익명화되어 유지됩니다.',
         '⚠️ 이 작업은 되돌릴 수 없습니다.',
       ],
-    };
+    });
   }
 
   /**
@@ -540,7 +545,7 @@ export class UserController {
       if (result.success) {
         this.logger.log(`✅ Successfully deleted user ${user.id}`);
 
-        return {
+        return crudResponse({
           success: true,
           message: '계정이 성공적으로 삭제되었습니다.',
           deletionSummary: {
@@ -565,7 +570,7 @@ export class UserController {
             deletedAt: new Date(),
             retentionPolicy: '개인정보는 즉시 완전 삭제되었습니다.',
           },
-        };
+        });
       } else {
         throw new Error('계정 삭제 중 오류가 발생했습니다.');
       }
@@ -603,7 +608,7 @@ export class UserController {
           parseInt(userId),
         );
 
-      return {
+      return crudResponse({
         userId: parseInt(userId),
         compliant: validation.compliant,
         status: validation.compliant ? 'COMPLIANT' : 'NON_COMPLIANT',
@@ -615,7 +620,7 @@ export class UserController {
           gdpr: validation.compliant,
           dataMinimization: validation.compliant,
         },
-      };
+      });
     } catch (error) {
       this.logger.error(
         `❌ Failed to validate deletion for user ${userId}:`,
