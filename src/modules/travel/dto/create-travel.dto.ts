@@ -36,13 +36,9 @@ export class CreateTravelDto {
   @IsDateString()
   startDate?: string;
 
-  @IsOptional()
-  @IsDateString()
-  endDate?: string;
-
   @IsDateString()
   @IsValidDateOrder()
-  expiryDate: string;
+  endDate: string;
 
   @IsOptional()
   @IsEnum(TravelVisibility)

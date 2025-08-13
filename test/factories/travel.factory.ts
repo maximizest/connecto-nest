@@ -25,10 +25,9 @@ export const TravelFactory = Factory.define<Travel>(({ sequence }) => {
   travel.status = TravelStatus.PLANNING;
   travel.isActive = true;
 
-  // 날짜 관리 (기본: 오늘부터 7일, 채팅은 30일)
+  // 날짜 관리 (기본: 오늘부터 30일)
   travel.startDate = new Date();
-  travel.endDate = addDays(new Date(), 7);
-  travel.expiryDate = addDays(new Date(), 30); // 채팅 만료 날짜
+  travel.endDate = addDays(new Date(), 30); // 여행 종료 날짜 (채팅 만료 날짜)
 
   // 접근 제어
   travel.visibility = TravelVisibility.INVITE_ONLY;

@@ -72,9 +72,9 @@ export class TravelExpiryManager {
       .andWhere('travel.status != :expiredStatus', {
         expiredStatus: TravelStatus.EXPIRED,
       })
-      .andWhere('travel.expiryDate > :now', { now: new Date() })
-      .andWhere('travel.expiryDate <= :warningDate', { warningDate })
-      .orderBy('travel.expiryDate', 'ASC')
+      .andWhere('travel.endDate > :now', { now: new Date() })
+      .andWhere('travel.endDate <= :warningDate', { warningDate })
+      .orderBy('travel.endDate', 'ASC')
       .getMany();
   }
 
@@ -104,7 +104,7 @@ export class TravelExpiryManager {
               travelId,
               travelName: travel.name,
               daysUntilExpiry: expiryStatus.daysUntilExpiry,
-              expiryDate: expiryStatus.expiryDate,
+              endDate: expiryStatus.endDate,
               warningGeneratedAt: new Date(),
             },
             7 * 24 * 60 * 60, // 7일 TTL
@@ -170,7 +170,7 @@ export class TravelExpiryManager {
       }
 
       // 새 만료 날짜 설정
-      travel.expiryDate = newExpiryDate;
+      travel.endDate = newExpiryDate;
       travel.reactivateFromExpiry();
 
       await this.travelRepository.save(travel);
@@ -232,7 +232,7 @@ export class TravelExpiryManager {
       .andWhere('travel.status != :expiredStatus', {
         expiredStatus: TravelStatus.EXPIRED,
       })
-      .andWhere('travel.expiryDate < :now', { now: new Date() })
+      .andWhere('travel.endDate < :now', { now: new Date() })
       .getMany();
   }
 

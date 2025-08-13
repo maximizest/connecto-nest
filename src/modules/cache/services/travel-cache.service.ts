@@ -11,7 +11,7 @@ export interface CachedTravelInfo {
   isActive: boolean;
   status: string;
   visibility: string;
-  expiryDate?: Date;
+  endDate: Date;
   memberCount: number;
   planetCount: number;
   lastActivityAt?: Date;
@@ -366,7 +366,7 @@ export class TravelCacheService {
       isActive: travel.isActive,
       status: travel.status,
       visibility: travel.visibility,
-      expiryDate: travel.expiryDate,
+      endDate: travel.endDate,
       memberCount: travel.memberCount,
       planetCount: travel.planetCount,
       lastActivityAt: travel.lastActivityAt,

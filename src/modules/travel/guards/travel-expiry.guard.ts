@@ -41,7 +41,7 @@ export class TravelExpiryGuard implements CanActivate {
     if (travel.isExpired() || travel.status === TravelStatus.EXPIRED) {
       const expiryStatus = travel.getExpiryStatus();
       throw new ForbiddenException(
-        `이 Travel은 만료되었습니다. (만료일: ${expiryStatus.expiryDate.toLocaleString('ko-KR')})`,
+        `이 Travel은 만료되었습니다. (만료일: ${expiryStatus.endDate.toLocaleString('ko-KR')})`,
       );
     }
 

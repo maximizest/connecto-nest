@@ -308,7 +308,7 @@ export class TravelExpirySchedulerService {
       where: {
         isActive: true,
         status: Not(TravelStatus.EXPIRED),
-        expiryDate: MoreThanOrEqual(now),
+        endDate: MoreThanOrEqual(now),
       },
     });
   }

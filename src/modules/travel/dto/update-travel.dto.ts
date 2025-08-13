@@ -39,12 +39,8 @@ export class UpdateTravelDto {
 
   @IsOptional()
   @IsDateString()
-  endDate?: string;
-
-  @IsOptional()
-  @IsDateString()
   @IsValidDateOrder()
-  expiryDate?: string;
+  endDate?: string;
 
   @IsOptional()
   @IsEnum(TravelVisibility)

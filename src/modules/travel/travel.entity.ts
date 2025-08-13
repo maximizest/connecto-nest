@@ -46,11 +46,11 @@ export enum TravelVisibility {
 @Entity('travels')
 // 복합 인덱스 - 성능 향상
 @Index(['status', 'isActive']) // 활성 상태 + 상태별 조회
-@Index(['isActive', 'expiryDate']) // 활성 Travel의 만료일 조회
-@Index(['status', 'expiryDate']) // 상태별 만료일 조회
+@Index(['isActive', 'endDate']) // 활성 Travel의 만료일 조회
+@Index(['status', 'endDate']) // 상태별 만료일 조회
 @Index(['visibility', 'isActive']) // 공개 설정별 활성 Travel 조회
 @Index(['createdByAdminId', 'status']) // 관리자별 상태 필터링
-@Index(['createdByAdminId', 'isActive', 'expiryDate']) // 관리자별 활성 Travel 만료일순
+@Index(['createdByAdminId', 'isActive', 'endDate']) // 관리자별 활성 Travel 만료일순
 export class Travel extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
@@ -132,20 +132,11 @@ export class Travel extends BaseEntity {
 
   @Column({
     type: 'timestamp',
-    nullable: true,
-    comment: '여행 종료 예정 날짜',
-  })
-  @IsOptional()
-  @IsDateString()
-  endDate?: Date;
-
-  @Column({
-    type: 'timestamp',
-    comment: '채팅 만료 날짜 (이후 채팅 불가)',
+    comment: '여행 종료 예정 날짜 (채팅 만료 날짜)',
   })
   @IsDateString()
-  @Index() // 만료 날짜 정렬 최적화
-  expiryDate: Date;
+  @Index() // 종료/만료 날짜 정렬 최적화
+  endDate: Date;
 
   /**
    * 접근 제어
@@ -302,7 +293,7 @@ export class Travel extends BaseEntity {
    * 만료 상태 확인
    */
   isExpired(): boolean {
-    return new Date() > this.expiryDate;
+    return new Date() > this.endDate;
   }
 
   /**
@@ -443,7 +434,7 @@ export class Travel extends BaseEntity {
    */
   getMinutesUntilExpiry(): number {
     const now = new Date();
-    const diffMs = this.expiryDate.getTime() - now.getTime();
+    const diffMs = this.endDate.getTime() - now.getTime();
     return Math.max(0, Math.ceil(diffMs / (1000 * 60)));
   }
 
@@ -476,7 +467,7 @@ export class Travel extends BaseEntity {
 
   /**
    * Travel 만료 복구 (관리자용)
-   * - 만료 날짜 연장 후 호출
+   * - 종료 날짜 연장 후 호출
    */
   reactivateFromExpiry(): void {
     if (this.status === TravelStatus.EXPIRED && !this.isExpired()) {
@@ -494,14 +485,14 @@ export class Travel extends BaseEntity {
     minutesUntilExpiry: number;
     daysUntilExpiry: number;
     isWarning: boolean;
-    expiryDate: Date;
+    endDate: Date;
   } {
     return {
       isExpired: this.isExpired(),
       minutesUntilExpiry: this.getMinutesUntilExpiry(),
       daysUntilExpiry: this.getDaysUntilExpiry(),
       isWarning: this.isExpiryWarning(),
-      expiryDate: this.expiryDate,
+      endDate: this.endDate,
     };
   }
 }

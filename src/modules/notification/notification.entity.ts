@@ -310,7 +310,7 @@ export class Notification extends BaseEntity {
     // Travel 관련
     travelName?: string;
     travelDescription?: string;
-    expiryDate?: Date;
+    endDate?: Date;
 
     // Planet 관련
     planetName?: string;

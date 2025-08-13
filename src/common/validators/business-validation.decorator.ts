@@ -7,7 +7,7 @@ import {
 } from 'class-validator';
 
 /**
- * 날짜 순서 검증 (시작일 < 종료일 < 만료일)
+ * 날짜 순서 검증 (시작일 < 종료일)
  */
 @ValidatorConstraint({ name: 'isValidDateOrder', async: false })
 export class IsValidDateOrderConstraint
@@ -15,33 +15,28 @@ export class IsValidDateOrderConstraint
 {
   validate(value: any, args: ValidationArguments) {
     const object = args.object as any;
-    const { startDate, endDate, expiryDate } = object;
+    const { startDate, endDate } = object;
 
-    if (!startDate || !endDate || !expiryDate) {
+    if (!startDate || !endDate) {
       return true; // 다른 검증에서 처리
     }
 
     const start = new Date(startDate);
     const end = new Date(endDate);
-    const expiry = new Date(expiryDate);
     const now = new Date();
 
     // 날짜 유효성 검증
-    if (
-      isNaN(start.getTime()) ||
-      isNaN(end.getTime()) ||
-      isNaN(expiry.getTime())
-    ) {
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
       return false;
     }
 
-    // 순서 검증: 시작일 <= 종료일 <= 만료일
-    if (start > end || end > expiry) {
+    // 순서 검증: 시작일 <= 종료일
+    if (start > end) {
       return false;
     }
 
-    // 만료일은 현재보다 미래여야 함
-    if (expiry <= now) {
+    // 종료일은 현재보다 미래여야 함
+    if (end <= now) {
       return false;
     }
 
@@ -49,7 +44,7 @@ export class IsValidDateOrderConstraint
   }
 
   defaultMessage(args: ValidationArguments) {
-    return '날짜 순서가 올바르지 않습니다. (시작일 ≤ 종료일 ≤ 만료일, 만료일은 미래)';
+    return '날짜 순서가 올바르지 않습니다. (시작일 ≤ 종료일, 종료일은 미래)';
   }
 }
 

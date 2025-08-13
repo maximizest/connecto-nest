@@ -320,7 +320,7 @@ export class WebSocketBroadcastService {
     server: Server,
     travelId: number,
     travelName: string,
-    expiryDate: Date,
+    endDate: Date,
   ): Promise<void> {
     try {
       const travelRoomId = `travel:${travelId}`;
@@ -334,7 +334,7 @@ export class WebSocketBroadcastService {
           data: {
             travelId,
             travelName,
-            expiryDate: expiryDate.toISOString(),
+            endDate: endDate.toISOString(),
           },
           timestamp: new Date(),
         },

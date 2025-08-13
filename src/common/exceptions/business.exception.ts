@@ -23,9 +23,9 @@ export class TravelNotFoundException extends NotFoundException {
 }
 
 export class TravelExpiredException extends ForbiddenException {
-  constructor(travelId?: number | string, expiryDate?: Date) {
-    const message = expiryDate
-      ? `Travel이 ${expiryDate.toLocaleDateString('ko-KR')}에 만료되었습니다.`
+  constructor(travelId?: number | string, endDate?: Date) {
+    const message = endDate
+      ? `Travel이 ${endDate.toLocaleDateString('ko-KR')}에 만료되었습니다.`
       : 'Travel이 만료되었습니다.';
 
     super(message, 'TRAVEL_EXPIRED');

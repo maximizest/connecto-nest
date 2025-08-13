@@ -82,10 +82,7 @@ export class PlanetAccessGuard implements CanActivate {
 
     // Travel 만료 확인
     if (planet.travel.isExpired()) {
-      throw new TravelExpiredException(
-        planet.travel.id,
-        planet.travel.expiryDate,
-      );
+      throw new TravelExpiredException(planet.travel.id, planet.travel.endDate);
     }
 
     // Planet 타입별 접근 권한 확인

@@ -28,7 +28,7 @@ import { TravelService } from '../../travel.service';
   only: ['index', 'show'],
 
   // 필터링 허용 필드 (보안)
-  allowedFilters: ['status', 'name', 'visibility', 'expiryDate', 'createdAt'],
+  allowedFilters: ['status', 'name', 'visibility', 'endDate', 'createdAt'],
 
   // 관계 포함 허용 필드
   allowedIncludes: [
@@ -42,13 +42,7 @@ import { TravelService } from '../../travel.service';
   routes: {
     // 목록 조회: 사용자가 참여한 Travel만 조회
     index: {
-      allowedFilters: [
-        'name',
-        'status',
-        'visibility',
-        'expiryDate',
-        'createdAt',
-      ],
+      allowedFilters: ['name', 'status', 'visibility', 'endDate', 'createdAt'],
       allowedIncludes: ['admin', 'members'],
     },
 
