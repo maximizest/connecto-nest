@@ -2,8 +2,6 @@ import { Crud } from '@foryourdev/nestjs-crud';
 import { Controller, UseGuards } from '@nestjs/common';
 
 import { AuthGuard } from '../../../../guards/auth.guard';
-
-import { PlanetAccessGuard } from '../../guards/planet-access.guard';
 import { Planet } from '../../planet.entity';
 import { PlanetService } from '../../planet.service';
 
@@ -60,7 +58,7 @@ import { PlanetService } from '../../planet.service';
     },
   },
 })
-@UseGuards(AuthGuard, PlanetAccessGuard)
+@UseGuards(AuthGuard)
 export class PlanetController {
   constructor(public readonly crudService: PlanetService) {}
 }

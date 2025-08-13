@@ -1,7 +1,6 @@
 import { Crud } from '@foryourdev/nestjs-crud';
 import { Controller, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../../../../guards/auth.guard';
-import { TravelAccessGuard } from '../../guards/travel-access.guard';
 import { Travel } from '../../travel.entity';
 import { TravelService } from '../../travel.service';
 
@@ -51,7 +50,7 @@ import { TravelService } from '../../travel.service';
     },
   },
 })
-@UseGuards(AuthGuard, TravelAccessGuard)
+@UseGuards(AuthGuard)
 export class TravelController {
   constructor(public readonly crudService: TravelService) {}
 }
