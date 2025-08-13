@@ -6,7 +6,7 @@ NestJS 11.x 기반 백엔드 API 서버로, 여행 그룹 채팅 플랫폼을 �
 
 - **프레임워크**: NestJS 11.x + TypeScript 5.7.x
 - **데이터베이스**: PostgreSQL + TypeORM
-- **인증**: JWT + 소셜 로그인 (Google, Apple, Kakao, Naver)
+- **인증**: JWT + 소셜 로그인 (Google, Apple)
 - **실시간 통신**: WebSocket (Socket.io)
 - **CRUD**: @foryourdev/nestjs-crud 자동 생성
 - **캐싱**: Redis 기반 성능 최적화
@@ -27,21 +27,38 @@ NestJS 11.x 기반 백엔드 API 서버로, 여행 그룹 채팅 플랫폼을 �
   - JWT 리프레시 토큰 관리
   - 관리자 권한 기반 시스템 접근 제어
 
-#### **user** - 사용자 계정 관리
+#### **auth** - 인증 시스템
+
+- **API**: `/api/v1/auth`
+- **역할**: 소셜 로그인, 토큰 관리, 계정 생성/삭제
+- **주요 기능**:
+  - 소셜 로그인 (Google, Apple)
+  - JWT 토큰 발급 및 갱신
+  - 로그아웃 및 토큰 무효화
+  - 회원가입 (첫 소셜 로그인 시 자동 계정 생성)
+  - 회원탈퇴 및 완전 데이터 삭제 (개보법 준수)
+  - 계정 삭제 영향도 분석
+- **특징**:
+  - JWT 기반 인증 시스템
+  - 실제 Google/Apple 토큰 검증 구현
+  - Google OAuth 2.0 ID 토큰 검증
+  - Apple Identity Token (JWT) 검증
+  - 개인정보 완전 삭제 + 서비스 데이터 익명화
+
+#### **user** - 사용자 프로필 관리
 
 - **API**: `/api/v1/users`
-- **역할**: 일반 사용자 계정 및 소셜 로그인 관리
+- **역할**: 사용자 프로필 조회 및 수정
 - **주요 기능**:
-  - 소셜 로그인 연동 (Google, Apple, Kakao, Naver)
+  - 사용자 프로필 조회 및 수정
   - 온라인/오프라인 상태 실시간 추적
   - 사용자 벤 시스템 (로그인 차단)
   - 알림 설정 및 광고성 알림 동의 관리
   - 전화번호 등록 및 관리
-  - 계정 삭제 시 관련 데이터 영향도 분석
 - **특징**:
   - 실시간 온라인 상태 관리
-  - 다양한 소셜 프로바이더 지원
   - 영구 벤 시스템 (만료 시간 없음)
+  - 본인 정보만 수정 가능한 보안 모델
 
 #### **profile** - 사용자 프로필
 
@@ -379,6 +396,31 @@ PUT    /{resource}/{id}    # 수정
 DELETE /{resource}/{id}    # 삭제
 ```
 
+### **인증 API 엔드포인트**
+
+```bash
+# 소셜 로그인 및 회원가입
+POST /api/v1/auth/sign/social
+
+# JWT 토큰 갱신
+POST /api/v1/auth/sign/refresh
+
+# 로그아웃
+POST /api/v1/auth/sign/out
+
+# 현재 사용자 정보 조회
+GET /api/v1/auth/me
+
+# 토큰 유효성 검증
+POST /api/v1/auth/verify-token
+
+# 계정 삭제 영향도 분석
+GET /api/v1/auth/account/deletion-impact
+
+# 회원탈퇴 (완전 삭제)
+DELETE /api/v1/auth/account
+```
+
 ### **고급 필터링 예시**
 
 ```bash
@@ -416,12 +458,9 @@ CLOUDFLARE_R2_SECRET_ACCESS_KEY=your-secret-key
 CLOUDFLARE_R2_BUCKET_NAME=your-bucket-name
 CLOUDFLARE_R2_PUBLIC_URL=https://your-domain.com
 
-# 소셜 로그인 (선택사항)
+# 소셜 로그인 (필수 - 토큰 검증을 위해 필요)
 GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
 APPLE_CLIENT_ID=your-apple-client-id
-KAKAO_CLIENT_ID=your-kakao-client-id
-NAVER_CLIENT_ID=your-naver-client-id
 ```
 
 ### **개발 환경 전용**
@@ -433,6 +472,30 @@ SCHEMA_API_ENABLED=true     # 스키마 API 활성화
 ```
 
 ## 📋 개발 가이드라인
+
+### **소셜 로그인 토큰 사용법**
+
+**Google OAuth 2.0:**
+
+```javascript
+// 클라이언트에서 Google ID 토큰 획득 후 API 호출
+POST /api/v1/auth/sign/social
+{
+  "provider": "google",
+  "socialToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..." // Google ID Token
+}
+```
+
+**Apple Sign-in:**
+
+```javascript
+// 클라이언트에서 Apple Identity 토큰 획득 후 API 호출
+POST /api/v1/auth/sign/social
+{
+  "provider": "apple",
+  "socialToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..." // Apple Identity Token
+}
+```
 
 ### **코딩 규칙**
 

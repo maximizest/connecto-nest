@@ -1,29 +1,14 @@
-import {
-  AfterUpdate,
-  BeforeUpdate,
-  Crud,
-  crudResponse,
-} from '@foryourdev/nestjs-crud';
+import { AfterUpdate, BeforeUpdate, Crud } from '@foryourdev/nestjs-crud';
 import {
   Controller,
-  Delete,
   ForbiddenException,
-  Get,
   Logger,
-  NotFoundException,
-  Param,
-  Post,
   UseGuards,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  CurrentUser,
-  CurrentUserData,
-} from '../../../../common/decorators/current-user.decorator';
 import { getCurrentUserFromContext } from '../../../../common/helpers/current-user.helper';
 import { AuthGuard } from '../../../../guards/auth.guard';
-import { UserDeletionService } from '../../services/user-deletion.service';
 import { User } from '../../user.entity';
 import { UserService } from '../../user.service';
 
@@ -123,7 +108,6 @@ export class UserController {
 
   constructor(
     public readonly crudService: UserService,
-    private readonly userDeletionService: UserDeletionService,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
   ) {}
@@ -170,124 +154,6 @@ export class UserController {
       );
 
       return entity;
-    }
-  }
-
-  /**
-   * 계정 삭제 영향도 분석
-   * 사용자가 삭제할 데이터의 양과 영향을 확인할 수 있습니다.
-   */
-  @Get('me/deletion-impact')
-  async getMyDeletionImpact(@CurrentUser() currentUser: CurrentUserData) {
-    const user: User = currentUser as User;
-
-    this.logger.log(`User ${user.id} is checking deletion impact`);
-
-    const impact = await this.userDeletionService.analyzeDeletionImpact(
-      user.id,
-    );
-
-    // Virtual User entity with deletion impact information
-    const deletionImpactUser = Object.assign(new User(), {
-      ...user,
-      status: 'DELETION_ANALYSIS',
-    });
-
-    return crudResponse(deletionImpactUser);
-  }
-
-  /**
-   * 본인 계정 완전 삭제 (개보법 준수)
-   * 한국 개인정보보호법에 따라 개인정보를 즉시 완전 삭제합니다.
-   */
-  @Delete('me')
-  async deleteMyAccount(@CurrentUser() currentUser: CurrentUserData) {
-    const user: User = currentUser as User;
-
-    this.logger.log(
-      `🔥 User ${user.id} (${user.name}) requested account deletion`,
-    );
-
-    try {
-      // 삭제 전 영향도 분석
-      const impact = await this.userDeletionService.analyzeDeletionImpact(
-        user.id,
-      );
-
-      this.logger.log(
-        `📊 Deletion impact: ${impact.totalImpactedRecords} records will be affected`,
-      );
-
-      // 완전 삭제 실행
-      const result = await this.userDeletionService.deleteUserCompletely(
-        user.id,
-      );
-
-      if (result.success) {
-        this.logger.log(`✅ Successfully deleted user ${user.id}`);
-
-        // Create a virtual User entity with deletion status
-        const deletedUser = Object.assign(new User(), {
-          ...user,
-          name: '[삭제된 사용자]',
-          email: '[삭제됨]',
-          status: 'DELETED',
-          isActive: false,
-          updatedAt: new Date(),
-        });
-
-        return crudResponse(deletedUser);
-      } else {
-        throw new Error('계정 삭제 중 오류가 발생했습니다.');
-      }
-    } catch (error) {
-      this.logger.error(`❌ Failed to delete user ${user.id}:`, error.stack);
-      throw new ForbiddenException(
-        `계정 삭제 중 오류가 발생했습니다: ${error.message}`,
-      );
-    }
-  }
-
-  /**
-   * 삭제 준수성 검증 (개발/테스트용)
-   * 관리자가 특정 사용자의 삭제 준수성을 검증할 때 사용
-   */
-  @Post(':id/validate-deletion')
-  async validateUserDeletion(
-    @Param('id') userId: string,
-    @CurrentUser() currentUser: CurrentUserData,
-  ) {
-    const user: User = currentUser as User;
-
-    // 본인 계정만 검증 가능
-    if (user.id !== parseInt(userId)) {
-      throw new ForbiddenException(
-        '본인 계정의 삭제 상태만 검증할 수 있습니다.',
-      );
-    }
-
-    this.logger.log(`🔍 Validating deletion compliance for User ${userId}`);
-
-    try {
-      const validation =
-        await this.userDeletionService.validateDeletionCompliance(
-          parseInt(userId),
-        );
-
-      // Create a virtual User entity with validation status
-      const validationUser = Object.assign(new User(), {
-        ...user,
-        status: validation.compliant ? 'COMPLIANT' : 'NON_COMPLIANT',
-        updatedAt: new Date(),
-      });
-
-      return crudResponse(validationUser);
-    } catch (error) {
-      this.logger.error(
-        `❌ Failed to validate deletion for user ${userId}:`,
-        error.stack,
-      );
-      throw new NotFoundException('삭제 검증 중 오류가 발생했습니다.');
     }
   }
 }
