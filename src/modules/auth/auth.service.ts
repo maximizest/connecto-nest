@@ -1,9 +1,13 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { OAuth2Client } from 'google-auth-library';
+import * as jwt from 'jsonwebtoken';
+import { JwksClient } from 'jwks-client';
 import {
   ERROR_MESSAGES,
   SECURITY_CONSTANTS,
 } from 'src/common/constants/app.constants';
+import { SocialProvider } from '../user/user.entity';
 
 export interface JwtPayload {
   id: number;
@@ -17,11 +21,28 @@ export interface TokenPair {
   refreshToken: string;
 }
 
+export interface SocialUserInfo {
+  socialId: string;
+  email: string;
+  name: string;
+  avatar?: string;
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private readonly googleClient: OAuth2Client;
+  private readonly appleJwksClient: JwksClient;
 
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(private readonly jwtService: JwtService) {
+    // Google OAuth2 클라이언트 초기화
+    this.googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+    // Apple JWKS 클라이언트 초기화
+    this.appleJwksClient = new JwksClient({
+      jwksUri: 'https://appleid.apple.com/auth/keys',
+    });
+  }
 
   private readonly JWT_SECRET = process.env.JWT_SECRET;
 
@@ -138,5 +159,89 @@ export class AuthService {
     }
 
     return token;
+  }
+
+  /**
+   * 소셜 로그인 토큰 검증
+   */
+  async verifySocialToken(
+    provider: SocialProvider,
+    token: string,
+  ): Promise<SocialUserInfo> {
+    try {
+      switch (provider) {
+        case SocialProvider.GOOGLE:
+          return await this.verifyGoogleToken(token);
+        case SocialProvider.APPLE:
+          return await this.verifyAppleToken(token);
+        default:
+          throw new UnauthorizedException(
+            '지원하지 않는 소셜 로그인 제공자입니다.',
+          );
+      }
+    } catch (error) {
+      this.logger.error(`소셜 로그인 토큰 검증 실패 (${provider}):`, error);
+      throw new UnauthorizedException('소셜 로그인 토큰 검증에 실패했습니다.');
+    }
+  }
+
+  /**
+   * Google ID 토큰 검증
+   */
+  private async verifyGoogleToken(idToken: string): Promise<SocialUserInfo> {
+    try {
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+
+      const payload = ticket.getPayload();
+      if (!payload) {
+        throw new UnauthorizedException('Google 토큰 페이로드가 없습니다.');
+      }
+
+      return {
+        socialId: payload.sub,
+        email: payload.email || '',
+        name: payload.name || payload.email?.split('@')[0] || 'Google User',
+        avatar: payload.picture,
+      };
+    } catch (error) {
+      this.logger.error('Google 토큰 검증 실패:', error);
+      throw new UnauthorizedException('Google 토큰 검증에 실패했습니다.');
+    }
+  }
+
+  /**
+   * Apple ID 토큰 검증
+   */
+  private async verifyAppleToken(idToken: string): Promise<SocialUserInfo> {
+    try {
+      // JWT 디코딩 (헤더만)
+      const decodedHeader = jwt.decode(idToken, { complete: true })?.header;
+      if (!decodedHeader?.kid) {
+        throw new UnauthorizedException('Apple 토큰 헤더가 유효하지 않습니다.');
+      }
+
+      // Apple 공개 키 가져오기
+      const key = await this.appleJwksClient.getSigningKey(decodedHeader.kid);
+      const signingKey = key.getPublicKey();
+
+      // JWT 검증
+      const payload = jwt.verify(idToken, signingKey, {
+        audience: process.env.APPLE_CLIENT_ID,
+        issuer: 'https://appleid.apple.com',
+      }) as any;
+
+      return {
+        socialId: payload.sub,
+        email: payload.email || '',
+        name: payload.name || payload.email?.split('@')[0] || 'Apple User',
+        avatar: undefined, // Apple은 프로필 이미지를 제공하지 않음
+      };
+    } catch (error) {
+      this.logger.error('Apple 토큰 검증 실패:', error);
+      throw new UnauthorizedException('Apple 토큰 검증에 실패했습니다.');
+    }
   }
 }
