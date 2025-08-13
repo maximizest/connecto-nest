@@ -16,7 +16,7 @@ import { ReadReceiptModule } from '../read-receipt/read-receipt.module';
 import { TravelUser } from '../travel-user/travel-user.entity';
 import { Travel } from '../travel/travel.entity';
 import { User } from '../user/user.entity';
-import { TypingController } from './api/v1/typing.controller';
+// import { TypingController } from './api/v1/typing.controller'; // 컨트롤러 제거됨
 import { ChatGateway } from './chat.gateway';
 import { WebSocketRateLimitGuard } from './guards/rate-limit.guard';
 import { WebSocketAuthGuard } from './guards/websocket-auth.guard';
@@ -52,7 +52,7 @@ import { WebSocketRoomService } from './services/websocket-room.service';
       },
     ]),
   ],
-  controllers: [TypingController],
+  controllers: [], // TypingController 제거됨
   providers: [
     ChatGateway,
     WebSocketAuthGuard,

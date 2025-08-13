@@ -56,7 +56,9 @@ export const SECURITY_CONSTANTS = {
   },
 
   HINTS: {
-    ENABLE_API: 'ENABLE_SCHEMA_API=true 환경변수를 설정하거나 NODE_ENV=development로 설정하세요.',
-    USE_LOCALHOST: 'localhost에서 접근하거나 ENABLE_SCHEMA_API=true로 설정하세요.',
+    ENABLE_API:
+      'ENABLE_SCHEMA_API=true 환경변수를 설정하거나 NODE_ENV=development로 설정하세요.',
+    USE_LOCALHOST:
+      'localhost에서 접근하거나 ENABLE_SCHEMA_API=true로 설정하세요.',
   },
-} as const; 
+} as const;

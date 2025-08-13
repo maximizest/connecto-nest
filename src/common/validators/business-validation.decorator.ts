@@ -204,7 +204,7 @@ export class IsValidMemberLimitConstraint
  * 데코레이터 함수들
  */
 export function IsValidDateOrder(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       target: object.constructor,
       propertyName: propertyName,
@@ -216,7 +216,7 @@ export function IsValidDateOrder(validationOptions?: ValidationOptions) {
 }
 
 export function IsValidTravelSettings(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       target: object.constructor,
       propertyName: propertyName,
@@ -228,7 +228,7 @@ export function IsValidTravelSettings(validationOptions?: ValidationOptions) {
 }
 
 export function IsValidTimeRestriction(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       target: object.constructor,
       propertyName: propertyName,
@@ -240,7 +240,7 @@ export function IsValidTimeRestriction(validationOptions?: ValidationOptions) {
 }
 
 export function IsValidMemberLimit(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       target: object.constructor,
       propertyName: propertyName,

@@ -126,8 +126,8 @@ export class UserController {
       throw new ForbiddenException('본인의 정보만 수정할 수 있습니다.');
     }
 
-    if (!entity.isActive) {
-      throw new ForbiddenException('비활성화된 계정입니다.');
+    if (entity.isBanned) {
+      throw new ForbiddenException('차단된 계정입니다.');
     }
 
     // lastSeenAt 갱신은 User 엔티티에서 자동 처리됨

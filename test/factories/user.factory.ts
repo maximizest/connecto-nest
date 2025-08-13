@@ -19,31 +19,20 @@ export const UserFactory = Factory.define<User>(({ sequence }) => {
   user.name = `테스트유저${sequence}`;
   user.email = `test-user-${sequence}@example.com`;
 
-  // 프로필 정보
-  user.avatar = `https://example.com/avatar/${sequence}.jpg`;
-
   // 온라인 상태
   user.status = UserStatus.OFFLINE;
-  user.isOnline = false;
-  user.lastSeenAt = new Date();
 
   // 설정
   user.notificationsEnabled = true;
+  user.advertisingConsentEnabled = false;
   user.language = 'ko';
   user.timezone = 'Asia/Seoul';
 
   // 보안 정보
   user.refreshToken = undefined;
-  user.refreshTokenExpiresAt = undefined;
 
   // 계정 상태
-  user.isActive = true;
   user.isBanned = false;
-  user.banExpiresAt = undefined;
-
-  // 통계 정보
-  user.loginCount = 0;
-  user.firstLoginAt = undefined;
 
   // 메타데이터
   user.socialMetadata = undefined;

@@ -4,7 +4,6 @@ import { SecurityValidationResult } from '../types/schema.types';
 
 @Injectable()
 export class SecurityValidationService {
-
   /**
    * 스키마 API 접근 권한을 종합적으로 검증합니다.
    */
@@ -75,8 +74,9 @@ export class SecurityValidationService {
   private isDevelopmentEnvironment(): boolean {
     const nodeEnv = process.env.NODE_ENV;
     return (
-      (SECURITY_CONSTANTS.DEVELOPMENT_ENVIRONMENTS as readonly string[]).includes(nodeEnv || '') ||
-      !nodeEnv
+      (
+        SECURITY_CONSTANTS.DEVELOPMENT_ENVIRONMENTS as readonly string[]
+      ).includes(nodeEnv || '') || !nodeEnv
     );
   }
 
@@ -86,9 +86,7 @@ export class SecurityValidationService {
   private isLocalhostIP(clientIP: string): boolean {
     if (!clientIP) return false;
 
-    return SECURITY_CONSTANTS.ALLOWED_IPS.some(ip =>
-      clientIP.includes(ip)
-    );
+    return SECURITY_CONSTANTS.ALLOWED_IPS.some((ip) => clientIP.includes(ip));
   }
 
   /**
@@ -102,4 +100,4 @@ export class SecurityValidationService {
       allowedIPs: SECURITY_CONSTANTS.ALLOWED_IPS,
     };
   }
-} 
+}

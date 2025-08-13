@@ -99,15 +99,8 @@ export class WebSocketAuthGuard implements CanActivate {
     socketId: string,
   ): Promise<void> {
     try {
-      // 사용자를 온라인으로 설정
-      const onlineInfo = this.onlinePresenceService.userEntityToOnlineInfo(
-        user,
-        [socketId],
-      );
-      await this.onlinePresenceService.setUserOnline(user.id, onlineInfo);
-
-      // 소켓 연결 추가
-      await this.onlinePresenceService.addUserSocket(user.id, socketId);
+      // 사용자를 온라인으로 설정 (onlinePresenceService 제거됨)
+      // TODO: 온라인 상태 관리 로직 구현 필요
 
       this.logger.debug(
         `User ${user.id} online status updated with socket ${socketId}`,

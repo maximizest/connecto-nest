@@ -497,7 +497,6 @@ export class MessagePaginationService {
         ? {
             id: message.sender.id,
             name: message.sender.name,
-            avatar: message.sender.avatar,
           }
         : null,
       planet: message.planet

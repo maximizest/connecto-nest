@@ -123,7 +123,7 @@ export class IsValidFileNameConstraint implements ValidatorConstraintInterface {
  * 파일 메타데이터 종합 검증 데코레이터
  */
 export function IsValidFileMetadata(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       target: object.constructor,
       propertyName: propertyName,
@@ -168,7 +168,7 @@ export function IsValidMediaDimensions(
   maxHeight = 4096,
   validationOptions?: ValidationOptions,
 ) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       target: object.constructor,
       propertyName: propertyName,

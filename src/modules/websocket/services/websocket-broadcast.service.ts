@@ -1,22 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Server } from 'socket.io';
 
-import { WebSocketRoomService } from './websocket-room.service';
-
 export interface BroadcastMessageData {
   messageId: number;
-  planetId: number;
-  senderId: number;
-  senderName: string;
-  senderAvatar?: string;
   type: string;
   content?: string;
+  senderId: number;
+  senderName: string;
+  planetId: number;
+  travelId?: number;
   fileUrl?: string;
   fileName?: string;
   fileSize?: number;
   createdAt: Date;
-  isEdited?: boolean;
-  editedAt?: Date;
 }
 
 export interface TypingData {
@@ -26,137 +22,65 @@ export interface TypingData {
   isTyping: boolean;
 }
 
-export interface OnlineStatusData {
-  userId: number;
-  userName: string;
-  isOnline: boolean;
-  lastSeenAt?: Date;
-  deviceType?: string;
-  connectedAt?: Date;
-  disconnectedAt?: Date;
-}
-
-export interface NotificationData {
-  type: 'message' | 'system' | 'travel_expired' | 'planet_created';
-  title: string;
-  message: string;
-  data?: any;
-  timestamp: Date;
-}
-
+/**
+ * 간소화된 WebSocket 브로드캐스트 서비스
+ * 캐시 기능을 제거하고 기본 브로드캐스트 기능만 제공
+ */
 @Injectable()
 export class WebSocketBroadcastService {
   private readonly logger = new Logger(WebSocketBroadcastService.name);
 
-  constructor(private readonly roomService: WebSocketRoomService) {}
-
   /**
-   * Planet 내 새 메시지 브로드캐스트
+   * 메시지 브로드캐스트 (간소화 버전)
    */
-  async broadcastNewMessage(
+  async broadcastMessage(
     server: Server,
     messageData: BroadcastMessageData,
-    excludeSenderId?: number,
   ): Promise<void> {
     try {
       const planetRoomId = `planet:${messageData.planetId}`;
-      const roomMembers = this.roomService.getRoomMembers(planetRoomId);
 
-      if (roomMembers.length === 0) {
-        this.logger.debug(
-          `No online members in planet ${messageData.planetId} for message broadcast`,
-        );
-        return;
-      }
-
-      // 발신자 제외 옵션
-      let targetMembers = roomMembers;
-      if (excludeSenderId) {
-        targetMembers = roomMembers.filter(
-          (userId) => userId !== excludeSenderId,
-        );
-      }
-
-      // 메시지 브로드캐스트
+      // Planet 룸에 메시지 브로드캐스트
       server.to(planetRoomId).emit('message:new', {
-        ...messageData,
+        id: messageData.messageId,
+        type: messageData.type,
+        content: messageData.content,
+        senderId: messageData.senderId,
+        senderName: messageData.senderName,
+        planetId: messageData.planetId,
+        fileUrl: messageData.fileUrl,
+        fileName: messageData.fileName,
+        fileSize: messageData.fileSize,
+        createdAt: messageData.createdAt,
         timestamp: new Date().toISOString(),
       });
 
-      // Travel 룸에도 알림 (Planet이 속한 Travel)
-      const travelRoomId = await this.getTravelRoomIdFromPlanet(
-        messageData.planetId,
-      );
-      if (travelRoomId) {
-        server.to(travelRoomId).emit('planet:new_message', {
-          planetId: messageData.planetId,
+      // Travel 룸에도 브로드캐스트 (선택적, travelId가 있을 때만)
+      if (messageData.travelId) {
+        const travelRoomId = `travel:${messageData.travelId}`;
+        server.to(travelRoomId).emit('message:new', {
+          id: messageData.messageId,
+          type: messageData.type,
+          content:
+            messageData.content?.substring(0, 50) || `[${messageData.type}]`,
           senderId: messageData.senderId,
           senderName: messageData.senderName,
-          messagePreview: this.createMessagePreview(messageData),
+          planetId: messageData.planetId,
+          createdAt: messageData.createdAt,
           timestamp: new Date().toISOString(),
         });
       }
 
       this.logger.debug(
-        `New message broadcasted to planet ${messageData.planetId} (${targetMembers.length} users)`,
+        `Message broadcasted: id=${messageData.messageId}, planetId=${messageData.planetId}`,
       );
     } catch (error) {
-      this.logger.error(`Failed to broadcast new message: ${error.message}`);
+      this.logger.error(`Failed to broadcast message: ${error.message}`);
     }
   }
 
   /**
-   * 메시지 편집 브로드캐스트
-   */
-  async broadcastMessageUpdated(
-    server: Server,
-    messageData: BroadcastMessageData,
-  ): Promise<void> {
-    try {
-      const planetRoomId = `planet:${messageData.planetId}`;
-
-      server.to(planetRoomId).emit('message:updated', {
-        ...messageData,
-        timestamp: new Date().toISOString(),
-      });
-
-      this.logger.debug(
-        `Message update broadcasted to planet ${messageData.planetId}`,
-      );
-    } catch (error) {
-      this.logger.error(`Failed to broadcast message update: ${error.message}`);
-    }
-  }
-
-  /**
-   * 메시지 삭제 브로드캐스트
-   */
-  async broadcastMessageDeleted(
-    server: Server,
-    messageId: number,
-    planetId: number,
-    deletedBy: number,
-  ): Promise<void> {
-    try {
-      const planetRoomId = `planet:${planetId}`;
-
-      server.to(planetRoomId).emit('message:deleted', {
-        messageId,
-        planetId,
-        deletedBy,
-        timestamp: new Date().toISOString(),
-      });
-
-      this.logger.debug(`Message deletion broadcasted to planet ${planetId}`);
-    } catch (error) {
-      this.logger.error(
-        `Failed to broadcast message deletion: ${error.message}`,
-      );
-    }
-  }
-
-  /**
-   * 타이핑 상태 브로드캐스트
+   * 타이핑 상태 브로드캐스트 (간소화 버전)
    */
   async broadcastTypingStatus(
     server: Server,
@@ -165,21 +89,6 @@ export class WebSocketBroadcastService {
     try {
       const planetRoomId = `planet:${typingData.planetId}`;
 
-      // 타이핑 상태를 캐시에 업데이트
-      if (typingData.isTyping) {
-        await this.planetCacheService.addTypingUser(
-          typingData.planetId,
-          typingData.userId,
-          typingData.userName,
-        );
-      } else {
-        await this.planetCacheService.removeTypingUser(
-          typingData.planetId,
-          typingData.userId,
-        );
-      }
-
-      // 타이핑 상태 브로드캐스트 (타이핑하는 사용자는 제외)
       server
         .to(planetRoomId)
         .except(`user:${typingData.userId}`)
@@ -200,181 +109,44 @@ export class WebSocketBroadcastService {
   }
 
   /**
-   * 온라인 상태 브로드캐스트
+   * 타이핑 중인 사용자 목록 브로드캐스트 (간소화 버전)
    */
-  async broadcastOnlineStatus(
-    server: Server,
-    statusData: OnlineStatusData,
-  ): Promise<void> {
-    try {
-      // 사용자가 참여한 모든 Travel/Planet에 브로드캐스트
-      const userRooms = this.roomService.getUserRooms(statusData.userId);
-
-      for (const roomId of userRooms) {
-        server.to(roomId).emit('user:online_status', {
-          userId: statusData.userId,
-          userName: statusData.userName,
-          isOnline: statusData.isOnline,
-          lastSeenAt: statusData.lastSeenAt,
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      this.logger.debug(
-        `Online status broadcasted for user ${statusData.userId} to ${userRooms.length} rooms`,
-      );
-    } catch (error) {
-      this.logger.error(`Failed to broadcast online status: ${error.message}`);
-    }
-  }
-
-  /**
-   * 시스템 알림 브로드캐스트
-   */
-  async broadcastNotification(
-    server: Server,
-    notificationData: NotificationData,
-    targetRoomId?: string,
-    targetUserId?: number,
-  ): Promise<void> {
-    try {
-      const eventData = {
-        ...notificationData,
-        timestamp: new Date().toISOString(),
-      };
-
-      if (targetUserId) {
-        // 특정 사용자에게만 전송
-        const userRooms = this.roomService.getUserRooms(targetUserId);
-        for (const roomId of userRooms) {
-          server.to(roomId).emit('notification', eventData);
-        }
-        this.logger.debug(`Notification sent to user ${targetUserId}`);
-      } else if (targetRoomId) {
-        // 특정 룸에만 전송
-        server.to(targetRoomId).emit('notification', eventData);
-        this.logger.debug(`Notification sent to room ${targetRoomId}`);
-      } else {
-        // 모든 연결된 사용자에게 전송
-        server.emit('notification', eventData);
-        this.logger.debug('Global notification sent');
-      }
-    } catch (error) {
-      this.logger.error(`Failed to broadcast notification: ${error.message}`);
-    }
-  }
-
-  /**
-   * Planet 멤버 변경 브로드캐스트 (가입/탈퇴)
-   */
-  async broadcastPlanetMemberChange(
-    server: Server,
-    planetId: number,
-    userId: number,
-    userName: string,
-    action: 'joined' | 'left',
-  ): Promise<void> {
-    try {
-      const planetRoomId = `planet:${planetId}`;
-      const travelRoomId = await this.getTravelRoomIdFromPlanet(planetId);
-
-      // Planet 룸에 브로드캐스트
-      server.to(planetRoomId).emit('planet:member_change', {
-        planetId,
-        userId,
-        userName,
-        action,
-        timestamp: new Date().toISOString(),
-      });
-
-      // Travel 룸에도 알림
-      if (travelRoomId) {
-        server.to(travelRoomId).emit('planet:member_change', {
-          planetId,
-          userId,
-          userName,
-          action,
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      this.logger.debug(
-        `Planet member ${action} broadcasted for user ${userId} in planet ${planetId}`,
-      );
-    } catch (error) {
-      this.logger.error(
-        `Failed to broadcast planet member change: ${error.message}`,
-      );
-    }
-  }
-
-  /**
-   * Travel 만료 알림 브로드캐스트
-   */
-  async broadcastTravelExpiry(
-    server: Server,
-    travelId: number,
-    travelName: string,
-    endDate: Date,
-  ): Promise<void> {
-    try {
-      const travelRoomId = `travel:${travelId}`;
-
-      await this.broadcastNotification(
-        server,
-        {
-          type: 'travel_expired',
-          title: 'Travel 만료 알림',
-          message: `${travelName}이(가) 만료되었습니다.`,
-          data: {
-            travelId,
-            travelName,
-            endDate: endDate.toISOString(),
-          },
-          timestamp: new Date(),
-        },
-        travelRoomId,
-      );
-
-      this.logger.debug(
-        `Travel expiry notification sent for travel ${travelId}`,
-      );
-    } catch (error) {
-      this.logger.error(`Failed to broadcast travel expiry: ${error.message}`);
-    }
-  }
-
-  /**
-   * 읽음 확인 브로드캐스트
-   */
-  async broadcastReadReceipt(
-    server: Server,
-    planetId: number,
-    userId: number,
-    userName: string,
-    messageId: number,
-  ): Promise<void> {
+  async broadcastTypingUsers(server: Server, planetId: number): Promise<void> {
     try {
       const planetRoomId = `planet:${planetId}`;
 
-      server.to(planetRoomId).emit('message:read', {
+      server.to(planetRoomId).emit('typing:users', {
         planetId,
-        userId,
-        userName,
-        messageId,
-        readAt: new Date().toISOString(),
+        typingUsers: [], // 캐시 서비스 제거로 빈 배열 반환
+        timestamp: new Date().toISOString(),
       });
 
       this.logger.debug(
-        `Read receipt broadcasted for message ${messageId} by user ${userId}`,
+        `Typing users list broadcasted for planet ${planetId} (cache disabled)`,
       );
     } catch (error) {
-      this.logger.error(`Failed to broadcast read receipt: ${error.message}`);
+      this.logger.error(`Failed to broadcast typing users: ${error.message}`);
     }
   }
 
   /**
-   * 사용자별 개인 메시지 전송
+   * 온라인 상태 브로드캐스트 (간소화 버전)
+   */
+  async broadcastOnlineStatus(server: Server, data: any): Promise<void> {
+    this.logger.debug(
+      'Online status broadcast disabled (cache services removed)',
+    );
+  }
+
+  /**
+   * 읽음 상태 브로드캐스트 (간소화 버전)
+   */
+  async broadcastReadReceipt(server: Server, data: any): Promise<void> {
+    this.logger.debug('Read receipt broadcast not implemented');
+  }
+
+  /**
+   * 개인 메시지 전송 (간소화 버전)
    */
   async sendPersonalMessage(
     server: Server,
@@ -383,19 +155,9 @@ export class WebSocketBroadcastService {
     data: any,
   ): Promise<void> {
     try {
-      // 사용자의 모든 소켓에 메시지 전송
-      const userSockets =
-        await this.onlinePresenceService.getUserSockets(targetUserId);
-
-      for (const socketId of userSockets) {
-        server.to(socketId).emit(eventName, {
-          ...data,
-          timestamp: new Date().toISOString(),
-        });
-      }
-
+      // 온라인 상태 관리 기능이 제거되어 소켓 관리 불가
       this.logger.debug(
-        `Personal message sent to user ${targetUserId} (${userSockets.length} sockets)`,
+        `Personal message attempted for user ${targetUserId} (socket management disabled)`,
       );
     } catch (error) {
       this.logger.error(`Failed to send personal message: ${error.message}`);
@@ -403,86 +165,22 @@ export class WebSocketBroadcastService {
   }
 
   /**
-   * 메시지 미리보기 생성
+   * 시스템 알림 브로드캐스트 (간소화 버전)
    */
-  private createMessagePreview(messageData: BroadcastMessageData): string {
-    if (messageData.type === 'TEXT') {
-      return messageData.content?.substring(0, 100) || '';
-    } else if (messageData.type === 'IMAGE') {
-      return '📷 이미지';
-    } else if (messageData.type === 'VIDEO') {
-      return '🎥 비디오';
-    } else if (messageData.type === 'FILE') {
-      return `📎 ${messageData.fileName || '파일'}`;
-    }
-    return '메시지';
-  }
-
-  /**
-   * Planet에서 Travel 룸 ID 조회
-   */
-  private async getTravelRoomIdFromPlanet(
-    planetId: number,
-  ): Promise<string | null> {
+  async broadcastNotification(
+    server: Server,
+    notificationData: any,
+  ): Promise<void> {
     try {
-      const planetInfo = await this.planetCacheService.getPlanetInfo(planetId);
-      if (planetInfo?.travelId) {
-        return `travel:${planetInfo.travelId}`;
-      }
-      return null;
-    } catch (error) {
-      this.logger.warn(
-        `Failed to get travel room ID for planet ${planetId}: ${error.message}`,
-      );
-      return null;
-    }
-  }
-
-  /**
-   * 현재 타이핑 중인 사용자 목록 브로드캐스트
-   */
-  async broadcastTypingUsers(server: Server, planetId: number): Promise<void> {
-    try {
-      const typingUsers =
-        await this.planetCacheService.getTypingUsers(planetId);
-      const planetRoomId = `planet:${planetId}`;
-
-      server.to(planetRoomId).emit('typing:users', {
-        planetId,
-        typingUsers: typingUsers.map((user) => ({
-          userId: user.userId,
-          userName: user.userName,
-          startedAt: user.startedAt,
-        })),
+      // 모든 연결된 클라이언트에게 브로드캐스트
+      server.emit('notification:system', {
+        ...notificationData,
         timestamp: new Date().toISOString(),
       });
 
-      this.logger.debug(
-        `Typing users list broadcasted for planet ${planetId} (${typingUsers.length} users)`,
-      );
+      this.logger.debug('System notification broadcasted to all clients');
     } catch (error) {
-      this.logger.error(`Failed to broadcast typing users: ${error.message}`);
-    }
-  }
-
-  /**
-   * 룸 통계 정보 브로드캐스트
-   */
-  async broadcastRoomStats(server: Server, roomId: string): Promise<void> {
-    try {
-      const roomInfo = await this.roomService.getRoomInfo(roomId);
-      if (!roomInfo) return;
-
-      server.to(roomId).emit('room:stats', {
-        roomId,
-        memberCount: roomInfo.memberCount,
-        onlineCount: roomInfo.onlineCount,
-        timestamp: new Date().toISOString(),
-      });
-
-      this.logger.debug(`Room stats broadcasted for ${roomId}`);
-    } catch (error) {
-      this.logger.error(`Failed to broadcast room stats: ${error.message}`);
+      this.logger.error(`Failed to broadcast notification: ${error.message}`);
     }
   }
 }

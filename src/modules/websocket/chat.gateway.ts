@@ -338,10 +338,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       };
 
       // 메시지 브로드캐스트
-      await this.broadcastService.broadcastNewMessage(
-        this.server,
-        broadcastData,
-      );
+      await this.broadcastService.broadcastMessage(this.server, broadcastData);
 
       // 이벤트 발행 (캐시 업데이트용)
       this.eventEmitter.emit('message.created', {
@@ -450,13 +447,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     try {
       // 읽음 상태 브로드캐스트
-      await this.broadcastService.broadcastReadReceipt(
-        this.server,
-        data.planetId,
-        client.userId,
-        client.user.name,
-        data.messageId,
-      );
+      await this.broadcastService.broadcastReadReceipt(this.server, {
+        planetId: data.planetId,
+        userId: client.userId,
+        userName: client.user.name,
+        messageId: data.messageId,
+      });
 
       // TODO: 읽음 상태를 데이터베이스에 저장 (추후 구현)
 
@@ -1207,7 +1203,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       this.logger.debug(
-        `Typing status retrieved: planetId=${planetId}, count=${typingStatus.totalTypingCount}`,
+        `Typing status retrieved: planetId=${planetId}, count=${typingStatus.length}`,
       );
     } catch (error) {
       this.logger.error('Get typing status failed:', error);

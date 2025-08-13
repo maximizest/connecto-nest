@@ -672,7 +672,7 @@ export class PlanetUser extends BaseEntity {
       return null; // 기본 아바터 사용
     }
 
-    return this.user?.avatar || null;
+    return null; // avatar 필드가 제거됨
   }
 
   /**

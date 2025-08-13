@@ -1,5 +1,5 @@
 {
-  "name": "foryourbiz-template-nestjs",
+  "name": "connecto-nest",
   "version": "0.0.1",
   "description": "",
   "author": "",
@@ -28,7 +28,7 @@
     "migration:template": "node scripts/migration-template.js",
     "migration:run": "node scripts/migration.js run",
     "migration:revert": "node scripts/migration.js revert",
-    "start:prod:migrate": "npm run migration:run && npm run start:prod",
+    "start:prod:migrate": "yarn migration:run && yarn start:prod",
     "deploy:prod:safe": "node scripts/migrate-and-start.js",
     "deploy:prod": "node scripts/migrate-and-start.js"
   },

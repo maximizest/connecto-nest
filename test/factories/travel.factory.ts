@@ -19,7 +19,7 @@ export const TravelFactory = Factory.define<Travel>(({ sequence }) => {
   travel.imageUrl = `https://example.com/travel/${sequence}/image.jpg`;
 
   // 소유자 (테스트에서 별도 설정 필요)
-  travel.createdBy = 1; // 기본값, 실제 테스트에서는 실제 사용자 ID로 설정
+  // createdBy 필드 제거됨
 
   // 상태 관리
   travel.status = TravelStatus.INACTIVE;

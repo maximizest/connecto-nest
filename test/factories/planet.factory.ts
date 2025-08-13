@@ -20,7 +20,7 @@ export const PlanetFactory = Factory.define<Planet>(({ sequence }) => {
   // 타입 및 소속 (테스트에서 별도 설정 필요)
   planet.type = PlanetType.GROUP;
   planet.travelId = 1; // 기본값, 실제 테스트에서는 실제 Travel ID로 설정
-  planet.createdBy = 1; // 기본값, 실제 테스트에서는 실제 사용자 ID로 설정
+  // createdBy 필드 제거됨
 
   // 상태 관리
   planet.status = PlanetStatus.ACTIVE;

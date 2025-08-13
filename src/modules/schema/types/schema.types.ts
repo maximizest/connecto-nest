@@ -245,4 +245,4 @@ export interface SecurityValidationResult {
   errorCode?: string;
   hint?: string;
   clientIP?: string;
-} 
+}

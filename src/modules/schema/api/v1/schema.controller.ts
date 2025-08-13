@@ -75,10 +75,7 @@ export class SchemaController {
             enum: column.enum,
             enumName: column.enumName,
             asExpression: column.asExpression,
-            generatedType: column.generatedType as
-              | 'VIRTUAL'
-              | 'STORED'
-              | undefined,
+            generatedType: column.generatedType,
             // 메타데이터 정보 추가
             metadata: this.getColumnMetadata(column),
           }),
@@ -242,10 +239,7 @@ export class SchemaController {
           enum: column.enum,
           enumName: column.enumName,
           asExpression: column.asExpression,
-          generatedType: column.generatedType as
-            | 'VIRTUAL'
-            | 'STORED'
-            | undefined,
+          generatedType: column.generatedType,
           // 메타데이터 정보 추가
           metadata: this.getColumnMetadata(column),
         }),

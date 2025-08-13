@@ -96,7 +96,7 @@ export class AuthService {
 
       const payload = this.jwtService.verify(token, {
         secret: this.JWT_SECRET,
-      }) as JwtPayload;
+      });
 
       // 페이로드 검증
       if (!payload.id || !payload.email) {

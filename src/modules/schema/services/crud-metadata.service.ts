@@ -1,14 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { ModulesContainer, Reflector } from '@nestjs/core';
-import { SCHEMA_CONSTANTS, SECURITY_CONSTANTS } from '../constants/schema.constants';
-import { CrudMetadata, CrudInfo, ControllerWrapper } from '../types/schema.types';
+import {
+  SCHEMA_CONSTANTS,
+  SECURITY_CONSTANTS,
+} from '../constants/schema.constants';
+import {
+  CrudMetadata,
+  CrudInfo,
+  ControllerWrapper,
+} from '../types/schema.types';
 
 @Injectable()
 export class CrudMetadataService {
   constructor(
     private readonly modulesContainer: ModulesContainer,
     private readonly reflector: Reflector,
-  ) { }
+  ) {}
 
   /**
    * 엔티티 이름으로 CRUD 정보를 추출합니다.
@@ -71,7 +78,8 @@ export class CrudMetadataService {
     const { METADATA_KEYS } = SCHEMA_CONSTANTS;
 
     // 여러 메타데이터 키를 시도
-    let crudMetadata = this.reflector.get(METADATA_KEYS.CRUD_OPTIONS, controller.metatype) ||
+    let crudMetadata =
+      this.reflector.get(METADATA_KEYS.CRUD_OPTIONS, controller.metatype) ||
       this.reflector.get(METADATA_KEYS.CRUD_ALT, controller.metatype) ||
       this.reflector.get(METADATA_KEYS.CRUD, controller.metatype) ||
       this.reflector.get(METADATA_KEYS.CRUD_UPPER, controller.metatype) ||
@@ -92,11 +100,13 @@ export class CrudMetadataService {
    */
   private findCrudMetadataDynamically(controller: ControllerWrapper): any {
     const allKeys = Reflect.getMetadataKeys(controller.metatype);
-    console.log(`Controller ${controller.metatype.name} metadata keys:`, allKeys);
+    console.log(
+      `Controller ${controller.metatype.name} metadata keys:`,
+      allKeys,
+    );
 
-    const crudKey = allKeys.find(key =>
-      typeof key === 'string' &&
-      key.toLowerCase().includes('crud')
+    const crudKey = allKeys.find(
+      (key) => typeof key === 'string' && key.toLowerCase().includes('crud'),
     );
 
     if (crudKey) {
@@ -120,14 +130,18 @@ export class CrudMetadataService {
   /**
    * CRUD 메타데이터 객체를 구성합니다.
    */
-  private buildCrudMetadata(controller: ControllerWrapper, crudMetadata: any): CrudMetadata {
+  private buildCrudMetadata(
+    controller: ControllerWrapper,
+    crudMetadata: any,
+  ): CrudMetadata {
     const controllerPath = this.getControllerPath(controller.metatype);
 
     return {
       controllerName: controller.metatype.name,
       controllerPath,
       entityName: this.getEntityName(crudMetadata.entity),
-      allowedMethods: crudMetadata.only || SCHEMA_CONSTANTS.DEFAULT_CRUD_METHODS,
+      allowedMethods:
+        crudMetadata.only || SCHEMA_CONSTANTS.DEFAULT_CRUD_METHODS,
       allowedFilters: crudMetadata.allowedFilters || [],
       allowedParams: crudMetadata.allowedParams || [],
       allowedIncludes: crudMetadata.allowedIncludes || [],
@@ -145,7 +159,8 @@ export class CrudMetadataService {
     const { METADATA_KEYS } = SCHEMA_CONSTANTS;
 
     // @Controller 데코레이터에서 path 추출
-    const controllerMetadata = this.reflector.get(METADATA_KEYS.CONTROLLER_PATH, controllerClass) ||
+    const controllerMetadata =
+      this.reflector.get(METADATA_KEYS.CONTROLLER_PATH, controllerClass) ||
       Reflect.getMetadata(METADATA_KEYS.CONTROLLER_PATH, controllerClass) ||
       Reflect.getMetadata(METADATA_KEYS.CONTROLLER_PATH_ALT, controllerClass);
 
@@ -174,7 +189,10 @@ export class CrudMetadataService {
 
     for (const module of this.modulesContainer.values()) {
       for (const controller of module.controllers.values()) {
-        if (controller.metatype && this.isValidController(controller.metatype)) {
+        if (
+          controller.metatype &&
+          this.isValidController(controller.metatype)
+        ) {
           controllers.push(controller as ControllerWrapper);
         }
       }
@@ -198,16 +216,19 @@ export class CrudMetadataService {
     const controllerName = controller.metatype.name;
 
     // 컨트롤러 경로가 admin으로 시작하거나 컨트롤러 이름에 Admin이 포함된 경우
-    return controllerPath.startsWith('admin/') ||
+    return (
+      controllerPath.startsWith('admin/') ||
       controllerPath.startsWith('admin') ||
-      controllerName.includes('Admin');
+      controllerName.includes('Admin')
+    );
   }
 
   /**
    * CRUD 메타데이터를 기반으로 엔드포인트를 생성합니다.
    */
   private generateEndpoints(crudMetadata: CrudMetadata): string[] {
-    const basePath = crudMetadata.controllerPath ||
+    const basePath =
+      crudMetadata.controllerPath ||
       crudMetadata.entityName.toLowerCase() + 's';
     const endpoints: string[] = [];
     const allowedMethods = crudMetadata.allowedMethods;
@@ -223,7 +244,8 @@ export class CrudMetadataService {
     };
 
     for (const method of allowedMethods) {
-      const template = methodEndpointMap[method as keyof typeof methodEndpointMap];
+      const template =
+        methodEndpointMap[method as keyof typeof methodEndpointMap];
       if (template) {
         endpoints.push(template.replace('{basePath}', basePath));
       }
@@ -231,4 +253,4 @@ export class CrudMetadataService {
 
     return endpoints;
   }
-} 
+}
