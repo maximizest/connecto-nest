@@ -12,7 +12,6 @@ import { PlanetUser } from '../modules/planet-user/planet-user.entity';
 import { Planet } from '../modules/planet/planet.entity';
 import { Profile } from '../modules/profile/profile.entity';
 import { MessageReadReceipt } from '../modules/read-receipt/read-receipt.entity';
-import { StreamingSession } from '../modules/streaming/streaming-session.entity';
 import { TravelUser } from '../modules/travel-user/travel-user.entity';
 import { Travel } from '../modules/travel/travel.entity';
 import { User } from '../modules/user/user.entity';
@@ -54,7 +53,6 @@ export const ENTITIES = [
   Notification,
   FileUpload,
   VideoProcessing,
-  StreamingSession,
 ];
 
 /**

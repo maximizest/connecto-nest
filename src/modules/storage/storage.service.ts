@@ -1,14 +1,10 @@
 import {
-  AbortMultipartUploadCommand,
-  CompleteMultipartUploadCommand,
-  CreateMultipartUploadCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
-  UploadPartCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Injectable, Logger } from '@nestjs/common';
@@ -34,10 +30,11 @@ interface UploadResult {
   etag?: string;
 }
 
-interface MultipartUpload {
-  uploadId: string;
+interface PresignedUploadUrl {
+  uploadUrl: string;
   key: string;
-  parts: { partNumber: number; etag: string }[];
+  publicUrl: string;
+  expiresAt: Date;
 }
 
 @Injectable()
@@ -51,63 +48,69 @@ export class StorageService {
   }
 
   /**
-   * 파일 업로드 (단일 파일)
+   * Presigned URL 생성 (Direct Upload용)
    */
-  async uploadFile(
-    file: Express.Multer.File,
+  async generatePresignedUploadUrl(
+    filename: string,
     folder: keyof typeof STORAGE_SETTINGS.folders,
+    contentType: string,
+    fileSize: number,
     metadata?: Record<string, string>,
-  ): Promise<UploadResult> {
+  ): Promise<PresignedUploadUrl> {
     try {
       // 파일 타입 검증
-      const fileType = this.getFileType(file.originalname);
-      if (!isValidFileType(file.originalname, fileType)) {
+      const fileType = this.getFileType(filename);
+      if (!isValidFileType(filename, fileType)) {
         const allowedTypes = this.getAllowedFileTypes();
-        throw new FileTypeNotSupportedException(file.mimetype, allowedTypes);
+        throw new FileTypeNotSupportedException(contentType, allowedTypes);
       }
 
       // 파일 크기 검증
-      if (!isValidFileSize(file.size, fileType)) {
+      if (!isValidFileSize(fileSize, fileType)) {
         const maxSize = this.getMaxSize(fileType);
-        throw new FileSizeExceededException(file.size, maxSize);
+        throw new FileSizeExceededException(fileSize, maxSize);
       }
 
       // 파일 키 생성
-      const key = this.generateFileKey(file.originalname, folder);
+      const key = this.generateFileKey(filename, folder);
 
       // 메타데이터 준비
       const uploadMetadata = {
-        'original-name': file.originalname,
+        'original-name': filename,
         'upload-date': new Date().toISOString(),
         'file-type': fileType,
-        size: file.size.toString(),
+        size: fileSize.toString(),
         ...metadata,
       };
 
-      // S3에 업로드
+      // Presigned URL 생성 (5분 유효)
       const command = new PutObjectCommand({
         Bucket: STORAGE_SETTINGS.bucket,
         Key: key,
-        Body: file.buffer,
-        ContentType: file.mimetype,
+        ContentType: contentType,
+        ContentLength: fileSize,
         Metadata: uploadMetadata,
         CacheControl: 'max-age=31536000', // 1년 캐시
       });
 
-      const result = await this.s3Client.send(command);
-      const url = this.getPublicUrl(key);
+      const expiresIn = 300; // 5분
+      const uploadUrl = await getSignedUrl(this.s3Client, command, {
+        expiresIn,
+      });
 
-      this.logger.log(`✅ File uploaded successfully: ${key}`);
+      const publicUrl = this.getPublicUrl(key);
+      const expiresAt = new Date(Date.now() + expiresIn * 1000);
+
+      this.logger.log(`✅ Presigned URL generated for: ${key}`);
 
       return {
+        uploadUrl,
         key,
-        url,
-        size: file.size,
-        contentType: file.mimetype,
-        etag: result.ETag,
+        publicUrl,
+        expiresAt,
       };
     } catch (error) {
-      this.logger.error(`❌ File upload failed: ${file.originalname}`, error);
+      this.logger.error(`❌ Presigned URL generation failed: ${filename}`, error);
 
       // 이미 커스텀 예외인 경우 그대로 던지기
       if (
@@ -139,137 +142,37 @@ export class StorageService {
   }
 
   /**
-   * 대용량 파일 멀티파트 업로드 시작
+   * 파일 업로드 완료 확인 및 검증
    */
-  async initiateMultipartUpload(
-    filename: string,
-    folder: keyof typeof STORAGE_SETTINGS.folders,
-    contentType: string,
-    metadata?: Record<string, string>,
-  ): Promise<{ uploadId: string; key: string }> {
+  async verifyUpload(key: string): Promise<UploadResult | null> {
     try {
-      const key = this.generateFileKey(filename, folder);
-
-      const command = new CreateMultipartUploadCommand({
-        Bucket: STORAGE_SETTINGS.bucket,
-        Key: key,
-        ContentType: contentType,
-        Metadata: {
-          'original-name': filename,
-          'upload-date': new Date().toISOString(),
-          ...metadata,
-        },
-        CacheControl: 'max-age=31536000',
-      });
-
-      const result = await this.s3Client.send(command);
-
-      this.logger.log(`🔄 Multipart upload initiated: ${key}`);
+      const fileInfo = await this.getFileInfo(key);
+      
+      if (!fileInfo) {
+        return null;
+      }
 
       return {
-        uploadId: result.UploadId!,
-        key,
-      };
-    } catch (error) {
-      this.logger.error(`❌ Multipart upload initiation failed:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * 멀티파트 업로드 - 파트 업로드
-   */
-  async uploadPart(
-    key: string,
-    uploadId: string,
-    partNumber: number,
-    body: Buffer,
-  ): Promise<{ etag: string; partNumber: number }> {
-    try {
-      const command = new UploadPartCommand({
-        Bucket: STORAGE_SETTINGS.bucket,
-        Key: key,
-        PartNumber: partNumber,
-        UploadId: uploadId,
-        Body: body,
-      });
-
-      const result = await this.s3Client.send(command);
-
-      return {
-        etag: result.ETag!,
-        partNumber,
-      };
-    } catch (error) {
-      this.logger.error(`❌ Part upload failed (part ${partNumber}):`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * 멀티파트 업로드 완료
-   */
-  async completeMultipartUpload(
-    key: string,
-    uploadId: string,
-    parts: { partNumber: number; etag: string }[],
-  ): Promise<UploadResult> {
-    try {
-      const command = new CompleteMultipartUploadCommand({
-        Bucket: STORAGE_SETTINGS.bucket,
-        Key: key,
-        UploadId: uploadId,
-        MultipartUpload: {
-          Parts: parts.map((part) => ({
-            ETag: part.etag,
-            PartNumber: part.partNumber,
-          })),
-        },
-      });
-
-      const result = await this.s3Client.send(command);
-
-      // 파일 정보 가져오기
-      const headResult = await this.getFileInfo(key);
-
-      const uploadResult: UploadResult = {
         key,
         url: this.getPublicUrl(key),
-        size: headResult?.size || 0,
-        contentType: headResult?.contentType || 'application/octet-stream',
-        etag: result.ETag,
+        size: fileInfo.size,
+        contentType: fileInfo.contentType,
       };
-
-      this.logger.log(`✅ Multipart upload completed: ${key}`);
-
-      return uploadResult;
     } catch (error) {
-      this.logger.error(`❌ Multipart upload completion failed:`, error);
+      this.logger.error(`❌ Upload verification failed:`, error);
       throw error;
     }
   }
 
   /**
-   * 멀티파트 업로드 취소
-   */
-  async abortMultipartUpload(key: string, uploadId: string): Promise<void> {
-    try {
-      const command = new AbortMultipartUploadCommand({
-        Bucket: STORAGE_SETTINGS.bucket,
-        Key: key,
-        UploadId: uploadId,
-      });
-
-      await this.s3Client.send(command);
-      this.logger.log(`🚫 Multipart upload aborted: ${key}`);
-    } catch (error) {
-      this.logger.error(`❌ Multipart upload abort failed:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * 파일 다운로드 (Signed URL 생성)
+   * 파일 다운로드 (Signed URL 생성 - Range 요청 지원)
+   * 
+   * Cloudflare R2는 자동으로 HTTP Range 요청을 지원합니다.
+   * 클라이언트는 생성된 URL에 Range 헤더를 포함하여 요청할 수 있습니다.
+   * 
+   * 예시:
+   * - Range: bytes=0-1048575 (첫 1MB)
+   * - Range: bytes=1048576- (1MB 이후부터 끝까지)
    */
   async getDownloadUrl(key: string, expiresIn: number = 3600): Promise<string> {
     try {
@@ -284,6 +187,17 @@ export class StorageService {
       this.logger.error(`❌ Download URL generation failed:`, error);
       throw error;
     }
+  }
+
+  /**
+   * 스트리밍용 URL 생성 (비디오/오디오용)
+   * 
+   * Cloudflare R2의 공개 URL을 반환합니다.
+   * 브라우저가 자동으로 Range 요청을 사용하여 스트리밍합니다.
+   */
+  async getStreamingUrl(key: string): Promise<string> {
+    // 공개 URL 반환 (CDN 경유)
+    return this.getPublicUrl(key);
   }
 
   /**

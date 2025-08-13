@@ -9,7 +9,6 @@ import { Notification } from '../notification/notification.entity';
 import { PlanetUser } from '../planet-user/planet-user.entity';
 import { Profile } from '../profile/profile.entity';
 import { MessageReadReceipt } from '../read-receipt/read-receipt.entity';
-import { StreamingSession } from '../streaming/streaming-session.entity';
 import { TravelUser } from '../travel-user/travel-user.entity';
 import { UserDeletionService } from '../user/services/user-deletion.service';
 import { User } from '../user/user.entity';
@@ -31,7 +30,6 @@ import { AuthService } from './auth.service';
       MessageReadReceipt,
       FileUpload,
       VideoProcessing,
-      StreamingSession,
       TravelUser,
       PlanetUser,
     ]),

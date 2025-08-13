@@ -599,27 +599,34 @@ export class VideoProcessingService {
     const fileName = path.basename(filePath);
     const buffer = fs.readFileSync(filePath);
     const stats = fs.statSync(filePath);
+    const mimeType = this.getMimeType(fileName);
 
-    // Multer.File 형태로 변환
-    const file: Express.Multer.File = {
-      fieldname: 'file',
-      originalname: fileName,
-      encoding: '7bit',
-      mimetype: this.getMimeType(fileName),
-      size: stats.size,
-      buffer,
-      destination: '',
-      filename: fileName,
-      path: filePath,
-      stream: null as any,
-    };
+    // Presigned URL 생성
+    const presignedUrl = await this.storageService.generatePresignedUploadUrl(
+      fileName,
+      folder as any,
+      mimeType,
+      stats.size,
+      {
+        'processing-output': 'true',
+        'upload-date': new Date().toISOString(),
+      },
+    );
 
-    const result = await this.storageService.uploadFile(file, folder as any, {
-      'processing-output': 'true',
-      'upload-date': new Date().toISOString(),
+    // axios를 사용하여 직접 업로드
+    const axios = require('axios');
+    await axios.put(presignedUrl.uploadUrl, buffer, {
+      headers: {
+        'Content-Type': mimeType,
+        'Content-Length': stats.size,
+      },
     });
 
-    return result;
+    return {
+      key: presignedUrl.key,
+      url: presignedUrl.publicUrl,
+      size: stats.size,
+    };
   }
 
   /**

@@ -8,7 +8,6 @@ import { Notification } from '../../notification/notification.entity';
 import { PlanetUser } from '../../planet-user/planet-user.entity';
 import { Profile } from '../../profile/profile.entity';
 import { MessageReadReceipt } from '../../read-receipt/read-receipt.entity';
-import { StreamingSession } from '../../streaming/streaming-session.entity';
 import { TravelUser } from '../../travel-user/travel-user.entity';
 import { VideoProcessing } from '../../video-processing/video-processing.entity';
 import { User } from '../user.entity';
@@ -61,9 +60,6 @@ export class UserDeletionService {
 
     @InjectRepository(VideoProcessing)
     private readonly videoProcessingRepository: Repository<VideoProcessing>,
-
-    @InjectRepository(StreamingSession)
-    private readonly streamingSessionRepository: Repository<StreamingSession>,
   ) {}
 
   /**
@@ -86,7 +82,6 @@ export class UserDeletionService {
       planetUsers: number;
       fileUploads: number;
       videoProcessings: number;
-      streamingSessions: number;
     };
     error?: string;
   }> {
@@ -108,7 +103,6 @@ export class UserDeletionService {
             planetUsers: 0,
             fileUploads: 0,
             videoProcessings: 0,
-            streamingSessions: 0,
           },
         };
 
@@ -184,17 +178,6 @@ export class UserDeletionService {
         result.anonymizedServiceData.videoProcessings =
           anonymizedVideoProcessings.affected || 0;
 
-        // 2-6. StreamingSession 익명화
-        const anonymizedStreamingSessions = await manager.update(
-          StreamingSession,
-          { userId: userId },
-          {
-            userId: undefined,
-            isFromDeletedUser: true,
-          },
-        );
-        result.anonymizedServiceData.streamingSessions =
-          anonymizedStreamingSessions.affected || 0;
 
         this.logger.log('✅ Service data anonymization completed');
 
@@ -255,9 +238,6 @@ export class UserDeletionService {
         );
         this.logger.log(
           `   - Video Processings: ${result.anonymizedServiceData.videoProcessings}`,
-        );
-        this.logger.log(
-          `   - Streaming Sessions: ${result.anonymizedServiceData.streamingSessions}`,
         );
 
         this.logger.log(
@@ -380,7 +360,6 @@ export class UserDeletionService {
       planetUsers: number;
       fileUploads: number;
       videoProcessings: number;
-      streamingSessions: number;
     };
     totalImpactedRecords: number;
   }> {
@@ -406,7 +385,6 @@ export class UserDeletionService {
       planetUsersCount,
       fileUploadsCount,
       videoProcessingsCount,
-      streamingSessionsCount,
     ] = await Promise.all([
       this.notificationRepository.count({ where: { userId: userId } }),
       this.readReceiptRepository.count({ where: { userId: userId } }),
@@ -415,7 +393,6 @@ export class UserDeletionService {
       this.planetUserRepository.count({ where: { userId: userId } }),
       this.fileUploadRepository.count({ where: { userId: userId } }),
       this.videoProcessingRepository.count({ where: { userId: userId } }),
-      this.streamingSessionRepository.count({ where: { userId: userId } }),
     ]);
 
     const result = {
@@ -431,7 +408,6 @@ export class UserDeletionService {
         planetUsers: planetUsersCount,
         fileUploads: fileUploadsCount,
         videoProcessings: videoProcessingsCount,
-        streamingSessions: streamingSessionsCount,
       },
       totalImpactedRecords: 0,
     };
@@ -446,8 +422,7 @@ export class UserDeletionService {
       travelUsersCount +
       planetUsersCount +
       fileUploadsCount +
-      videoProcessingsCount +
-      streamingSessionsCount;
+      videoProcessingsCount;
 
     this.logger.log(`📋 Impact Analysis Result:`);
     this.logger.log(
@@ -464,7 +439,6 @@ export class UserDeletionService {
     this.logger.log(`   - Planet Users: ${planetUsersCount}`);
     this.logger.log(`   - File Uploads: ${fileUploadsCount}`);
     this.logger.log(`   - Video Processings: ${videoProcessingsCount}`);
-    this.logger.log(`   - Streaming Sessions: ${streamingSessionsCount}`);
 
     return result;
   }

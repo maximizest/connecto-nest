@@ -39,8 +39,9 @@ export enum FileUploadStatus {
  * 업로드 타입
  */
 export enum FileUploadType {
-  SINGLE = 'single', // 단일 파일 업로드
-  MULTIPART = 'multipart', // 멀티파트 업로드
+  DIRECT = 'direct', // Direct Upload (Presigned URL)
+  SINGLE = 'single', // 단일 파일 업로드 (레거시)
+  MULTIPART = 'multipart', // 멀티파트 업로드 (레거시)
 }
 
 /**
@@ -128,7 +129,7 @@ export class FileUpload extends BaseEntity {
     type: 'varchar',
     length: 100,
     nullable: true,
-    comment: '업로드 ID (멀티파트)',
+    comment: '업로드 ID (레거시 멀티파트용)',
   })
   @IsString()
   @IsOptional()
@@ -136,17 +137,17 @@ export class FileUpload extends BaseEntity {
   uploadId?: string;
 
   /**
-   * 진행률 및 청크 정보 (멀티파트용)
+   * 진행률 정보
    */
-  @Column({ type: 'int', default: 0, comment: '전체 청크 수' })
+  @Column({ type: 'int', default: 0, comment: '전체 청크 수 (레거시)' })
   @IsNumber()
   totalChunks: number;
 
-  @Column({ type: 'int', default: 0, comment: '완료된 청크 수' })
+  @Column({ type: 'int', default: 0, comment: '완료된 청크 수 (레거시)' })
   @IsNumber()
   completedChunks: number;
 
-  @Column({ type: 'bigint', default: 0, comment: '업로드된 바이트 수' })
+  @Column({ type: 'bigint', default: 0, comment: '업로드된 바이트 수 (레거시)' })
   @IsNumber()
   uploadedBytes: number;
 
