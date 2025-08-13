@@ -14,7 +14,7 @@ import {
   TravelUser,
   TravelUserStatus,
 } from '../../travel-user/travel-user.entity';
-import { Travel } from '../../travel/travel.entity';
+import { Travel, TravelStatus } from '../../travel/travel.entity';
 import { AuthenticatedSocket } from '../guards/websocket-auth.guard';
 
 export interface RoomInfo {
@@ -134,7 +134,10 @@ export class WebSocketRoomService {
 
       // Travel 룸들에 가입
       for (const travelUser of travelUsers) {
-        if (travelUser.travel && travelUser.travel.isActive) {
+        if (
+          travelUser.travel &&
+          travelUser.travel.status === TravelStatus.ACTIVE
+        ) {
           const travelRoomId = `travel:${travelUser.travel.id}`;
           await this.joinRoom(socket, travelRoomId, server);
         }
@@ -313,7 +316,7 @@ export class WebSocketRoomService {
           relations: ['travel'],
         });
 
-        return travelUser?.travel?.isActive || false;
+        return travelUser?.travel?.status === TravelStatus.ACTIVE || false;
       } else if (type === 'planet') {
         const planetUser = await this.planetUserRepository.findOne({
           where: {

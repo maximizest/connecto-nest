@@ -15,7 +15,7 @@ import {
   PlanetUserStatus,
 } from '../../../planet-user/planet-user.entity';
 import { Planet, PlanetType } from '../../../planet/planet.entity';
-import { Travel } from '../../../travel/travel.entity';
+import { Travel, TravelStatus } from '../../../travel/travel.entity';
 import { User } from '../../../user/user.entity';
 import {
   TravelUser,
@@ -140,7 +140,7 @@ export class TravelUserController {
     body.joinedAt = new Date();
     body.invitedBy = user.id; // 셀프 초대로 설정 (초대 코드 사용)
 
-    if (!travel.isActive) {
+    if (travel.status !== TravelStatus.ACTIVE) {
       throw new ForbiddenException('비활성화된 Travel입니다.');
     }
 

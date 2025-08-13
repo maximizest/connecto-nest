@@ -13,7 +13,7 @@ import {
   TravelUserStatus,
 } from '../../travel-user/travel-user.entity';
 import { User } from '../../user/user.entity';
-import { Travel, TravelVisibility } from '../travel.entity';
+import { Travel, TravelStatus, TravelVisibility } from '../travel.entity';
 
 /**
  * Travel 접근 권한 Guard
@@ -93,13 +93,10 @@ export class TravelAccessGuard implements CanActivate {
       throw new ForbiddenException('만료된 Travel은 조회만 가능합니다.');
     }
 
-    // 취소/완료된 Travel 확인 (Admin이 생성하므로 일반 사용자는 수정 불가)
-    if (
-      (travel.status === 'cancelled' || travel.status === 'completed') &&
-      method !== 'GET'
-    ) {
+    // 비활성된 Travel 확인 (Admin이 생성하므로 일반 사용자는 수정 불가)
+    if (travel.status === TravelStatus.INACTIVE && method !== 'GET') {
       throw new ForbiddenException(
-        '완료되거나 취소된 Travel은 관리자만 수정할 수 있습니다.',
+        '비활성된 Travel은 관리자만 수정할 수 있습니다.',
       );
     }
 
