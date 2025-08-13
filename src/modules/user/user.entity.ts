@@ -6,7 +6,6 @@ import {
   IsEnum,
   IsOptional,
   IsString,
-  IsUrl,
 } from 'class-validator';
 import {
   BaseEntity,
@@ -42,10 +41,7 @@ export enum UserStatus {
 @Entity('users')
 @Index(['socialId', 'provider'], { unique: true }) // 소셜 ID + 제공자 조합 고유
 // 복합 인덱스 - 성능 향상
-@Index(['status', 'isOnline']) // 상태별 온라인 사용자 조회
-@Index(['provider', 'isOnline']) // 제공자별 온라인 사용자 조회
 @Index(['isBanned']) // 밴된 사용자 조회
-@Index(['isOnline', 'lastSeenAt']) // 온라인 상태별 최근 접속 시간순
 export class User extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
@@ -84,11 +80,6 @@ export class User extends BaseEntity {
   @Index() // 이메일 검색 최적화
   email: string;
 
-  @Column({ type: 'text', nullable: true, comment: '프로필 이미지 URL' })
-  @IsOptional()
-  @IsUrl()
-  avatar?: string;
-
   @Column({
     type: 'varchar',
     length: 20,
@@ -112,25 +103,6 @@ export class User extends BaseEntity {
   @IsEnum(UserStatus)
   @Index() // 사용자 상태 필터링
   status: UserStatus;
-
-  @Column({
-    type: 'boolean',
-    default: false,
-    comment: '현재 온라인 여부 (실시간)',
-  })
-  @IsBoolean()
-  @Index() // 온라인 상태 필터링 최적화
-  isOnline: boolean;
-
-  @Column({
-    type: 'timestamp',
-    nullable: true,
-    comment: '마지막 접속 시간',
-  })
-  @IsOptional()
-  @IsDateString()
-  @Index() // 마지막 접속 시간 정렬 최적화
-  lastSeenAt?: Date;
 
   /**
    * 추가 설정
@@ -185,26 +157,9 @@ export class User extends BaseEntity {
   @Exclude()
   refreshToken?: string;
 
-  @Column({
-    type: 'timestamp',
-    nullable: true,
-    comment: 'Refresh Token 만료 시간',
-  })
-  @IsOptional()
-  @IsDateString()
-  @Exclude()
-  refreshTokenExpiresAt?: Date;
-
   /**
    * 계정 상태
    */
-  @Column({
-    type: 'boolean',
-    default: true,
-    comment: '계정 활성화 여부',
-  })
-  @IsBoolean()
-  isActive: boolean;
 
   @Column({
     type: 'boolean',
@@ -214,25 +169,6 @@ export class User extends BaseEntity {
   @IsBoolean()
   @Index() // 벤 상태 필터링
   isBanned: boolean;
-
-  /**
-   * 통계 정보
-   */
-  @Column({
-    type: 'int',
-    default: 0,
-    comment: '로그인 횟수',
-  })
-  loginCount: number;
-
-  @Column({
-    type: 'timestamp',
-    nullable: true,
-    comment: '첫 로그인 시간',
-  })
-  @IsOptional()
-  @IsDateString()
-  firstLoginAt?: Date;
 
   /**
    * 메타데이터
@@ -273,24 +209,6 @@ export class User extends BaseEntity {
    */
 
   /**
-   * 온라인 상태 업데이트
-   */
-  setOnline(status: UserStatus = UserStatus.ONLINE): void {
-    this.isOnline = true;
-    this.status = status;
-    this.lastSeenAt = new Date();
-  }
-
-  /**
-   * 오프라인 상태 설정
-   */
-  setOffline(): void {
-    this.isOnline = false;
-    this.status = UserStatus.OFFLINE;
-    this.lastSeenAt = new Date();
-  }
-
-  /**
    * 계정 정지 (로그인 불가)
    */
   banUser(): void {
@@ -312,28 +230,10 @@ export class User extends BaseEntity {
   }
 
   /**
-   * 로그인 카운트 증가
-   */
-  incrementLoginCount(): void {
-    this.loginCount += 1;
-    if (!this.firstLoginAt) {
-      this.firstLoginAt = new Date();
-    }
-  }
-
-  /**
    * 사용자 표시명 (이름 또는 이메일)
    */
   getDisplayName(): string {
     return this.name || this.email.split('@')[0];
-  }
-
-  /**
-   * 온라인 지속 시간 계산
-   */
-  getOnlineDuration(): number {
-    if (!this.lastSeenAt) return 0;
-    return Date.now() - this.lastSeenAt.getTime();
   }
 
   // =================================================================
@@ -350,10 +250,6 @@ export class User extends BaseEntity {
       this.status = UserStatus.OFFLINE;
     }
 
-    if (this.isOnline === undefined) {
-      this.isOnline = false;
-    }
-
     console.log(`🟢 User creating: ${this.email}`);
   }
 
@@ -362,11 +258,6 @@ export class User extends BaseEntity {
    */
   @BeforeUpdate()
   beforeUpdate() {
-    // 온라인 상태 변경 시 lastSeenAt 업데이트
-    if (!this.isOnline) {
-      this.lastSeenAt = new Date();
-    }
-
     console.log(`🟡 User updating: ${this.email}`);
   }
 }

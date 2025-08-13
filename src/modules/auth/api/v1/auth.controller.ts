@@ -37,16 +37,12 @@ export class AuthController {
           socialId: socialUserInfo.socialId,
           provider: data.provider,
         },
-        select: ['id', 'email', 'name', 'avatar', 'isActive', 'isBanned'],
+        select: ['id', 'email', 'name', 'isBanned'],
       });
 
       // 계정 상태 확인
       if (user && user.isBanned) {
         throw new BadRequestException('정지된 계정입니다.');
-      }
-
-      if (user && !user.isActive) {
-        throw new BadRequestException('비활성화된 계정입니다.');
       }
 
       // 새 사용자인 경우 계정 생성
@@ -56,8 +52,6 @@ export class AuthController {
           provider: data.provider,
           email: socialUserInfo.email,
           name: socialUserInfo.name,
-          avatar: socialUserInfo.avatar,
-          isActive: true,
           notificationsEnabled: true,
         });
 
@@ -65,9 +59,6 @@ export class AuthController {
       } else {
         // 기존 사용자인 경우 프로필 정보 업데이트
         user.name = socialUserInfo.name;
-        user.avatar = socialUserInfo.avatar;
-        user.incrementLoginCount();
-        user.setOnline();
 
         user = await user.save();
       }

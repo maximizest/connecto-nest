@@ -25,7 +25,6 @@ export interface SocialUserInfo {
   socialId: string;
   email: string;
   name: string;
-  avatar?: string;
 }
 
 @Injectable()
@@ -204,7 +203,6 @@ export class AuthService {
         socialId: payload.sub,
         email: payload.email || '',
         name: payload.name || payload.email?.split('@')[0] || 'Google User',
-        avatar: payload.picture,
       };
     } catch (error) {
       this.logger.error('Google 토큰 검증 실패:', error);
@@ -237,7 +235,6 @@ export class AuthService {
         socialId: payload.sub,
         email: payload.email || '',
         name: payload.name || payload.email?.split('@')[0] || 'Apple User',
-        avatar: undefined, // Apple은 프로필 이미지를 제공하지 않음
       };
     } catch (error) {
       this.logger.error('Apple 토큰 검증 실패:', error);
