@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MoreThanOrEqual, Not, Repository } from 'typeorm';
+import { LessThan, MoreThanOrEqual, Repository } from 'typeorm';
 import { RedisService } from '../../cache/redis.service';
 import { Planet, PlanetStatus } from '../../planet/planet.entity';
 import { Travel, TravelStatus } from '../travel.entity';
@@ -227,8 +227,13 @@ export class TravelExpirySchedulerService {
       totalExpiredPlanets,
     ] = await Promise.all([
       this.travelRepository.count(),
-      this.travelRepository.count({ where: { isActive: true } }),
-      this.travelRepository.count({ where: { status: TravelStatus.EXPIRED } }),
+      this.travelRepository.count({ where: { status: TravelStatus.ACTIVE } }),
+      this.travelRepository.count({
+        where: {
+          status: TravelStatus.INACTIVE,
+          endDate: LessThan(new Date()),
+        },
+      }),
       this.getExpiringTravelsCount(7),
       this.getExpiringTravelsCount(30),
       this.planetRepository.count({
@@ -267,7 +272,8 @@ export class TravelExpirySchedulerService {
       await Promise.all([
         this.travelRepository.count({
           where: {
-            status: TravelStatus.EXPIRED,
+            status: TravelStatus.INACTIVE,
+            endDate: LessThan(new Date()),
             updatedAt: MoreThanOrEqual(weekStart),
           },
         }),
@@ -306,8 +312,7 @@ export class TravelExpirySchedulerService {
 
     return this.travelRepository.count({
       where: {
-        isActive: true,
-        status: Not(TravelStatus.EXPIRED),
+        status: TravelStatus.ACTIVE,
         endDate: MoreThanOrEqual(now),
       },
     });

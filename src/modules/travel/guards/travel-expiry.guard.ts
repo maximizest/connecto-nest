@@ -38,7 +38,7 @@ export class TravelExpiryGuard implements CanActivate {
     }
 
     // 만료 상태 체크
-    if (travel.isExpired() || travel.status === TravelStatus.EXPIRED) {
+    if (travel.isExpired()) {
       const expiryStatus = travel.getExpiryStatus();
       throw new ForbiddenException(
         `이 Travel은 만료되었습니다. (만료일: ${expiryStatus.endDate.toLocaleString('ko-KR')})`,
@@ -46,13 +46,8 @@ export class TravelExpiryGuard implements CanActivate {
     }
 
     // 비활성 상태 체크
-    if (!travel.isActive) {
+    if (travel.status !== TravelStatus.ACTIVE) {
       throw new ForbiddenException('이 Travel은 비활성 상태입니다.');
-    }
-
-    // 취소된 상태 체크
-    if (travel.status === TravelStatus.CANCELLED) {
-      throw new ForbiddenException('이 Travel은 취소되었습니다.');
     }
 
     return true;

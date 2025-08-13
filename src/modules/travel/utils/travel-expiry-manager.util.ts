@@ -68,10 +68,7 @@ export class TravelExpiryManager {
 
     return this.travelRepository
       .createQueryBuilder('travel')
-      .where('travel.isActive = :isActive', { isActive: true })
-      .andWhere('travel.status != :expiredStatus', {
-        expiredStatus: TravelStatus.EXPIRED,
-      })
+      .where('travel.status = :status', { status: TravelStatus.ACTIVE })
       .andWhere('travel.endDate > :now', { now: new Date() })
       .andWhere('travel.endDate <= :warningDate', { warningDate })
       .orderBy('travel.endDate', 'ASC')
@@ -86,7 +83,7 @@ export class TravelExpiryManager {
   async processExpiryWarning(travelId: number): Promise<boolean> {
     try {
       const travel = await this.travelRepository.findOne({
-        where: { id: travelId, isActive: true },
+        where: { id: travelId, status: TravelStatus.ACTIVE },
       });
 
       if (!travel || travel.isExpired()) {
@@ -161,11 +158,12 @@ export class TravelExpiryManager {
   ): Promise<boolean> {
     try {
       const travel = await this.travelRepository.findOne({
-        where: { id: travelId, status: TravelStatus.EXPIRED },
+        where: { id: travelId },
       });
 
-      if (!travel) {
-        this.logger.warn(`만료된 Travel not found: ${travelId}`);
+      // Travel 존재 여부와 만료 상태 확인
+      if (!travel || !travel.isExpired()) {
+        this.logger.warn(`만료된 Travel not found or not expired: ${travelId}`);
         return false;
       }
 
@@ -212,7 +210,7 @@ export class TravelExpiryManager {
         id: travel.id,
         name: travel.name,
         status: travel.status,
-        isActive: travel.isActive,
+        isActive: travel.status === TravelStatus.ACTIVE,
       },
       expiry: expiryStatus,
       planets: {
@@ -228,10 +226,7 @@ export class TravelExpiryManager {
   private async findExpiredTravels(): Promise<Travel[]> {
     return this.travelRepository
       .createQueryBuilder('travel')
-      .where('travel.isActive = :isActive', { isActive: true })
-      .andWhere('travel.status != :expiredStatus', {
-        expiredStatus: TravelStatus.EXPIRED,
-      })
+      .where('travel.status = :status', { status: TravelStatus.ACTIVE })
       .andWhere('travel.endDate < :now', { now: new Date() })
       .getMany();
   }

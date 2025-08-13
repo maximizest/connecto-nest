@@ -65,10 +65,6 @@ export class UpdateTravelDto {
   inviteCodeEnabled?: boolean;
 
   @IsOptional()
-  @IsBoolean()
-  isActive?: boolean;
-
-  @IsOptional()
   @IsValidTravelSettings()
   settings?: any;
 }

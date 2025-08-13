@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Planet } from '../../planet/planet.entity';
 import { TravelUser } from '../../travel-user/travel-user.entity';
-import { Travel } from '../../travel/travel.entity';
+import { Travel, TravelStatus } from '../../travel/travel.entity';
 import { RedisService } from '../redis.service';
 
 export interface CachedTravelInfo {
@@ -363,7 +363,7 @@ export class TravelCacheService {
       id: travel.id,
       name: travel.name,
       description: travel.description,
-      isActive: travel.isActive,
+      isActive: travel.status === TravelStatus.ACTIVE,
       status: travel.status,
       visibility: travel.visibility,
       endDate: travel.endDate,

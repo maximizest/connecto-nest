@@ -27,11 +27,9 @@ import { Admin } from '../admin/admin.entity';
  * Travel 상태
  */
 export enum TravelStatus {
-  PLANNING = 'planning', // 계획 중
+  INACTIVE = 'inactive', // 비활성 (계획 중, 취소됨, 완료됨 등)
   ACTIVE = 'active', // 활성 (진행 중)
-  COMPLETED = 'completed', // 완료
-  CANCELLED = 'cancelled', // 취소
-  EXPIRED = 'expired', // 만료
+  // 만료 여부는 endDate와 현재 시간 비교로 판단
 }
 
 /**
@@ -45,12 +43,10 @@ export enum TravelVisibility {
 
 @Entity('travels')
 // 복합 인덱스 - 성능 향상
-@Index(['status', 'isActive']) // 활성 상태 + 상태별 조회
-@Index(['isActive', 'endDate']) // 활성 Travel의 만료일 조회
 @Index(['status', 'endDate']) // 상태별 만료일 조회
-@Index(['visibility', 'isActive']) // 공개 설정별 활성 Travel 조회
+@Index(['visibility', 'status']) // 공개 설정별 상태 조회
 @Index(['createdByAdminId', 'status']) // 관리자별 상태 필터링
-@Index(['createdByAdminId', 'isActive', 'endDate']) // 관리자별 활성 Travel 만료일순
+@Index(['createdByAdminId', 'status', 'endDate']) // 관리자별 상태별 만료일순
 export class Travel extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
@@ -102,21 +98,12 @@ export class Travel extends BaseEntity {
   @Column({
     type: 'enum',
     enum: TravelStatus,
-    default: TravelStatus.PLANNING,
+    default: TravelStatus.INACTIVE,
     comment: '여행 상태',
   })
   @IsEnum(TravelStatus)
   @Index() // 상태별 조회 최적화
   status: TravelStatus;
-
-  @Column({
-    type: 'boolean',
-    default: true,
-    comment: '활성 상태',
-  })
-  @IsBoolean()
-  @Index() // 활성 상태 필터링
-  isActive: boolean;
 
   /**
    * 날짜 관리
@@ -300,22 +287,14 @@ export class Travel extends BaseEntity {
    * 진행 중 상태 확인
    */
   isOngoing(): boolean {
-    const now = new Date();
-    return (
-      this.isActive && this.status === TravelStatus.ACTIVE && !this.isExpired()
-    );
+    return this.status === TravelStatus.ACTIVE && !this.isExpired();
   }
 
   /**
    * 가입 가능 상태 확인
    */
   canJoin(): boolean {
-    return (
-      this.isActive &&
-      !this.isExpired() &&
-      this.status !== TravelStatus.CANCELLED &&
-      this.status !== TravelStatus.EXPIRED
-    );
+    return this.status === TravelStatus.ACTIVE && !this.isExpired();
   }
 
   /**
@@ -349,21 +328,11 @@ export class Travel extends BaseEntity {
   }
 
   /**
-   * Travel 완료
+   * Travel 비활성화 (취소/완료 시 사용)
    */
-  complete(): void {
-    this.status = TravelStatus.COMPLETED;
-    if (!this.endDate) {
-      this.endDate = new Date();
-    }
-  }
-
-  /**
-   * Travel 취소
-   */
-  cancel(): void {
-    this.status = TravelStatus.CANCELLED;
-    this.isActive = false;
+  deactivate(): void {
+    this.status = TravelStatus.INACTIVE;
+    this.lastActivityAt = new Date();
   }
 
   /**
@@ -455,13 +424,12 @@ export class Travel extends BaseEntity {
 
   /**
    * Travel 만료 처리
-   * - 상태를 EXPIRED로 변경
-   * - 활성 상태 비활성화
+   * - 상태를 비활성으로 변경
    * - lastActivityAt 업데이트
+   * - 만료 여부는 endDate로 판단
    */
   expire(): void {
-    this.status = TravelStatus.EXPIRED;
-    this.isActive = false;
+    this.status = TravelStatus.INACTIVE;
     this.lastActivityAt = new Date();
   }
 
@@ -470,9 +438,8 @@ export class Travel extends BaseEntity {
    * - 종료 날짜 연장 후 호출
    */
   reactivateFromExpiry(): void {
-    if (this.status === TravelStatus.EXPIRED && !this.isExpired()) {
+    if (!this.isExpired()) {
       this.status = TravelStatus.ACTIVE;
-      this.isActive = true;
       this.lastActivityAt = new Date();
     }
   }

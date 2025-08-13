@@ -22,8 +22,7 @@ export const TravelFactory = Factory.define<Travel>(({ sequence }) => {
   travel.createdBy = 1; // 기본값, 실제 테스트에서는 실제 사용자 ID로 설정
 
   // 상태 관리
-  travel.status = TravelStatus.PLANNING;
-  travel.isActive = true;
+  travel.status = TravelStatus.INACTIVE;
 
   // 날짜 관리 (기본: 오늘부터 30일)
   travel.startDate = new Date();
