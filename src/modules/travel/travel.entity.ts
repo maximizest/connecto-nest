@@ -14,14 +14,11 @@ import {
   CreateDateColumn,
   Entity,
   Index,
-  JoinColumn,
-  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { TRAVEL_CONSTANTS } from '../../common/constants/app.constants';
-import { Admin } from '../admin/admin.entity';
 
 /**
  * Travel 상태
@@ -44,8 +41,6 @@ export enum TravelVisibility {
 // 복합 인덱스 - 성능 향상
 @Index(['status', 'endDate']) // 상태별 만료일 조회
 @Index(['visibility', 'status']) // 공개 설정별 상태 조회
-@Index(['createdByAdminId', 'status']) // 관리자별 상태 필터링
-@Index(['createdByAdminId', 'status', 'endDate']) // 관리자별 상태별 만료일순
 export class Travel extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
@@ -78,18 +73,6 @@ export class Travel extends BaseEntity {
   @IsOptional()
   @IsString()
   imageUrl?: string;
-
-  /**
-   * 소유자 및 관리 (Admin 전용)
-   */
-  @Column({ comment: '여행 생성 관리자 ID' })
-  @IsNumber()
-  @Index() // 관리자별 조회 최적화
-  createdByAdminId: number;
-
-  @ManyToOne(() => Admin, { eager: false })
-  @JoinColumn({ name: 'createdByAdminId' })
-  admin: Admin;
 
   /**
    * 상태 관리

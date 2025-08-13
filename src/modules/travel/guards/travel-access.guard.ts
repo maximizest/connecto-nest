@@ -132,12 +132,6 @@ export class TravelAccessGuard implements CanActivate {
       return parseInt(request.query['filter[travelId_eq]']);
     }
 
-    if (request.query?.['filter[createdByAdminId_eq]']) {
-      // Admin별 필터링인 경우 해당 Admin ID 반환 (특수 케이스)
-      const adminId = parseInt(request.query['filter[createdByAdminId_eq]']);
-      return adminId;
-    }
-
     return null;
   }
 }

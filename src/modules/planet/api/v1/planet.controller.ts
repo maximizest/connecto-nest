@@ -30,18 +30,10 @@ import { PlanetService } from '../../planet.service';
   only: ['index', 'show'],
 
   // 필터링 허용 필드 (보안)
-  allowedFilters: [
-    'travelId',
-    'type',
-    'createdByAdminId',
-    'isActive',
-    'name',
-    'createdAt',
-  ],
+  allowedFilters: ['travelId', 'type', 'isActive', 'name', 'createdAt'],
 
   // 관계 포함 허용 필드
   allowedIncludes: [
-    'admin',
     'travel',
     'messages',
     'directMembers', // PlanetUser (1:1 Planet용)

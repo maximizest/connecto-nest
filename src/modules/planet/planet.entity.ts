@@ -20,7 +20,6 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { TRAVEL_CONSTANTS } from '../../common/constants/app.constants';
-import { Admin } from '../admin/admin.entity';
 import { Travel } from '../travel/travel.entity';
 import { User } from '../user/user.entity';
 
@@ -75,7 +74,6 @@ interface TimeRestriction {
 @Index(['travelId', 'isActive']) // Travel 내 활성 Planet 조회
 @Index(['travelId', 'status']) // Travel 내 상태별 조회
 @Index(['type', 'isActive']) // 타입별 활성 Planet 조회
-@Index(['createdByAdminId', 'type']) // 관리자별 타입 필터링
 @Index(['isActive', 'lastMessageAt']) // 활성 Planet의 최근 메시지순
 @Index(['travelId', 'isActive', 'lastMessageAt']) // Travel 내 활성 Planet 최근 메시지순
 export class Planet extends BaseEntity {
@@ -131,15 +129,6 @@ export class Planet extends BaseEntity {
   @ManyToOne(() => Travel, { eager: false })
   @JoinColumn({ name: 'travelId' })
   travel: Travel;
-
-  @Column({ comment: 'Planet 생성 관리자 ID' })
-  @IsNumber()
-  @Index() // 관리자별 조회
-  createdByAdminId: number;
-
-  @ManyToOne(() => Admin, { eager: false })
-  @JoinColumn({ name: 'createdByAdminId' })
-  admin: Admin;
 
   /**
    * 상태 관리
