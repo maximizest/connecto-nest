@@ -20,8 +20,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Repository } from 'typeorm';
-import { OnlinePresenceService } from '../cache/services/online-presence.service';
-import { PlanetCacheService } from '../cache/services/planet-cache.service';
+
 import { Message } from '../message/message.entity';
 import { NotificationService } from '../notification/notification.service';
 import { Planet } from '../planet/planet.entity';
@@ -60,11 +59,6 @@ interface JoinRoomDto {
 
 interface LeaveRoomDto {
   roomId: string;
-}
-
-interface TypingDto {
-  planetId: number;
-  isTyping: boolean;
 }
 
 interface ReadMessageDto {
@@ -149,8 +143,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly authGuard: WebSocketAuthGuard,
     private readonly roomService: WebSocketRoomService,
     private readonly broadcastService: WebSocketBroadcastService,
-    private readonly onlinePresenceService: OnlinePresenceService,
-    private readonly planetCacheService: PlanetCacheService,
     private readonly rateLimitService: RateLimitService,
     private readonly typingIndicatorService: TypingIndicatorService,
     private readonly notificationService: NotificationService,
@@ -194,33 +186,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         rooms: this.roomService.getUserRooms(authenticatedClient.userId),
       });
 
-      // 사용자의 온라인 상태 업데이트 (OnlinePresenceService 통합)
-      const deviceType = this.extractDeviceType(
-        client.handshake.headers['user-agent'],
-      );
-      const onlineInfo = this.onlinePresenceService.userEntityToOnlineInfo(
-        authenticatedClient.user,
-        [client.id],
-      );
-      onlineInfo.deviceType = deviceType;
-      onlineInfo.userAgent = client.handshake.headers['user-agent'] as string;
-
-      await this.onlinePresenceService.setUserOnline(
-        authenticatedClient.userId,
-        onlineInfo,
-      );
-      await this.onlinePresenceService.addUserSocket(
-        authenticatedClient.userId,
-        client.id,
-      );
-
       // 사용자 온라인 상태 브로드캐스트
       await this.broadcastService.broadcastOnlineStatus(this.server, {
         userId: authenticatedClient.userId,
         userName: authenticatedClient.user.name,
         isOnline: true,
-        deviceType: onlineInfo.deviceType,
-        connectedAt: onlineInfo.connectedAt,
+        deviceType: this.extractDeviceType(
+          client.handshake.headers['user-agent'],
+        ),
+        connectedAt: new Date(),
       });
 
       this.logger.log(
@@ -256,22 +230,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         await WebSocketAuthGuard.updateUserOfflineStatus(
           authenticatedClient.userId,
           client.id,
-          this.onlinePresenceService,
           this.logger,
         );
 
-        // 사용자 오프라인 상태 브로드캐스트 (다른 소켓이 없는 경우만)
-        const isStillOnline = await this.onlinePresenceService.isUserOnline(
-          authenticatedClient.userId,
-        );
-        if (!isStillOnline) {
-          await this.broadcastService.broadcastOnlineStatus(this.server, {
-            userId: authenticatedClient.userId,
-            userName: authenticatedClient.user.name,
-            isOnline: false,
-            lastSeenAt: new Date(),
-          });
-        }
+        // 사용자 오프라인 상태 브로드캐스트
+        await this.broadcastService.broadcastOnlineStatus(this.server, {
+          userId: authenticatedClient.userId,
+          userName: authenticatedClient.user.name,
+          isOnline: false,
+          lastSeenAt: new Date(),
+        });
 
         this.logger.log(
           `User ${authenticatedClient.userId} disconnected from WebSocket`,
@@ -510,12 +478,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: UpdateLocationDto,
   ) {
     try {
-      await this.onlinePresenceService.updateUserLocation(
-        client.userId,
-        data.travelId,
-        data.planetId,
-      );
-
       client.emit('location:updated', {
         travelId: data.travelId,
         planetId: data.planetId,
@@ -1087,186 +1049,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /**
-   * 온라인 상태 업데이트 이벤트 핸들러
-   */
-  @SubscribeMessage('presence:update')
-  @UseGuards(WebSocketAuthGuard)
-  async handleUpdatePresence(
-    @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody()
-    payload: {
-      currentTravelId?: number;
-      currentPlanetId?: number;
-      status?: string;
-    },
-  ) {
-    try {
-      const { currentTravelId, currentPlanetId, status } = payload;
-
-      // 기존 온라인 정보 조회
-      const currentInfo = await this.onlinePresenceService.getUserOnlineInfo(
-        client.user.id,
-      );
-
-      if (currentInfo) {
-        // 위치 변경 처리
-        if (currentTravelId !== currentInfo.currentTravelId) {
-          if (currentInfo.currentTravelId) {
-            await this.onlinePresenceService.removeUserFromTravel(
-              currentInfo.currentTravelId,
-              client.user.id,
-            );
-          }
-          if (currentTravelId) {
-            await this.onlinePresenceService.addUserToTravel(
-              currentTravelId,
-              client.user.id,
-            );
-          }
-        }
-
-        if (currentPlanetId !== currentInfo.currentPlanetId) {
-          if (currentInfo.currentPlanetId) {
-            await this.onlinePresenceService.removeUserFromPlanet(
-              currentInfo.currentPlanetId,
-              client.user.id,
-            );
-          }
-          if (currentPlanetId) {
-            await this.onlinePresenceService.addUserToPlanet(
-              currentPlanetId,
-              client.user.id,
-            );
-          }
-        }
-
-        // 온라인 상태 업데이트
-        const updates: any = {
-          lastActivity: new Date(),
-        };
-        if (currentTravelId !== undefined)
-          updates.currentTravelId = currentTravelId;
-        if (currentPlanetId !== undefined)
-          updates.currentPlanetId = currentPlanetId;
-        if (status) updates.status = status;
-
-        await this.onlinePresenceService.updateUserOnlineStatus(
-          client.user.id,
-          updates,
-        );
-
-        // 위치 업데이트 기록
-        await this.onlinePresenceService.updateUserLocation(
-          client.user.id,
-          currentTravelId,
-          currentPlanetId,
-        );
-
-        // 성공 응답
-        client.emit('presence:updated', {
-          userId: client.user.id,
-          currentTravelId,
-          currentPlanetId,
-          status,
-          lastActivity: new Date(),
-          timestamp: new Date().toISOString(),
-        });
-
-        this.logger.debug(
-          `Presence updated: userId=${client.user.id}, travel=${currentTravelId}, planet=${currentPlanetId}`,
-        );
-      } else {
-        client.emit('error', {
-          message: '온라인 상태 정보를 찾을 수 없습니다.',
-        });
-      }
-    } catch (error) {
-      this.logger.error('Presence update failed:', error);
-      client.emit('error', { message: '온라인 상태 업데이트에 실패했습니다.' });
-    }
-  }
-
-  /**
-   * Travel 온라인 사용자 조회 이벤트 핸들러
-   */
-  @SubscribeMessage('presence:get_travel_users')
-  @UseGuards(WebSocketAuthGuard)
-  async handleGetTravelOnlineUsers(
-    @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() payload: { travelId: number },
-  ) {
-    try {
-      const { travelId } = payload;
-
-      const onlineUsers =
-        await this.onlinePresenceService.getTravelOnlineUsers(travelId);
-      const onlineUserInfos = await Promise.all(
-        onlineUsers.map(async (userId) => {
-          const info =
-            await this.onlinePresenceService.getUserOnlineInfo(userId);
-          return info;
-        }),
-      );
-
-      client.emit('presence:travel_users', {
-        travelId,
-        onlineCount: onlineUserInfos.filter(Boolean).length,
-        onlineUsers: onlineUserInfos.filter(Boolean),
-        timestamp: new Date().toISOString(),
-      });
-
-      this.logger.debug(
-        `Travel online users retrieved: travelId=${travelId}, count=${onlineUserInfos.length}`,
-      );
-    } catch (error) {
-      this.logger.error('Get travel online users failed:', error);
-      client.emit('error', {
-        message: 'Travel 온라인 사용자 조회에 실패했습니다.',
-      });
-    }
-  }
-
-  /**
-   * Planet 온라인 사용자 조회 이벤트 핸들러
-   */
-  @SubscribeMessage('presence:get_planet_users')
-  @UseGuards(WebSocketAuthGuard)
-  async handleGetPlanetOnlineUsers(
-    @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() payload: { planetId: number },
-  ) {
-    try {
-      const { planetId } = payload;
-
-      const onlineUsers =
-        await this.onlinePresenceService.getPlanetOnlineUsers(planetId);
-      const onlineUserInfos = await Promise.all(
-        onlineUsers.map(async (userId) => {
-          const info =
-            await this.onlinePresenceService.getUserOnlineInfo(userId);
-          return info;
-        }),
-      );
-
-      client.emit('presence:planet_users', {
-        planetId,
-        onlineCount: onlineUserInfos.filter(Boolean).length,
-        onlineUsers: onlineUserInfos.filter(Boolean),
-        timestamp: new Date().toISOString(),
-      });
-
-      this.logger.debug(
-        `Planet online users retrieved: planetId=${planetId}, count=${onlineUserInfos.length}`,
-      );
-    } catch (error) {
-      this.logger.error('Get planet online users failed:', error);
-      client.emit('error', {
-        message: 'Planet 온라인 사용자 조회에 실패했습니다.',
-      });
-    }
-  }
-
-  /**
    * 고급 타이핑 상태 시작 이벤트 핸들러
    */
   @SubscribeMessage('typing:advanced_start')
@@ -1491,29 +1273,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     await this.handleAdvancedTypingStop(client, payload);
   }
 
-  /**
-   * 전역 온라인 통계 조회 이벤트 핸들러
-   */
-  @SubscribeMessage('presence:get_global_stats')
-  @UseGuards(WebSocketAuthGuard)
-  async handleGetGlobalStats(@ConnectedSocket() client: AuthenticatedSocket) {
-    try {
-      const stats = await this.onlinePresenceService.collectOnlineStatistics();
-
-      client.emit('presence:global_stats', {
-        ...stats,
-        timestamp: new Date().toISOString(),
-      });
-
-      this.logger.debug(`Global stats retrieved for user ${client.user.id}`);
-    } catch (error) {
-      this.logger.error('Get global stats failed:', error);
-      client.emit('error', {
-        message: '전역 온라인 통계 조회에 실패했습니다.',
-      });
-    }
-  }
-
   // ==============================
   // 알림 관련 WebSocket 이벤트
   // ==============================
@@ -1531,25 +1290,30 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const { userId, event, data: notificationData } = data;
 
-      // 사용자의 활성 소켓 조회
-      const userSockets =
-        await this.onlinePresenceService.getUserSockets(userId);
+      // 사용자에게 알림 전송 시도
+      const socketRooms = this.roomService.getUserRooms(userId);
+      let notificationSent = false;
 
-      if (userSockets.length > 0) {
-        // 모든 사용자 소켓에 알림 전송
-        userSockets.forEach((socketId) => {
-          const socket = this.server.sockets.sockets.get(socketId);
-          if (socket) {
-            socket.emit(event, {
-              ...notificationData,
-              receivedAt: new Date().toISOString(),
-            });
-          }
-        });
+      // 사용자가 참여한 룸에서 활성 소켓을 찾아 알림 전송
+      for (const roomId of socketRooms) {
+        const roomSockets = this.server.sockets.adapter.rooms.get(roomId);
+        if (roomSockets) {
+          roomSockets.forEach((socketId) => {
+            const socket = this.server.sockets.sockets.get(socketId);
+            const authenticatedSocket = socket as any;
+            if (socket && authenticatedSocket.userId === userId) {
+              socket.emit(event, {
+                ...notificationData,
+                receivedAt: new Date().toISOString(),
+              });
+              notificationSent = true;
+            }
+          });
+        }
+      }
 
-        this.logger.debug(
-          `WebSocket notification sent to ${userSockets.length} sockets for user ${userId}`,
-        );
+      if (notificationSent) {
+        this.logger.debug(`WebSocket notification sent to user ${userId}`);
       }
     } catch (error) {
       this.logger.error('Failed to handle WebSocket notification:', error);

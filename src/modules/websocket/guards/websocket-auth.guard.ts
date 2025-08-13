@@ -9,7 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { WsException } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 import { Repository } from 'typeorm';
-import { OnlinePresenceService } from '../../cache/services/online-presence.service';
+
 import { User } from '../../user/user.entity';
 
 export interface AuthenticatedSocket extends Socket {
@@ -26,7 +26,6 @@ export class WebSocketAuthGuard implements CanActivate {
     private readonly jwtService: JwtService,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    private readonly onlinePresenceService: OnlinePresenceService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -126,13 +125,9 @@ export class WebSocketAuthGuard implements CanActivate {
   static async updateUserOfflineStatus(
     userId: number,
     socketId: string,
-    onlinePresenceService: OnlinePresenceService,
     logger: Logger,
   ): Promise<void> {
     try {
-      // 소켓 연결 제거 (다른 소켓이 있으면 온라인 상태 유지)
-      await onlinePresenceService.removeUserSocket(userId, socketId);
-
       logger.debug(`User ${userId} socket ${socketId} disconnected`);
     } catch (error) {
       logger.warn(

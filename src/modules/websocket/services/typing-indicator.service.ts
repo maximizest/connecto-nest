@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RedisService } from '../../cache/redis.service';
-import { OnlinePresenceService } from '../../cache/services/online-presence.service';
+
 import { Planet } from '../../planet/planet.entity';
 import { User } from '../../user/user.entity';
 import {
@@ -53,7 +53,6 @@ export class TypingIndicatorService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly redisService: RedisService,
-    private readonly onlinePresenceService: OnlinePresenceService,
   ) {
     // 주기적으로 만료된 타이핑 상태 정리
     this.startCleanupTimer();
@@ -118,8 +117,8 @@ export class TypingIndicatorService {
       // 타이핑 분석 데이터 업데이트
       await this.updateTypingAnalytics(planetId, typingState);
 
-      // 온라인 상태 서비스와 연동
-      await this.onlinePresenceService.setUserTyping(userId, planetId, true);
+      // 타이핑 상태 로깅
+      this.logger.debug(`User ${userId} started typing in Planet ${planetId}`);
 
       this.logger.debug(
         `Typing started: userId=${userId}, planetId=${planetId}, type=${options.typingType}`,
@@ -161,8 +160,10 @@ export class TypingIndicatorService {
         // Planet의 타이핑 사용자 목록에서 제거
         await this.removeFromPlanetTypingUsers(planetId, userId);
 
-        // 온라인 상태 서비스와 연동
-        await this.onlinePresenceService.setUserTyping(userId, planetId, false);
+        // 타이핑 중지 로깅
+        this.logger.debug(
+          `User ${userId} stopped typing in Planet ${planetId}`,
+        );
 
         this.logger.debug(
           `Typing stopped: userId=${userId}, planetId=${planetId}, duration=${duration}ms`,

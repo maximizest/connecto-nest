@@ -2,9 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Server } from 'socket.io';
 import { Repository } from 'typeorm';
-import { OnlinePresenceService } from '../../cache/services/online-presence.service';
-import { PlanetCacheService } from '../../cache/services/planet-cache.service';
-import { TravelCacheService } from '../../cache/services/travel-cache.service';
+
 import {
   PlanetUser,
   PlanetUserStatus,
@@ -51,9 +49,6 @@ export class WebSocketRoomService {
     private readonly travelUserRepository: Repository<TravelUser>,
     @InjectRepository(PlanetUser)
     private readonly planetUserRepository: Repository<PlanetUser>,
-    private readonly travelCacheService: TravelCacheService,
-    private readonly planetCacheService: PlanetCacheService,
-    private readonly onlinePresenceService: OnlinePresenceService,
   ) {}
 
   /**
@@ -217,22 +212,7 @@ export class WebSocketRoomService {
 
       // 사용자 위치 업데이트
       const { type, entityId } = this.parseRoomId(roomId);
-      if (type === 'travel') {
-        await this.onlinePresenceService.updateUserLocation(
-          userId,
-          entityId,
-          undefined,
-        );
-      } else if (type === 'planet') {
-        const planet = await this.planetRepository.findOne({
-          where: { id: entityId },
-        });
-        await this.onlinePresenceService.updateUserLocation(
-          userId,
-          planet?.travelId,
-          entityId,
-        );
-      }
+      this.logger.debug(`User ${userId} joined ${type} room ${entityId}`);
 
       this.logger.debug(`User ${userId} joined room ${roomId}`);
       return true;
@@ -370,25 +350,9 @@ export class WebSocketRoomService {
       const { type, entityId } = this.parseRoomId(roomId);
       const onlineCount = this.roomMembers.get(roomId)?.size || 0;
 
-      if (type === 'travel') {
-        await this.onlinePresenceService.updateTravelOnlineCount(
-          entityId,
-          onlineCount,
-        );
-        await this.travelCacheService.setTravelOnlineMembers(
-          entityId,
-          Array.from(this.roomMembers.get(roomId) || []),
-        );
-      } else if (type === 'planet') {
-        await this.onlinePresenceService.updatePlanetOnlineCount(
-          entityId,
-          onlineCount,
-        );
-        await this.planetCacheService.setPlanetOnlineMembers(
-          entityId,
-          Array.from(this.roomMembers.get(roomId) || []),
-        );
-      }
+      this.logger.debug(
+        `Updated ${type} ${entityId} online count: ${onlineCount}`,
+      );
     } catch (error) {
       this.logger.warn(
         `Failed to update room online count for ${roomId}: ${error.message}`,

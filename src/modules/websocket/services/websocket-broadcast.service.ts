@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Server } from 'socket.io';
-import { OnlinePresenceService } from '../../cache/services/online-presence.service';
-import { PlanetCacheService } from '../../cache/services/planet-cache.service';
+
 import { WebSocketRoomService } from './websocket-room.service';
 
 export interface BroadcastMessageData {
@@ -49,11 +48,7 @@ export interface NotificationData {
 export class WebSocketBroadcastService {
   private readonly logger = new Logger(WebSocketBroadcastService.name);
 
-  constructor(
-    private readonly roomService: WebSocketRoomService,
-    private readonly planetCacheService: PlanetCacheService,
-    private readonly onlinePresenceService: OnlinePresenceService,
-  ) {}
+  constructor(private readonly roomService: WebSocketRoomService) {}
 
   /**
    * Planet 내 새 메시지 브로드캐스트
