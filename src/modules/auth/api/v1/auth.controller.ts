@@ -22,8 +22,8 @@ import { SocialSigninDto } from '../../dto/social-signin.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('sign/in')
-  async socialSignIn(@Body() data: SocialSigninDto) {
+  @Post('sign/social')
+  async signSocial(@Body() data: SocialSigninDto) {
     try {
       // 소셜 로그인 토큰 검증
       const socialUserInfo = await this.authService.verifySocialToken(
