@@ -361,7 +361,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         planetId,
         senderId: userId,
         senderName: client.user.name,
-        senderAvatar: client.user.avatar,
         type: type.toUpperCase(),
         content: savedMessage.content,
         fileUrl: savedMessage.fileMetadata?.url,

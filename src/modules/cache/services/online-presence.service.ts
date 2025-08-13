@@ -7,7 +7,6 @@ export interface OnlineUserInfo {
   name: string;
   avatarUrl?: string;
   status: string;
-  lastSeenAt: Date;
   connectedAt: Date;
   socketIds: string[];
   currentTravelId?: number;
@@ -514,9 +513,7 @@ export class OnlinePresenceService {
     return {
       userId: user.id,
       name: user.name,
-      avatarUrl: user.avatar,
       status: user.status,
-      lastSeenAt: user.lastSeenAt || new Date(),
       connectedAt: new Date(),
       socketIds,
       lastActivity: new Date(),

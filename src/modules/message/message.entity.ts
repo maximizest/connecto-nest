@@ -606,17 +606,6 @@ export class Message extends BaseEntity {
   }
 
   /**
-   * 발신자 아바터 URL 반환 (탈퇴한 사용자 처리)
-   */
-  getSenderAvatarUrl(): string | null {
-    if (this.isFromDeletedUser) {
-      return null; // 기본 아바터 사용
-    }
-
-    return this.sender?.avatar || null;
-  }
-
-  /**
    * 메시지가 탈퇴한 사용자의 것인지 확인
    */
   isFromDeletedUserAccount(): boolean {

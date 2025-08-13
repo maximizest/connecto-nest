@@ -393,7 +393,6 @@ export class OnlinePresenceController {
       const targetUserWithStatus = Object.assign(new User(), {
         ...targetUser,
         isOnline,
-        lastSeenAt: onlineInfo?.lastSeenAt || new Date(),
         metadata: {
           onlineInfo: onlineInfo
             ? {
