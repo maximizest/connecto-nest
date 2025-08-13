@@ -357,6 +357,43 @@ export class SchedulerController {
   }
 
   /**
+   * 활성 락 상태 조회 API
+   * GET /api/v1/scheduler/locks
+   */
+  @Get('locks')
+  async getActiveLocks(@Request() req: any) {
+    const user: User = req.user;
+
+    try {
+      const activeLocks = await this.schedulerService.getActiveLocks();
+
+      // Return User entity with active locks data
+      const userWithLocks = Object.assign(new User(), {
+        ...user,
+        metadata: {
+          activeLocks: {
+            count: Object.keys(activeLocks).length,
+            locks: Object.entries(activeLocks).map(([taskName, lockValue]) => ({
+              taskName,
+              lockValue,
+              description: this.getTaskDescription(taskName),
+              lockedSince: this.extractTimestampFromLock(lockValue),
+            })),
+            checkedAt: new Date(),
+          },
+        },
+      });
+
+      return crudResponse(userWithLocks);
+    } catch (error) {
+      this.logger.error(
+        `Get active locks failed: userId=${user.id}, error=${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  /**
    * 캐시 최적화 수동 실행 API (테스트/관리 목적)
    * POST /api/v1/scheduler/optimize-cache
    */
@@ -459,5 +496,24 @@ export class SchedulerController {
     };
 
     return descriptions[taskName] || '스케줄링 작업';
+  }
+
+  /**
+   * 락 값에서 타임스탬프 추출
+   */
+  private extractTimestampFromLock(lockValue: string): Date | null {
+    try {
+      // 락 값 형식: ${process.pid}_${Date.now()}_${Math.random()}
+      const parts = lockValue.split('_');
+      if (parts.length >= 3) {
+        const timestamp = parseInt(parts[1], 10);
+        if (!isNaN(timestamp)) {
+          return new Date(timestamp);
+        }
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
   }
 }

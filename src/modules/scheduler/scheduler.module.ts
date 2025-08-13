@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '../cache/cache.module';
 import { FileUpload } from '../file-upload/file-upload.entity';
 import { Message } from '../message/message.entity';
+import { Notification } from '../notification/notification.entity';
 import { NotificationModule } from '../notification/notification.module';
 import { Planet } from '../planet/planet.entity';
 import { MessageReadReceipt } from '../read-receipt/read-receipt.entity';
@@ -27,6 +28,7 @@ import { SchedulerService } from './scheduler.service';
       User,
       FileUpload,
       VideoProcessing,
+      Notification,
     ]),
     CacheModule,
     NotificationModule,

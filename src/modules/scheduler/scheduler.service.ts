@@ -226,78 +226,91 @@ export class SchedulerService {
     try {
       this.logger.log('Starting expiry warnings...');
 
-      const sevenDaysFromNow = new Date();
-      sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+      // 락을 사용하여 중복 실행 방지
+      const lockKey = `${this.SCHEDULER_LOCK_KEY}:${taskName}`;
+      const acquired = await this.acquireLock(lockKey, 1800); // 30분 락
 
-      const threeDaysFromNow = new Date();
-      threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
-
-      const oneDayFromNow = new Date();
-      oneDayFromNow.setDate(oneDayFromNow.getDate() + 1);
-
-      // 7일 후 만료 경고
-      const sevenDayWarnings = await this.travelRepository.find({
-        where: {
-          expiryDate: Between(sevenDaysFromNow, addDays(sevenDaysFromNow, 1)),
-          status: TravelStatus.ACTIVE,
-        },
-        relations: ['travelUsers'],
-      });
-
-      // 3일 후 만료 경고
-      const threeDayWarnings = await this.travelRepository.find({
-        where: {
-          expiryDate: Between(threeDaysFromNow, addDays(threeDaysFromNow, 1)),
-          status: TravelStatus.ACTIVE,
-        },
-        relations: ['travelUsers'],
-      });
-
-      // 1일 후 만료 경고
-      const oneDayWarnings = await this.travelRepository.find({
-        where: {
-          expiryDate: Between(oneDayFromNow, addDays(oneDayFromNow, 1)),
-          status: TravelStatus.ACTIVE,
-        },
-        relations: ['travelUsers'],
-      });
-
-      // 7일 전 경고 발송
-      for (const travel of sevenDayWarnings) {
-        await this.sendExpiryWarning(travel, 7);
-        processedItems++;
+      if (!acquired) {
+        this.logger.warn(`Task ${taskName} is already running, skipping...`);
+        return;
       }
 
-      // 3일 전 경고 발송
-      for (const travel of threeDayWarnings) {
-        await this.sendExpiryWarning(travel, 3);
-        processedItems++;
+      try {
+        const sevenDaysFromNow = new Date();
+        sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+        const threeDaysFromNow = new Date();
+        threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+
+        const oneDayFromNow = new Date();
+        oneDayFromNow.setDate(oneDayFromNow.getDate() + 1);
+
+        // 7일 후 만료 경고
+        const sevenDayWarnings = await this.travelRepository.find({
+          where: {
+            expiryDate: Between(sevenDaysFromNow, addDays(sevenDaysFromNow, 1)),
+            status: TravelStatus.ACTIVE,
+          },
+          relations: ['travelUsers'],
+        });
+
+        // 3일 후 만료 경고
+        const threeDayWarnings = await this.travelRepository.find({
+          where: {
+            expiryDate: Between(threeDaysFromNow, addDays(threeDaysFromNow, 1)),
+            status: TravelStatus.ACTIVE,
+          },
+          relations: ['travelUsers'],
+        });
+
+        // 1일 후 만료 경고
+        const oneDayWarnings = await this.travelRepository.find({
+          where: {
+            expiryDate: Between(oneDayFromNow, addDays(oneDayFromNow, 1)),
+            status: TravelStatus.ACTIVE,
+          },
+          relations: ['travelUsers'],
+        });
+
+        // 7일 전 경고 발송
+        for (const travel of sevenDayWarnings) {
+          await this.sendExpiryWarning(travel, 7);
+          processedItems++;
+        }
+
+        // 3일 전 경고 발송
+        for (const travel of threeDayWarnings) {
+          await this.sendExpiryWarning(travel, 3);
+          processedItems++;
+        }
+
+        // 1일 전 경고 발송
+        for (const travel of oneDayWarnings) {
+          await this.sendExpiryWarning(travel, 1);
+          processedItems++;
+        }
+
+        const stats: SchedulerStats = {
+          taskName,
+          lastRunAt: new Date(),
+          status: 'success',
+          processedItems,
+          duration: Date.now() - startTime,
+          metrics: {
+            sevenDayWarnings: sevenDayWarnings.length,
+            threeDayWarnings: threeDayWarnings.length,
+            oneDayWarnings: oneDayWarnings.length,
+          },
+        };
+
+        await this.saveTaskStats(stats);
+
+        this.logger.log(
+          `Expiry warnings completed: ${processedItems} warnings sent`,
+        );
+      } finally {
+        await this.releaseLock(lockKey);
       }
-
-      // 1일 전 경고 발송
-      for (const travel of oneDayWarnings) {
-        await this.sendExpiryWarning(travel, 1);
-        processedItems++;
-      }
-
-      const stats: SchedulerStats = {
-        taskName,
-        lastRunAt: new Date(),
-        status: 'success',
-        processedItems,
-        duration: Date.now() - startTime,
-        metrics: {
-          sevenDayWarnings: sevenDayWarnings.length,
-          threeDayWarnings: threeDayWarnings.length,
-          oneDayWarnings: oneDayWarnings.length,
-        },
-      };
-
-      await this.saveTaskStats(stats);
-
-      this.logger.log(
-        `Expiry warnings completed: ${processedItems} warnings sent`,
-      );
     } catch (error) {
       this.logger.error(
         `Expiry warnings failed: ${error.message}`,
@@ -515,69 +528,84 @@ export class SchedulerService {
     try {
       this.logger.log('Starting old data cleanup...');
 
-      // 1. 오래된 읽음 영수증 정리 (90일 이상)
-      const threeMonthsAgo = new Date();
-      threeMonthsAgo.setDate(threeMonthsAgo.getDate() - 90);
+      // 락을 사용하여 중복 실행 방지
+      const lockKey = `${this.SCHEDULER_LOCK_KEY}:${taskName}`;
+      const acquired = await this.acquireLock(lockKey, 7200); // 2시간 락
 
-      const oldReadReceipts = await this.messageReadReceiptRepository.delete({
-        createdAt: LessThan(threeMonthsAgo),
-      });
-
-      processedItems += oldReadReceipts.affected || 0;
-
-      // 2. 오래된 알림 정리 (30일 이상, 읽음 처리된 것)
-      const oneMonthAgo = new Date();
-      oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
-
-      const oldNotifications = await this.notificationRepository.delete({
-        createdAt: LessThan(oneMonthAgo),
-        isRead: true,
-      });
-
-      processedItems += oldNotifications.affected || 0;
-
-      // 3. 오래된 분석 데이터 정리 (1년 이상, 일일 데이터만)
-      const oneYearAgo = new Date();
-      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-
-      // 4. 비활성 사용자 정리 (6개월 이상 로그인하지 않은 사용자의 임시 데이터)
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-
-      const inactiveUsers = await this.userRepository.find({
-        where: {
-          lastSeenAt: LessThan(sixMonthsAgo),
-        },
-        select: ['id'],
-      });
-
-      // 비활성 사용자의 알림 정리
-      for (const user of inactiveUsers) {
-        const deletedNotifications = await this.notificationRepository.delete({
-          userId: user.id,
-          isRead: true,
-        });
-        processedItems += deletedNotifications.affected || 0;
+      if (!acquired) {
+        this.logger.warn(`Task ${taskName} is already running, skipping...`);
+        return;
       }
 
-      const stats: SchedulerStats = {
-        taskName,
-        lastRunAt: new Date(),
-        status: 'success',
-        processedItems,
-        duration: Date.now() - startTime,
-        metrics: {
-          oldReadReceipts: oldReadReceipts.affected || 0,
-          oldNotifications: oldNotifications.affected || 0,
-          inactiveUsers: inactiveUsers.length,
-        },
-      };
+      try {
+        // 1. 오래된 읽음 영수증 정리 (90일 이상)
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setDate(threeMonthsAgo.getDate() - 90);
 
-      await this.saveTaskStats(stats);
+        const oldReadReceipts = await this.messageReadReceiptRepository.delete({
+          createdAt: LessThan(threeMonthsAgo),
+        });
 
-      this.logger.log(
-        `Old data cleanup completed: ${processedItems} records cleaned`,
-      );
+        processedItems += oldReadReceipts.affected || 0;
+
+        // 2. 오래된 알림 정리 (30일 이상, 읽음 처리된 것)
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+
+        const oldNotifications = await this.notificationRepository.delete({
+          createdAt: LessThan(oneMonthAgo),
+          isRead: true,
+        });
+
+        processedItems += oldNotifications.affected || 0;
+
+        // 3. 오래된 분석 데이터 정리 (1년 이상, 일일 데이터만)
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+        // 4. 비활성 사용자 정리 (6개월 이상 로그인하지 않은 사용자의 임시 데이터)
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+        const inactiveUsers = await this.userRepository.find({
+          where: {
+            lastSeenAt: LessThan(sixMonthsAgo),
+          },
+          select: ['id'],
+        });
+
+        // 비활성 사용자의 알림 정리
+        for (const user of inactiveUsers) {
+          const deletedNotifications = await this.notificationRepository.delete(
+            {
+              userId: user.id,
+              isRead: true,
+            },
+          );
+          processedItems += deletedNotifications.affected || 0;
+        }
+
+        const stats: SchedulerStats = {
+          taskName,
+          lastRunAt: new Date(),
+          status: 'success',
+          processedItems,
+          duration: Date.now() - startTime,
+          metrics: {
+            oldReadReceipts: oldReadReceipts.affected || 0,
+            oldNotifications: oldNotifications.affected || 0,
+            inactiveUsers: inactiveUsers.length,
+          },
+        };
+
+        await this.saveTaskStats(stats);
+
+        this.logger.log(
+          `Old data cleanup completed: ${processedItems} records cleaned`,
+        );
+      } finally {
+        await this.releaseLock(lockKey);
+      }
     } catch (error) {
       this.logger.error(
         `Old data cleanup failed: ${error.message}`,
@@ -614,34 +642,47 @@ export class SchedulerService {
     try {
       this.logger.debug('Starting cache optimization...');
 
-      // 만료된 키 정리
-      const expiredKeys = await this.redisService.getKeys('*:expired');
-      for (const key of expiredKeys.slice(0, 100)) {
-        // 한번에 최대 100개
-        await this.redisService.del(key);
-        processedItems++;
+      // 락을 사용하여 중복 실행 방지
+      const lockKey = `${this.SCHEDULER_LOCK_KEY}:${taskName}`;
+      const acquired = await this.acquireLock(lockKey, 900); // 15분 락
+
+      if (!acquired) {
+        this.logger.debug(`Task ${taskName} is already running, skipping...`);
+        return;
       }
 
-      // 메모리 사용량 체크
-      const memoryUsage = await this.redisService.getMemoryUsage();
+      try {
+        // 만료된 키 정리
+        const expiredKeys = await this.redisService.getKeys('*:expired');
+        for (const key of expiredKeys.slice(0, 100)) {
+          // 한번에 최대 100개
+          await this.redisService.del(key);
+          processedItems++;
+        }
 
-      const stats: SchedulerStats = {
-        taskName,
-        lastRunAt: new Date(),
-        status: 'success',
-        processedItems,
-        duration: Date.now() - startTime,
-        metrics: {
-          expiredKeysRemoved: processedItems,
-          memoryUsage,
-        },
-      };
+        // 메모리 사용량 체크
+        const memoryUsage = await this.redisService.getMemoryUsage();
 
-      await this.saveTaskStats(stats);
+        const stats: SchedulerStats = {
+          taskName,
+          lastRunAt: new Date(),
+          status: 'success',
+          processedItems,
+          duration: Date.now() - startTime,
+          metrics: {
+            expiredKeysRemoved: processedItems,
+            memoryUsage,
+          },
+        };
 
-      this.logger.debug(
-        `Cache optimization completed: ${processedItems} expired keys removed`,
-      );
+        await this.saveTaskStats(stats);
+
+        this.logger.debug(
+          `Cache optimization completed: ${processedItems} expired keys removed`,
+        );
+      } finally {
+        await this.releaseLock(lockKey);
+      }
     } catch (error) {
       this.logger.error(`Cache optimization failed: ${error.message}`);
 
@@ -731,15 +772,29 @@ export class SchedulerService {
   }
 
   /**
-   * 분산 락 획득
+   * 분산 락 획득 (개선된 버전)
    */
   private async acquireLock(lockKey: string, ttl: number): Promise<boolean> {
     try {
+      const lockValue = `${process.pid}_${Date.now()}_${Math.random()}`; // 고유한 락 값
+
       // Redis lock 설정 (NX 옵션은 ioredis의 set 명령어로 구현)
       const result = await this.redisService
         .getClient()
-        .set(lockKey, 'locked', 'EX', ttl, 'NX');
-      return result === 'OK';
+        .set(lockKey, lockValue, 'EX', ttl, 'NX');
+
+      if (result === 'OK') {
+        this.logger.debug(`Lock acquired: ${lockKey} with value: ${lockValue}`);
+        return true;
+      }
+
+      // 기존 락 정보 확인
+      const existingValue = await this.redisService.get(lockKey);
+      this.logger.warn(
+        `Failed to acquire lock ${lockKey}, existing value: ${existingValue}`,
+      );
+
+      return false;
     } catch (error) {
       this.logger.error(`Failed to acquire lock ${lockKey}: ${error.message}`);
       return false;
@@ -747,13 +802,57 @@ export class SchedulerService {
   }
 
   /**
-   * 분산 락 해제
+   * 분산 락 해제 (안전한 해제)
    */
   private async releaseLock(lockKey: string): Promise<void> {
     try {
-      await this.redisService.del(lockKey);
+      const result = await this.redisService.del(lockKey);
+      if (result > 0) {
+        this.logger.debug(`Lock released: ${lockKey}`);
+      } else {
+        this.logger.warn(`Lock was already released or expired: ${lockKey}`);
+      }
     } catch (error) {
       this.logger.error(`Failed to release lock ${lockKey}: ${error.message}`);
+    }
+  }
+
+  /**
+   * 락 상태 확인
+   */
+  private async isLockActive(lockKey: string): Promise<boolean> {
+    try {
+      const value = await this.redisService.get(lockKey);
+      return value !== null;
+    } catch (error) {
+      this.logger.error(
+        `Failed to check lock status ${lockKey}: ${error.message}`,
+      );
+      return false;
+    }
+  }
+
+  /**
+   * 모든 활성 락 조회 (모니터링용)
+   */
+  async getActiveLocks(): Promise<Record<string, string>> {
+    try {
+      const lockPattern = `${this.SCHEDULER_LOCK_KEY}:*`;
+      const keys = await this.redisService.getKeys(lockPattern);
+      const locks: Record<string, string> = {};
+
+      for (const key of keys) {
+        const value = await this.redisService.get(key);
+        if (value) {
+          const taskName = key.replace(`${this.SCHEDULER_LOCK_KEY}:`, '');
+          locks[taskName] = value;
+        }
+      }
+
+      return locks;
+    } catch (error) {
+      this.logger.error(`Failed to get active locks: ${error.message}`);
+      return {};
     }
   }
 
