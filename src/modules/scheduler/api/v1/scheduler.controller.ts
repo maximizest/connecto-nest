@@ -317,24 +317,9 @@ export class SchedulerController {
             },
             scheduledTasks: [
               {
-                name: 'processExpiredTravels',
-                schedule: 'Daily at midnight',
-                description: 'Travel 만료 처리 및 Planet 비활성화',
-              },
-              {
-                name: 'sendExpiryWarnings',
-                schedule: 'Daily at 9 AM',
-                description: 'Travel 만료 경고 알림 전송',
-              },
-              {
                 name: 'cleanupLargeFiles',
                 schedule: 'Daily at 2 AM',
                 description: '대용량 파일 및 임시 파일 정리',
-              },
-              {
-                name: 'cleanupOldData',
-                schedule: 'Weekly on Sunday at 3 AM',
-                description: '오래된 데이터 정리 (읽음 영수증, 알림 등)',
               },
               {
                 name: 'optimizeCache',
@@ -487,12 +472,8 @@ export class SchedulerController {
    */
   private getTaskDescription(taskName: string): string {
     const descriptions: Record<string, string> = {
-      processExpiredTravels: 'Travel 만료 처리 및 Planet 비활성화',
-      sendExpiryWarnings: 'Travel 만료 경고 알림 전송',
       cleanupLargeFiles: '대용량 파일 및 임시 파일 정리',
-      cleanupOldData: '오래된 데이터 정리 (읽음 영수증, 알림 등)',
       optimizeCache: 'Redis 캐시 최적화 및 만료된 키 정리',
-      collectDailyAnalytics: '일일 분석 데이터 수집',
     };
 
     return descriptions[taskName] || '스케줄링 작업';
