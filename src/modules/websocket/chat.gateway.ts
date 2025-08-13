@@ -1571,14 +1571,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await client.join(notificationRoom);
 
       // 읽지 않은 알림 개수 전송
-      const stats = await this.notificationService.getUserNotificationStats(
-        client.user.id,
-      );
+      const unreadCount =
+        await this.notificationService.getUnreadNotificationCount(
+          client.user.id,
+        );
 
       client.emit('notifications:subscribed', {
         userId: client.user.id,
-        unreadCount: stats.unreadNotifications,
-        totalCount: stats.totalNotifications,
+        unreadCount: unreadCount,
         subscribedAt: new Date().toISOString(),
       });
 
@@ -1668,19 +1668,19 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: AuthenticatedSocket,
   ) {
     try {
-      const stats = await this.notificationService.getUserNotificationStats(
-        client.user.id,
-      );
+      const unreadCount =
+        await this.notificationService.getUnreadNotificationCount(
+          client.user.id,
+        );
 
       client.emit('notifications:unread_count', {
         userId: client.user.id,
-        unreadCount: stats.unreadNotifications,
-        totalCount: stats.totalNotifications,
+        unreadCount: unreadCount,
         checkedAt: new Date().toISOString(),
       });
 
       this.logger.debug(
-        `Unread count retrieved for user ${client.user.id}: ${stats.unreadNotifications}`,
+        `Unread count retrieved for user ${client.user.id}: ${unreadCount}`,
       );
     } catch (error) {
       this.logger.error('Get unread count failed:', error);

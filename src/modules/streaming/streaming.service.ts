@@ -433,78 +433,16 @@ export class StreamingService {
   }
 
   /**
-   * 스트리밍 통계 조회
+   * 활성 세션 수 조회
    */
-  async getStreamingStats(userId?: number): Promise<{
-    activeSessions: number;
-    totalBytesTransferred: number;
-    averageQualityChanges: number;
-    averageBufferingEvents: number;
-    popularQualities: { quality: string; count: number }[];
-    deviceDistribution: { device: string; count: number }[];
-  }> {
-    const queryBuilder = this.streamingSessionRepository
-      .createQueryBuilder('session')
-      .where('session.status = :status', {
+  async getActiveSessionCount(): Promise<number> {
+    const activeSessions = await this.streamingSessionRepository.count({
+      where: {
         status: StreamingSessionStatus.ACTIVE,
-      });
-
-    if (userId) {
-      queryBuilder.andWhere('session.userId = :userId', { userId });
-    }
-
-    const activeSessions = await queryBuilder.getMany();
-
-    const totalBytes = activeSessions.reduce(
-      (sum, s) => sum + s.bytesTransferred,
-      0,
-    );
-    const avgQualityChanges =
-      activeSessions.length > 0
-        ? activeSessions.reduce((sum, s) => sum + s.qualityChanges, 0) /
-          activeSessions.length
-        : 0;
-    const avgBufferingEvents =
-      activeSessions.length > 0
-        ? activeSessions.reduce((sum, s) => sum + s.bufferingEvents, 0) /
-          activeSessions.length
-        : 0;
-
-    // 품질 분포
-    const qualityCount = activeSessions.reduce(
-      (acc, s) => {
-        acc[s.currentQuality] = (acc[s.currentQuality] || 0) + 1;
-        return acc;
       },
-      {} as Record<string, number>,
-    );
+    });
 
-    const popularQualities = Object.entries(qualityCount)
-      .map(([quality, count]) => ({ quality, count }))
-      .sort((a, b) => b.count - a.count);
-
-    // 디바이스 분포
-    const deviceCount = activeSessions.reduce(
-      (acc, s) => {
-        const deviceStr = this.deviceTypeToString(s.deviceType);
-        acc[deviceStr] = (acc[deviceStr] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
-
-    const deviceDistribution = Object.entries(deviceCount)
-      .map(([device, count]) => ({ device, count }))
-      .sort((a, b) => b.count - a.count);
-
-    return {
-      activeSessions: activeSessions.length,
-      totalBytesTransferred: totalBytes,
-      averageQualityChanges: Math.round(avgQualityChanges * 100) / 100,
-      averageBufferingEvents: Math.round(avgBufferingEvents * 100) / 100,
-      popularQualities,
-      deviceDistribution,
-    };
+    return activeSessions;
   }
 
   /**

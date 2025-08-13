@@ -595,42 +595,6 @@ export class StreamingController {
   }
 
   /**
-   * 스트리밍 통계 조회
-   * GET /api/v1/streaming/stats
-   */
-  @Get('stats')
-  @UseGuards(AuthGuard)
-  async getStreamingStats(@Req() req?: StreamingRequest) {
-    const user = req!.user;
-
-    try {
-      const stats = await this.streamingService.getStreamingStats(user.id);
-
-      return {
-        success: true,
-        message: '스트리밍 통계를 가져왔습니다.',
-        data: {
-          ...stats,
-          // 사용자 친화적인 단위로 변환
-          totalBytesTransferredMB:
-            Math.round((stats.totalBytesTransferred / (1024 * 1024)) * 100) /
-            100,
-          totalBytesTransferredGB:
-            Math.round(
-              (stats.totalBytesTransferred / (1024 * 1024 * 1024)) * 100,
-            ) / 100,
-        },
-      };
-    } catch (error) {
-      this.logger.error(
-        `Streaming stats retrieval failed: ${error.message}`,
-        error.stack,
-      );
-      throw error;
-    }
-  }
-
-  /**
    * 스트리밍 설정 정보 조회
    * GET /api/v1/streaming/config
    */
@@ -671,9 +635,10 @@ export class StreamingController {
   async checkStreamingHealth() {
     try {
       // 스트리밍 서비스 상태 확인
-      const stats = await this.streamingService.getStreamingStats();
+      const activeSessions =
+        await this.streamingService.getActiveSessionCount();
       const isHealthy =
-        stats.activeSessions <
+        activeSessions <
         STREAMING_CONFIG.bandwidth.throttling.maxConcurrentStreams;
 
       return {
@@ -683,11 +648,11 @@ export class StreamingController {
           : '스트리밍 서비스 부하가 높습니다.',
         data: {
           status: isHealthy ? 'healthy' : 'overloaded',
-          activeSessions: stats.activeSessions,
+          activeSessions: activeSessions,
           maxConcurrentStreams:
             STREAMING_CONFIG.bandwidth.throttling.maxConcurrentStreams,
           systemLoad: Math.round(
-            (stats.activeSessions /
+            (activeSessions /
               STREAMING_CONFIG.bandwidth.throttling.maxConcurrentStreams) *
               100,
           ),

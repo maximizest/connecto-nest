@@ -14,16 +14,6 @@ import {
 } from '../travel-user/travel-user.entity';
 import { MessageReadReceipt } from './read-receipt.entity';
 
-/**
- * 메시지 읽음 상태 관리 인터페이스
- */
-export interface ReadReceiptStats {
-  totalMessages: number;
-  readMessages: number;
-  unreadMessages: number;
-  readPercentage: number;
-}
-
 export interface PlanetReadStatus {
   planetId: number;
   planetName: string;
@@ -31,15 +21,6 @@ export interface PlanetReadStatus {
   lastReadAt: Date | null;
   unreadCount: number;
   totalMessages: number;
-}
-
-export interface UserReadStatus {
-  userId: number;
-  userName: string;
-  lastReadMessageId: number | null;
-  lastReadAt: Date | null;
-  unreadCount: number;
-  isOnline?: boolean;
 }
 
 @Injectable()
@@ -363,104 +344,6 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
         error,
       );
       return [];
-    }
-  }
-
-  /**
-   * Planet의 메시지별 읽음 상태 통계
-   */
-  async getReadStatsByMessage(messageId: number): Promise<{
-    messageId: number;
-    totalReaders: number;
-    readCount: number;
-    unreadCount: number;
-    readPercentage: number;
-    readers: UserReadStatus[];
-  }> {
-    try {
-      // 메시지 정보 조회
-      const message = await this.messageRepository.findOne({
-        where: { id: messageId },
-        relations: ['planet', 'planet.travel'],
-      });
-
-      if (!message) {
-        throw new Error(`Message not found: ${messageId}`);
-      }
-
-      // Planet의 모든 사용자 조회
-      const planetUsers = await this.getPlanetUsers(message.planetId);
-      const totalReaders = planetUsers.length;
-
-      // 메시지를 읽은 사용자들 조회
-      const readReceipts = await this.repository.find({
-        where: { messageId, isRead: true },
-        relations: ['user'],
-      });
-
-      const readCount = readReceipts.length;
-      const unreadCount = Math.max(0, totalReaders - readCount);
-      const readPercentage =
-        totalReaders > 0 ? Math.round((readCount / totalReaders) * 100) : 0;
-
-      // 읽은 사용자들 정보
-      const readers: UserReadStatus[] = readReceipts.map((receipt) => ({
-        userId: receipt.userId,
-        userName: receipt.user?.name || 'Unknown User',
-        lastReadMessageId: messageId,
-        lastReadAt: receipt.readAt,
-        unreadCount: 0, // 이 메시지는 읽었으므로
-      }));
-
-      return {
-        messageId,
-        totalReaders,
-        readCount,
-        unreadCount,
-        readPercentage,
-        readers,
-      };
-    } catch (error) {
-      this.logger.error(
-        `Failed to get read stats by message: messageId=${messageId}`,
-        error,
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * Planet의 읽음 상태 통계
-   */
-  async getReadStatsByPlanet(planetId: number): Promise<ReadReceiptStats> {
-    try {
-      const [totalMessages, readMessages] = await Promise.all([
-        this.messageRepository.count({
-          where: { planetId, isDeleted: false },
-        }),
-        this.repository.count({
-          where: { planetId, isRead: true },
-        }),
-      ]);
-
-      const unreadMessages = Math.max(0, totalMessages - readMessages);
-      const readPercentage =
-        totalMessages > 0
-          ? Math.round((readMessages / totalMessages) * 100)
-          : 0;
-
-      return {
-        totalMessages,
-        readMessages,
-        unreadMessages,
-        readPercentage,
-      };
-    } catch (error) {
-      this.logger.error(
-        `Failed to get read stats by planet: planetId=${planetId}`,
-        error,
-      );
-      throw error;
     }
   }
 

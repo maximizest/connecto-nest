@@ -475,43 +475,6 @@ export class VideoProcessingController {
   }
 
   /**
-   * 프로세싱 통계 조회
-   * GET /api/v1/video-processing/stats
-   */
-  @Get('my/stats')
-  async getProcessingStats(@Request() req?: any) {
-    const user: User = req.user;
-
-    try {
-      const stats = await this.videoProcessingService.getProcessingStats(
-        user.id,
-      );
-
-      return {
-        success: true,
-        message: '프로세싱 통계를 가져왔습니다.',
-        data: {
-          ...stats,
-          // 사용자 친화적인 단위로 변환
-          totalInputSizeMB:
-            Math.round((stats.totalInputSize / (1024 * 1024)) * 100) / 100,
-          totalOutputSizeMB:
-            Math.round((stats.totalOutputSize / (1024 * 1024)) * 100) / 100,
-          averageProcessingTimeMinutes: Math.round(
-            stats.averageProcessingTime / 60,
-          ),
-        },
-      };
-    } catch (error) {
-      this.logger.error(
-        `Processing stats retrieval failed: ${error.message}`,
-        error.stack,
-      );
-      throw error;
-    }
-  }
-
-  /**
    * 지원되는 품질 프로필 목록 조회
    * GET /api/v1/video-processing/quality-profiles
    */

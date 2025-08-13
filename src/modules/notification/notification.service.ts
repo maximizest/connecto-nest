@@ -55,18 +55,6 @@ export interface BulkNotificationOptions {
   metadata?: any;
 }
 
-/**
- * 알림 통계 정보
- */
-export interface NotificationStats {
-  totalNotifications: number;
-  unreadNotifications: number;
-  notificationsByType: Record<NotificationType, number>;
-  notificationsByPriority: Record<NotificationPriority, number>;
-  notificationsByStatus: Record<NotificationStatus, number>;
-  recentNotifications: Notification[];
-}
-
 @Injectable()
 export class NotificationService extends CrudService<Notification> {
   private readonly logger = new Logger(NotificationService.name);
@@ -548,87 +536,20 @@ export class NotificationService extends CrudService<Notification> {
   }
 
   /**
-   * 사용자 알림 통계 조회
+   * 사용자 읽지 않은 알림 개수 조회
    */
-  async getUserNotificationStats(userId: number): Promise<NotificationStats> {
+  async getUnreadNotificationCount(userId: number): Promise<number> {
     try {
-      const notifications = await this.repository.find({
-        where: { userId },
-        order: { createdAt: 'DESC' },
-        take: 10, // 최근 10개
-      });
-
-      const totalNotifications = await this.repository.count({
-        where: { userId },
-      });
-      const unreadNotifications = await this.repository.count({
+      const unreadCount = await this.repository.count({
         where: { userId, isRead: false },
       });
 
-      // 타입별 통계
-      const typeStats = await this.repository
-        .createQueryBuilder('notification')
-        .select('notification.type', 'type')
-        .addSelect('COUNT(*)', 'count')
-        .where('notification.userId = :userId', { userId })
-        .groupBy('notification.type')
-        .getRawMany();
-
-      const notificationsByType = typeStats.reduce(
-        (acc, stat) => {
-          acc[stat.type as NotificationType] = parseInt(stat.count);
-          return acc;
-        },
-        {} as Record<NotificationType, number>,
-      );
-
-      // 우선순위별 통계
-      const priorityStats = await this.repository
-        .createQueryBuilder('notification')
-        .select('notification.priority', 'priority')
-        .addSelect('COUNT(*)', 'count')
-        .where('notification.userId = :userId', { userId })
-        .groupBy('notification.priority')
-        .getRawMany();
-
-      const notificationsByPriority = priorityStats.reduce(
-        (acc, stat) => {
-          acc[stat.priority as NotificationPriority] = parseInt(stat.count);
-          return acc;
-        },
-        {} as Record<NotificationPriority, number>,
-      );
-
-      // 상태별 통계
-      const statusStats = await this.repository
-        .createQueryBuilder('notification')
-        .select('notification.status', 'status')
-        .addSelect('COUNT(*)', 'count')
-        .where('notification.userId = :userId', { userId })
-        .groupBy('notification.status')
-        .getRawMany();
-
-      const notificationsByStatus = statusStats.reduce(
-        (acc, stat) => {
-          acc[stat.status as NotificationStatus] = parseInt(stat.count);
-          return acc;
-        },
-        {} as Record<NotificationStatus, number>,
-      );
-
-      return {
-        totalNotifications,
-        unreadNotifications,
-        notificationsByType,
-        notificationsByPriority,
-        notificationsByStatus,
-        recentNotifications: notifications,
-      };
+      return unreadCount;
     } catch (error) {
       this.logger.error(
-        `Failed to get user notification stats: ${error.message}`,
+        `Failed to get unread notification count: userId=${userId}, error=${error.message}`,
       );
-      throw error;
+      return 0;
     }
   }
 

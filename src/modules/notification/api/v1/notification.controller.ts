@@ -117,21 +117,22 @@ export class NotificationController {
     const user: User = currentUser as User;
 
     try {
-      const stats = await this.crudService.getUserNotificationStats(user.id);
+      const unreadCount = await this.crudService.getUnreadNotificationCount(
+        user.id,
+      );
 
       // Create virtual Notification entity with unread count stats
       const unreadStatsEntity = Object.assign(new Notification(), {
         id: 0,
         type: NotificationType.SYSTEM_ANNOUNCEMENT,
         title: '읽지 않은 알림 개수',
-        content: `읽지 않은 알림 ${stats.unreadNotifications}개`,
+        content: `읽지 않은 알림 ${unreadCount}개`,
         userId: user.id,
         priority: NotificationPriority.NORMAL,
         channels: [NotificationChannel.IN_APP],
         isRead: true,
         data: {
-          unreadCount: stats.unreadNotifications,
-          totalCount: stats.totalNotifications,
+          unreadCount: unreadCount,
           checkedAt: new Date(),
         },
       });
@@ -261,42 +262,6 @@ export class NotificationController {
     } catch (error) {
       this.logger.error(
         `Mark all as read failed: userId=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * 알림 통계 조회 API
-   * GET /api/v1/notifications/stats
-   */
-  @Get('stats')
-  async getNotificationStats(@CurrentUser() currentUser: CurrentUserData) {
-    const user: User = currentUser as User;
-
-    try {
-      const stats = await this.crudService.getUserNotificationStats(user.id);
-
-      // Create virtual Notification entity with stats
-      const statsEntity = Object.assign(new Notification(), {
-        id: 0,
-        type: NotificationType.SYSTEM_ANNOUNCEMENT,
-        title: '알림 통계',
-        content: `전체 ${stats.totalNotifications}개, 읽지 않음 ${stats.unreadNotifications}개`,
-        userId: user.id,
-        priority: NotificationPriority.NORMAL,
-        channels: [NotificationChannel.IN_APP],
-        isRead: true,
-        data: {
-          ...stats,
-          generatedAt: new Date(),
-        },
-      });
-
-      return crudResponse(statsEntity);
-    } catch (error) {
-      this.logger.error(
-        `Get notification stats failed: userId=${user.id}, error=${error.message}`,
       );
       throw error;
     }

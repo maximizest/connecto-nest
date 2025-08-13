@@ -537,47 +537,6 @@ export class FileUploadController {
   // @BeforeCreate/@BeforeUpdate 훅에서 userId 필터링을 자동으로 처리합니다.
 
   /**
-   * 업로드 통계 조회
-   * GET /api/v1/files/uploads/stats
-   */
-  @Get('uploads/stats')
-  async getUploadStats(@CurrentUser() currentUser?: CurrentUserData) {
-    const user: User = currentUser as User;
-
-    try {
-      const stats = await this.crudService.getUploadStats(user.id);
-
-      // Create virtual FileUpload entity with stats data
-      const statsEntity = Object.assign(new FileUpload(), {
-        id: 0,
-        userId: user.id,
-        originalFileName: 'upload_stats',
-        storageKey: 'stats',
-        mimeType: 'application/json',
-        fileSize: 0,
-        uploadType: FileUploadType.SINGLE,
-        folder: 'files' as any,
-        status: 'completed' as any,
-        metadata: {
-          ...stats,
-          totalSizeMB:
-            Math.round((stats.totalSize / (1024 * 1024)) * 100) / 100,
-          averageSpeedMBps:
-            Math.round((stats.averageSpeed / (1024 * 1024)) * 100) / 100,
-        },
-      });
-
-      return crudResponse(statsEntity);
-    } catch (error) {
-      this.logger.error(
-        `Upload stats retrieval failed: ${error.message}`,
-        error.stack,
-      );
-      throw error;
-    }
-  }
-
-  /**
    * 파일 정보 조회
    * GET /api/v1/files/:key/info
    */
