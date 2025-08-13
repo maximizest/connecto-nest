@@ -9,10 +9,6 @@ import { Analytics } from '../modules/analytics/analytics.entity';
 import { FileUpload } from '../modules/file-upload/file-upload.entity';
 import { Message } from '../modules/message/message.entity';
 import { Notification } from '../modules/notification/notification.entity';
-import {
-  PerformanceAlert,
-  PerformanceMetric,
-} from '../modules/performance/performance.entity';
 import { PlanetUser } from '../modules/planet-user/planet-user.entity';
 import { Planet } from '../modules/planet/planet.entity';
 import { Profile } from '../modules/profile/profile.entity';
@@ -63,8 +59,6 @@ export const ENTITIES = [
   MessageReadReceipt,
   Notification,
   Analytics,
-  PerformanceMetric,
-  PerformanceAlert,
   SecurityEvent,
   BlockedIp,
   FileScanResult,
