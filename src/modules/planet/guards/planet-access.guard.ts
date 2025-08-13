@@ -94,6 +94,23 @@ export class PlanetAccessGuard implements CanActivate {
       );
     }
 
+    // Travel 만료 여부와 HTTP 메소드에 따른 접근 제어
+    if (planet.travel && planet.travel.isExpired()) {
+      const method = request.method;
+
+      // GET 요청(조회)은 만료된 Travel이어도 허용
+      if (method === 'GET') {
+        this.logger.debug(
+          `만료된 Travel의 Planet 조회 허용: Travel ${planet.travel.id}, Planet ${planet.id}`,
+        );
+      } else {
+        // POST/PUT/PATCH/DELETE는 차단
+        throw new ForbiddenException(
+          `이 Travel은 만료되었습니다. (만료일: ${planet.travel.endDate.toLocaleString('ko-KR')})`,
+        );
+      }
+    }
+
     // 조회 권한 확인
     return await this.checkReadAccess(planet, user);
   }
@@ -126,10 +143,7 @@ export class PlanetAccessGuard implements CanActivate {
       throw new ForbiddenException('GROUP Planet은 Travel이 필요합니다.');
     }
 
-    // Travel 만료 확인
-    if (planet.travel && planet.travel.isExpired()) {
-      throw new ForbiddenException('만료된 Travel의 Planet입니다.');
-    }
+    // Travel 만료 확인은 상위 함수(canActivate)에서 HTTP 메소드별로 처리
 
     // Travel 멤버십 확인
     const travelUser = await this.travelUserRepository.findOne({

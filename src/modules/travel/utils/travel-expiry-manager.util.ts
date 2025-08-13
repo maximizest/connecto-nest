@@ -256,33 +256,29 @@ export class TravelExpiryManager {
 
   /**
    * Travel의 모든 Planet들 만료 처리
+   * 조회는 가능하되 새 메시지 작성만 차단하기 위해 Planet은 활성 상태 유지
    */
   private async expireTravelPlanets(travel: Travel): Promise<void> {
-    const result = await this.planetRepository
-      .createQueryBuilder()
-      .update(Planet)
-      .set({
-        isActive: false,
-        status: PlanetStatus.INACTIVE,
-      })
-      .where('travelId = :travelId', { travelId: travel.id })
-      .andWhere('isActive = :isActive', { isActive: true })
-      .execute();
+    // Planet은 비활성화하지 않고 활성 상태 유지
+    // 메시지 조회는 가능하되, 작성/수정은 메시지 가드에서 차단
 
-    const affectedPlanets = result.affected || 0;
+    const planets = await this.planetRepository.find({
+      where: { travelId: travel.id },
+      select: ['id'],
+    });
+
     this.logger.log(
-      `Travel ${travel.name}의 ${affectedPlanets}개 Planet 비활성화 완료`,
+      `Travel ${travel.name}의 ${planets.length}개 Planet - 조회 가능, 채팅 차단 상태로 유지`,
     );
 
-    // Redis에서 Planet 캐시들 제거
+    // Redis에서 Planet 캐시 업데이트 (비활성화하지 않음)
     if (this.redisService) {
-      const planets = await this.planetRepository.find({
-        where: { travelId: travel.id },
-        select: ['id'],
-      });
-
       for (const planet of planets) {
-        await this.redisService.del(`planet:${planet.id}`);
+        // 캐시 제거 대신 Travel 만료 정보만 업데이트
+        await this.redisService.setJson(`planet:${planet.id}:travel_expired`, {
+          travelId: travel.id,
+          expiredAt: new Date(),
+        });
       }
     }
   }

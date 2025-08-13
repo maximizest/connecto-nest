@@ -80,9 +80,22 @@ export class PlanetAccessGuard implements CanActivate {
       throw new PlanetInactiveException(planetId);
     }
 
-    // Travel 만료 확인
+    // Travel 만료 확인 - 조회는 허용, 생성/수정/삭제는 차단
     if (planet.travel.isExpired()) {
-      throw new TravelExpiredException(planet.travel.id, planet.travel.endDate);
+      const method = request.method;
+
+      // GET 요청(조회)은 만료된 Travel이어도 허용
+      if (method === 'GET') {
+        this.logger.debug(
+          `만료된 Travel의 Planet 조회 허용: Travel ${planet.travel.id}, Planet ${planet.id}`,
+        );
+      } else {
+        // POST/PUT/PATCH/DELETE는 차단
+        throw new TravelExpiredException(
+          planet.travel.id,
+          planet.travel.endDate,
+        );
+      }
     }
 
     // Planet 타입별 접근 권한 확인
