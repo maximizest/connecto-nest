@@ -89,6 +89,17 @@ export class User extends BaseEntity {
   @IsUrl()
   avatar?: string;
 
+  @Column({
+    type: 'varchar',
+    length: 20,
+    nullable: true,
+    comment: '전화번호',
+  })
+  @IsOptional()
+  @IsString()
+  @Index() // 전화번호 검색 최적화
+  phone?: string;
+
   /**
    * 온라인 상태 관리
    */
@@ -131,6 +142,14 @@ export class User extends BaseEntity {
   })
   @IsBoolean()
   notificationsEnabled: boolean;
+
+  @Column({
+    type: 'boolean',
+    default: false,
+    comment: '광고성 알림 수신 동의 여부',
+  })
+  @IsBoolean()
+  advertisingConsentEnabled: boolean;
 
   @Column({
     type: 'varchar',

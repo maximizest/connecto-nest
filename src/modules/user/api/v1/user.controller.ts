@@ -66,9 +66,11 @@ import { UserService } from '../../user.service';
   allowedParams: [
     'name',
     'avatar',
+    'phone',
     'language',
     'timezone',
     'notificationsEnabled',
+    'advertisingConsentEnabled',
     'isOnline', // 온라인 상태 업데이트
   ],
 
@@ -105,9 +107,11 @@ import { UserService } from '../../user.service';
       allowedParams: [
         'name',
         'avatar',
+        'phone',
         'language',
         'timezone',
         'notificationsEnabled',
+        'advertisingConsentEnabled',
         'isOnline',
       ],
     },
