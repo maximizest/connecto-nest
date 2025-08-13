@@ -36,7 +36,6 @@ import {
 } from '../../../travel-user/travel-user.entity';
 import { Travel } from '../../../travel/travel.entity';
 import { User } from '../../../user/user.entity';
-import { PlanetAccessGuard } from '../../guards/planet-access.guard';
 import { Message, MessageType } from '../../message.entity';
 import { MessageService } from '../../message.service';
 import { MessagePaginationService } from '../../services/message-pagination.service';
@@ -133,7 +132,7 @@ import { MessagePaginationService } from '../../services/message-pagination.serv
     },
   },
 })
-@UseGuards(AuthGuard, PlanetAccessGuard)
+@UseGuards(AuthGuard)
 export class MessageController {
   private readonly logger = new Logger(MessageController.name);
 

@@ -12,11 +12,6 @@ import { PlanetUser } from '../modules/planet-user/planet-user.entity';
 import { Planet } from '../modules/planet/planet.entity';
 import { Profile } from '../modules/profile/profile.entity';
 import { MessageReadReceipt } from '../modules/read-receipt/read-receipt.entity';
-import {
-  BlockedIp,
-  FileScanResult,
-  SecurityEvent,
-} from '../modules/security/security.entity';
 import { StreamingSession } from '../modules/streaming/streaming-session.entity';
 import { TravelUser } from '../modules/travel-user/travel-user.entity';
 import { Travel } from '../modules/travel/travel.entity';
@@ -57,9 +52,6 @@ export const ENTITIES = [
   Message,
   MessageReadReceipt,
   Notification,
-  SecurityEvent,
-  BlockedIp,
-  FileScanResult,
   FileUpload,
   VideoProcessing,
   StreamingSession,

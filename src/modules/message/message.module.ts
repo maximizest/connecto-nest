@@ -7,7 +7,6 @@ import { TravelUser } from '../travel-user/travel-user.entity';
 import { Travel } from '../travel/travel.entity';
 import { User } from '../user/user.entity';
 import { MessageController } from './api/v1/message.controller';
-import { PlanetAccessGuard } from './guards/planet-access.guard';
 import { Message } from './message.entity';
 import { MessageService } from './message.service';
 import { MessagePaginationService } from './services/message-pagination.service';
@@ -24,8 +23,8 @@ import { MessagePaginationService } from './services/message-pagination.service'
     ]),
     CacheModule,
   ],
-  providers: [MessageService, MessagePaginationService, PlanetAccessGuard],
+  providers: [MessageService, MessagePaginationService],
   controllers: [MessageController],
-  exports: [MessageService, MessagePaginationService, PlanetAccessGuard],
+  exports: [MessageService, MessagePaginationService],
 })
 export class MessageModule {}
