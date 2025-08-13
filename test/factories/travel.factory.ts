@@ -29,7 +29,7 @@ export const TravelFactory = Factory.define<Travel>(({ sequence }) => {
   travel.endDate = addDays(new Date(), 30); // 여행 종료 날짜 (채팅 만료 날짜)
 
   // 접근 제어
-  travel.visibility = TravelVisibility.INVITE_ONLY;
+  travel.visibility = TravelVisibility.PUBLIC;
   travel.inviteCode = undefined;
   travel.inviteCodeEnabled = true;
 

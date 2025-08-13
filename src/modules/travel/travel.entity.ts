@@ -36,9 +36,8 @@ export enum TravelStatus {
  * Travel 공개 설정
  */
 export enum TravelVisibility {
-  PUBLIC = 'public', // 공개 (누구나 가입 가능)
-  PRIVATE = 'private', // 비공개 (초대만)
-  INVITE_ONLY = 'invite_only', // 초대 전용
+  PUBLIC = 'public', // 누구나 참여 가능 (초대코드 불필요)
+  INVITE_ONLY = 'invite_only', // 초대코드 필요
 }
 
 @Entity('travels')
@@ -131,7 +130,7 @@ export class Travel extends BaseEntity {
   @Column({
     type: 'enum',
     enum: TravelVisibility,
-    default: TravelVisibility.INVITE_ONLY,
+    default: TravelVisibility.PUBLIC,
     comment: '공개 설정',
   })
   @IsEnum(TravelVisibility)
