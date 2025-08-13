@@ -4,8 +4,6 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { addDays } from 'date-fns';
 import { Between, LessThan, Not, Repository } from 'typeorm';
-import { AggregationPeriod, Analytics } from '../analytics/analytics.entity';
-import { AnalyticsService } from '../analytics/analytics.service';
 import { RedisService } from '../cache/redis.service';
 import {
   FileUpload,
@@ -68,12 +66,9 @@ export class SchedulerService {
     private readonly videoProcessingRepository: Repository<VideoProcessing>,
     @InjectRepository(Notification)
     private readonly notificationRepository: Repository<Notification>,
-    @InjectRepository(Analytics)
-    private readonly analyticsRepository: Repository<Analytics>,
     private readonly redisService: RedisService,
     private readonly storageService: StorageService,
     private readonly notificationService: NotificationService,
-    private readonly analyticsService: AnalyticsService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -545,13 +540,6 @@ export class SchedulerService {
       const oneYearAgo = new Date();
       oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-      const oldAnalytics = await this.analyticsRepository.delete({
-        date: LessThan(oneYearAgo),
-        period: AggregationPeriod.DAILY,
-      });
-
-      processedItems += oldAnalytics.affected || 0;
-
       // 4. 비활성 사용자 정리 (6개월 이상 로그인하지 않은 사용자의 임시 데이터)
       const sixMonthsAgo = new Date();
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
@@ -581,7 +569,6 @@ export class SchedulerService {
         metrics: {
           oldReadReceipts: oldReadReceipts.affected || 0,
           oldNotifications: oldNotifications.affected || 0,
-          oldAnalytics: oldAnalytics.affected || 0,
           inactiveUsers: inactiveUsers.length,
         },
       };

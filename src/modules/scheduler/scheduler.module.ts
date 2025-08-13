@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AnalyticsModule } from '../analytics/analytics.module';
 import { CacheModule } from '../cache/cache.module';
 import { FileUpload } from '../file-upload/file-upload.entity';
 import { Message } from '../message/message.entity';
@@ -31,7 +30,6 @@ import { SchedulerService } from './scheduler.service';
     ]),
     CacheModule,
     NotificationModule,
-    AnalyticsModule,
   ],
   providers: [SchedulerService, StorageService],
   controllers: [SchedulerController],

@@ -5,7 +5,6 @@ import {
   ENV_KEYS,
 } from '../common/constants/app.constants';
 import { Admin } from '../modules/admin/admin.entity';
-import { Analytics } from '../modules/analytics/analytics.entity';
 import { FileUpload } from '../modules/file-upload/file-upload.entity';
 import { Message } from '../modules/message/message.entity';
 import { Notification } from '../modules/notification/notification.entity';
@@ -58,7 +57,6 @@ export const ENTITIES = [
   Message,
   MessageReadReceipt,
   Notification,
-  Analytics,
   SecurityEvent,
   BlockedIp,
   FileScanResult,
