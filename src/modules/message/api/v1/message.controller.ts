@@ -15,7 +15,6 @@ import {
   Logger,
   NotFoundException,
   Param,
-  Post,
   Put,
   Query,
   Request,
@@ -24,10 +23,7 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  CursorPaginationResponseDto,
-  MessagePaginationMeta,
-} from '../../../../common/dto/pagination.dto';
+import { CursorPaginationResponseDto } from '../../../../common/dto/pagination.dto';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import {
   PlanetUser,
@@ -576,157 +572,6 @@ export class MessageController {
   }
 
   /**
-   * 메시지 편집 기록 조회 API
-   * GET /api/v1/messages/:id/edit-history
-   */
-  @Get(':id/edit-history')
-  @UseGuards(AuthGuard)
-  async getEditHistory(@Param('id') messageId: number, @Request() req: any) {
-    const user: User = req.user;
-
-    try {
-      const message = await this.messageRepository.findOne({
-        where: { id: messageId },
-        relations: ['sender', 'planet'],
-      });
-
-      if (!message) {
-        throw new NotFoundException('메시지를 찾을 수 없습니다.');
-      }
-
-      // Planet 접근 권한 확인
-      await this.validatePlanetAccess(message.planetId, user.id);
-
-      if (!message.isEdited) {
-        // Create virtual Message entity with no edit history
-        const noEditMessage = Object.assign(new Message(), {
-          ...message,
-          metadata: {
-            ...message.metadata,
-            editHistory: [],
-          },
-        });
-        return crudResponse(noEditMessage);
-      }
-
-      // Create Message entity with edit history
-      const messageWithHistory = Object.assign(new Message(), {
-        ...message,
-        metadata: {
-          ...message.metadata,
-          editHistory: [
-            {
-              version: 1,
-              content: message.originalContent,
-              timestamp: message.createdAt,
-              isOriginal: true,
-            },
-            {
-              version: 2,
-              content: message.content,
-              timestamp: message.editedAt,
-              isOriginal: false,
-            },
-          ],
-        },
-      });
-
-      return crudResponse(messageWithHistory);
-    } catch (error) {
-      this.logger.error(
-        `Edit history retrieval failed: id=${messageId}, user=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * 메시지 복구 API (소프트 삭제된 메시지 복구)
-   * POST /api/v1/messages/:id/restore
-   */
-  @Post(':id/restore')
-  @UseGuards(AuthGuard)
-  async restoreMessage(@Param('id') messageId: number, @Request() req: any) {
-    const user: User = req.user;
-
-    try {
-      const message = await this.messageRepository.findOne({
-        where: { id: messageId },
-        relations: ['sender', 'planet', 'planet.travel'],
-      });
-
-      if (!message) {
-        throw new NotFoundException('메시지를 찾을 수 없습니다.');
-      }
-
-      // Planet 접근 권한 확인
-      await this.validatePlanetAccess(message.planetId, user.id);
-
-      if (!message.isDeleted) {
-        return crudResponse(message);
-      }
-
-      // 복구 권한 확인 (원래 발신자 또는 Planet 관리자)
-      const hasRestorePermission = await this.checkDeletePermission(
-        message,
-        user.id,
-      );
-
-      if (!hasRestorePermission) {
-        throw new ForbiddenException('메시지 복구 권한이 없습니다.');
-      }
-
-      // 복구 처리 (24시간 내에만 가능)
-      const deletedHoursAgo =
-        (Date.now() - (message.deletedAt?.getTime() || 0)) / (1000 * 60 * 60);
-
-      if (deletedHoursAgo > 24) {
-        throw new ForbiddenException(
-          '삭제된 지 24시간이 넘은 메시지는 복구할 수 없습니다.',
-        );
-      }
-
-      // 복구 처리
-      message.isDeleted = false;
-      message.deletedAt = undefined;
-      message.deletedBy = undefined;
-
-      const restoredMessage = await this.messageRepository.save(message);
-
-      // 실시간 복구 알림 이벤트 발생
-      this.eventEmitter.emit('message.restored', {
-        messageId: restoredMessage.id,
-        planetId: restoredMessage.planetId,
-        content: restoredMessage.content,
-        isDeleted: restoredMessage.isDeleted,
-        restoredBy: { id: user.id, name: user.name },
-        restoredAt: new Date(),
-      });
-
-      this.logger.log(
-        `Message restored: id=${messageId}, restoredBy=${user.id}`,
-      );
-
-      // Create Message entity with restore info
-      const messageWithRestoreInfo = Object.assign(new Message(), {
-        ...restoredMessage,
-        metadata: {
-          ...restoredMessage.metadata,
-          restoredBy: user.id,
-          restoredAt: new Date(),
-        },
-      });
-
-      return crudResponse(messageWithRestoreInfo);
-    } catch (error) {
-      this.logger.error(
-        `Message restore failed: id=${messageId}, user=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
-  }
-
-  /**
    * 삭제 권한 확인 (발신자 또는 Planet 관리자)
    */
   private async checkDeletePermission(
@@ -811,64 +656,6 @@ export class MessageController {
       const user = req.user;
       this.logger.error(
         `Failed to get message context: messageId=${messageId}, user=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * Planet 메시지 통계 조회
-   * GET /api/v1/messages/planet/:planetId/stats
-   */
-  @Get('planet/:planetId/stats')
-  async getPlanetMessageStats(
-    @Param('planetId') planetId: number,
-    @Request() req: any,
-  ): Promise<MessagePaginationMeta> {
-    try {
-      const user = req.user;
-      this.logger.log(
-        `Getting message stats for planet ${planetId} by user ${user.id}`,
-      );
-
-      return await this.messagePaginationService.getPlanetMessageStats(
-        planetId,
-        user.id,
-      );
-    } catch (error) {
-      const user = req.user;
-      this.logger.error(
-        `Failed to get message stats: planetId=${planetId}, user=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * Planet 메시지 캐시 무효화 (관리자용)
-   * DELETE /api/v1/messages/planet/:planetId/cache
-   */
-  @Delete('planet/:planetId/cache')
-  async invalidatePlanetMessageCache(
-    @Param('planetId') planetId: number,
-    @Request() req: any,
-  ): Promise<{ success: boolean; message: string }> {
-    try {
-      const user = req.user;
-      this.logger.log(
-        `Invalidating message cache for planet ${planetId} by user ${user.id}`,
-      );
-
-      await this.messagePaginationService.invalidatePlanetCache(planetId);
-
-      return {
-        success: true,
-        message: `Planet ${planetId}의 메시지 캐시가 무효화되었습니다.`,
-      };
-    } catch (error) {
-      const user = req.user;
-      this.logger.error(
-        `Failed to invalidate cache: planetId=${planetId}, user=${user.id}, error=${error.message}`,
       );
       throw error;
     }
