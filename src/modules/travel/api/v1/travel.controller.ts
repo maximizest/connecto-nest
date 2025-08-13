@@ -1,5 +1,5 @@
 import { Crud } from '@foryourdev/nestjs-crud';
-import { Controller, Logger, UseGuards } from '@nestjs/common';
+import { Controller, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { TravelAccessGuard } from '../../guards/travel-access.guard';
 import { Travel } from '../../travel.entity';
@@ -53,9 +53,5 @@ import { TravelService } from '../../travel.service';
 })
 @UseGuards(AuthGuard, TravelAccessGuard)
 export class TravelController {
-  private readonly logger = new Logger(TravelController.name);
-
   constructor(public readonly crudService: TravelService) {}
-
-  // Travel 조회만 허용 - 생성/수정은 관리자 API에서 처리
 }

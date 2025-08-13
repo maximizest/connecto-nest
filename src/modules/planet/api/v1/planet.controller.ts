@@ -1,5 +1,5 @@
 import { Crud } from '@foryourdev/nestjs-crud';
-import { Controller, Logger, UseGuards } from '@nestjs/common';
+import { Controller, UseGuards } from '@nestjs/common';
 
 import { AuthGuard } from '../../../../guards/auth.guard';
 
@@ -51,23 +51,16 @@ import { PlanetService } from '../../planet.service';
         'name',
         'createdAt',
       ],
-      allowedIncludes: ['admin', 'travel'],
+      allowedIncludes: ['travel'],
     },
 
     // 단일 조회: 상세 정보 포함
     show: {
-      allowedIncludes: [
-        'admin',
-        'travel',
-        'directMembers',
-        'directMembers.user',
-      ],
+      allowedIncludes: ['travel', 'directMembers', 'directMembers.user'],
     },
   },
 })
 @UseGuards(AuthGuard, PlanetAccessGuard)
 export class PlanetController {
-  private readonly logger = new Logger(PlanetController.name);
-
   constructor(public readonly crudService: PlanetService) {}
 }
