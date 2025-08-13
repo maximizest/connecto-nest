@@ -36,7 +36,6 @@ export enum PlanetUserRole {
 export enum PlanetUserStatus {
   ACTIVE = 'active', // 활성 참여
   LEFT = 'left', // 탈퇴
-  BANNED = 'banned', // 정지
   INVITED = 'invited', // 초대됨 (1:1 Planet 전용)
   MUTED = 'muted', // 음소거됨
 }
@@ -229,52 +228,6 @@ export class PlanetUser extends BaseEntity {
   muteUntil?: Date;
 
   /**
-   * 정지 및 제재 정보
-   */
-  @Column({
-    type: 'boolean',
-    default: false,
-    comment: '정지 여부',
-  })
-  @IsBoolean()
-  isBanned: boolean;
-
-  @Column({
-    type: 'timestamp',
-    nullable: true,
-    comment: '정지 시작 시간',
-  })
-  @IsOptional()
-  @IsDateString()
-  bannedAt?: Date;
-
-  @Column({
-    type: 'timestamp',
-    nullable: true,
-    comment: '정지 해제 시간',
-  })
-  @IsOptional()
-  @IsDateString()
-  banExpiresAt?: Date;
-
-  @Column({
-    type: 'int',
-    nullable: true,
-    comment: '정지 처리한 관리자 ID',
-  })
-  @IsOptional()
-  @IsNumber()
-  bannedBy?: number;
-
-  @Column({
-    type: 'text',
-    nullable: true,
-    comment: '정지 사유',
-  })
-  @IsOptional()
-  banReason?: string;
-
-  /**
    * Planet 내 개별 권한 (그룹 Planet용)
    */
   @Column({
@@ -412,20 +365,7 @@ export class PlanetUser extends BaseEntity {
    * 활성 참여자인지 확인
    */
   isActiveParticipant(): boolean {
-    return (
-      this.status === PlanetUserStatus.ACTIVE &&
-      !this.isBannedNow() &&
-      !this.isMutedNow()
-    );
-  }
-
-  /**
-   * 현재 정지 상태인지 확인
-   */
-  isBannedNow(): boolean {
-    if (!this.isBanned) return false;
-    if (!this.banExpiresAt) return true;
-    return new Date() < this.banExpiresAt;
+    return this.status === PlanetUserStatus.ACTIVE && !this.isMutedNow();
   }
 
   /**
@@ -480,33 +420,6 @@ export class PlanetUser extends BaseEntity {
   leave(): void {
     this.status = PlanetUserStatus.LEFT;
     this.leftAt = new Date();
-  }
-
-  /**
-   * 사용자 정지
-   */
-  banUser(bannedBy: number, reason?: string, duration?: number): void {
-    this.isBanned = true;
-    this.bannedAt = new Date();
-    this.bannedBy = bannedBy;
-    this.banReason = reason;
-    this.status = PlanetUserStatus.BANNED;
-
-    if (duration) {
-      this.banExpiresAt = new Date(Date.now() + duration);
-    }
-  }
-
-  /**
-   * 사용자 정지 해제
-   */
-  unbanUser(): void {
-    this.isBanned = false;
-    this.bannedAt = undefined;
-    this.banExpiresAt = undefined;
-    this.bannedBy = undefined;
-    this.banReason = undefined;
-    this.status = PlanetUserStatus.ACTIVE;
   }
 
   /**
@@ -633,16 +546,6 @@ export class PlanetUser extends BaseEntity {
   }
 
   /**
-   * 정지 남은 시간 계산 (초 단위)
-   */
-  getBanRemainingSeconds(): number {
-    if (!this.isBanned || !this.banExpiresAt) return 0;
-
-    const remaining = this.banExpiresAt.getTime() - Date.now();
-    return Math.max(0, Math.ceil(remaining / 1000));
-  }
-
-  /**
    * 음소거 남은 시간 계산 (초 단위)
    */
   getMuteRemainingSeconds(): number {
@@ -682,18 +585,17 @@ export class PlanetUser extends BaseEntity {
   /**
    * 1:1 Planet에서 채팅할 수 있는 권한이 있는지 확인
    * - 활성 상태여야 함
-   * - 정지되지 않았어야 함
    * - 탈퇴하지 않았어야 함
    */
   canChatInDirectPlanet(): boolean {
-    return this.status === PlanetUserStatus.ACTIVE && !this.isBannedNow();
+    return this.status === PlanetUserStatus.ACTIVE;
   }
 
   /**
    * 1:1 Planet 초대를 수락할 수 있는지 확인
    */
   canAcceptDirectPlanetInvite(): boolean {
-    return this.isInvitedToDirectPlanet() && !this.isBannedNow();
+    return this.isInvitedToDirectPlanet();
   }
 
   /**

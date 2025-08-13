@@ -44,7 +44,7 @@ export enum UserStatus {
 // 복합 인덱스 - 성능 향상
 @Index(['status', 'isOnline']) // 상태별 온라인 사용자 조회
 @Index(['provider', 'isOnline']) // 제공자별 온라인 사용자 조회
-@Index(['isBanned', 'banExpiresAt']) // 밴된 사용자의 만료일 조회
+@Index(['isBanned']) // 밴된 사용자 조회
 @Index(['isOnline', 'lastSeenAt']) // 온라인 상태별 최근 접속 시간순
 export class User extends BaseEntity {
   @PrimaryGeneratedColumn()
@@ -209,21 +209,11 @@ export class User extends BaseEntity {
   @Column({
     type: 'boolean',
     default: false,
-    comment: '계정 정지 여부',
+    comment: '계정 정지 여부 (로그인 불가)',
   })
   @IsBoolean()
-  @Index() // 밤 상태 필터링
+  @Index() // 벤 상태 필터링
   isBanned: boolean;
-
-  @Column({
-    type: 'timestamp',
-    nullable: true,
-    comment: '정지 해제 시간',
-  })
-  @IsOptional()
-  @IsDateString()
-  @Index() // 밤 만료 시간 정렬
-  banExpiresAt?: Date;
 
   /**
    * 통계 정보
@@ -301,13 +291,10 @@ export class User extends BaseEntity {
   }
 
   /**
-   * 계정 정지
+   * 계정 정지 (로그인 불가)
    */
-  banUser(duration?: number): void {
+  banUser(): void {
     this.isBanned = true;
-    if (duration) {
-      this.banExpiresAt = new Date(Date.now() + duration);
-    }
   }
 
   /**
@@ -315,16 +302,13 @@ export class User extends BaseEntity {
    */
   unbanUser(): void {
     this.isBanned = false;
-    this.banExpiresAt = undefined;
   }
 
   /**
-   * 정지 상태 확인
+   * 정지 상태 확인 (로그인 불가)
    */
   isBannedNow(): boolean {
-    if (!this.isBanned) return false;
-    if (!this.banExpiresAt) return true;
-    return new Date() < this.banExpiresAt;
+    return this.isBanned;
   }
 
   /**

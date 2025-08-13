@@ -200,15 +200,6 @@ export class TravelUser extends BaseEntity {
   bannedAt?: Date;
 
   @Column({
-    type: 'timestamp',
-    nullable: true,
-    comment: '정지 해제 시간',
-  })
-  @IsOptional()
-  @IsDateString()
-  banExpiresAt?: Date;
-
-  @Column({
     type: 'int',
     nullable: true,
     comment: '정지 처리한 관리자 ID',
@@ -347,12 +338,10 @@ export class TravelUser extends BaseEntity {
   }
 
   /**
-   * 현재 정지 상태인지 확인
+   * 현재 정지 상태인지 확인 (여행 내 채팅 불가)
    */
   isBannedNow(): boolean {
-    if (!this.isBanned) return false;
-    if (!this.banExpiresAt) return true;
-    return new Date() < this.banExpiresAt;
+    return this.isBanned;
   }
 
   /**
@@ -370,18 +359,14 @@ export class TravelUser extends BaseEntity {
   }
 
   /**
-   * 사용자 정지
+   * 사용자 정지 (여행 내 채팅 불가)
    */
-  banUser(bannedBy: number, reason?: string, duration?: number): void {
+  banUser(bannedBy: number, reason?: string): void {
     this.isBanned = true;
     this.bannedAt = new Date();
     this.bannedBy = bannedBy;
     this.banReason = reason;
     this.status = TravelUserStatus.BANNED;
-
-    if (duration) {
-      this.banExpiresAt = new Date(Date.now() + duration);
-    }
   }
 
   /**
@@ -390,7 +375,6 @@ export class TravelUser extends BaseEntity {
   unbanUser(): void {
     this.isBanned = false;
     this.bannedAt = undefined;
-    this.banExpiresAt = undefined;
     this.bannedBy = undefined;
     this.banReason = undefined;
     this.status = TravelUserStatus.ACTIVE;
@@ -526,16 +510,6 @@ export class TravelUser extends BaseEntity {
   getMembershipDays(): number {
     const diffTime = Date.now() - this.joinedAt.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  }
-
-  /**
-   * 정지 남은 시간 계산 (초 단위)
-   */
-  getBanRemainingSeconds(): number {
-    if (!this.isBanned || !this.banExpiresAt) return 0;
-
-    const remaining = this.banExpiresAt.getTime() - Date.now();
-    return Math.max(0, Math.ceil(remaining / 1000));
   }
 
   /**
