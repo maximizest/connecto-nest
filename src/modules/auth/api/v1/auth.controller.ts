@@ -12,6 +12,7 @@ import {
   SUCCESS_MESSAGES,
 } from 'src/common/constants/app.constants';
 import { User } from '../../../user/user.entity';
+import { PushNotificationService } from '../../../notification/services/push-notification.service';
 import { AuthService, JwtPayload } from '../../auth.service';
 import { SocialSigninDto } from '../../dto/social-signin.dto';
 
@@ -20,7 +21,10 @@ import { SocialSigninDto } from '../../dto/social-signin.dto';
   version: '1',
 })
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly pushNotificationService: PushNotificationService,
+  ) {}
 
   @Post('sign/social')
   async signSocial(@Body() data: SocialSigninDto) {
@@ -74,7 +78,27 @@ export class AuthController {
       // 리프레시 토큰 저장
       await User.update(user.id, { refreshToken: tokens.refreshToken });
 
-      return tokens;
+      // 푸시 토큰 등록 (선택적)
+      if (data.pushToken && data.platform && data.deviceId) {
+        try {
+          await this.pushNotificationService.registerPushToken(
+            user.id,
+            data.pushToken,
+            data.platform,
+            data.deviceId,
+            data.appVersion,
+          );
+        } catch (error) {
+          // 푸시 토큰 등록 실패해도 로그인은 성공
+          console.error('푸시 토큰 등록 실패:', error);
+        }
+      }
+
+      return {
+        ...tokens,
+        isNewUser: !user,
+        pushTokenRegistered: !!(data.pushToken && data.platform && data.deviceId),
+      };
     } catch (error) {
       if (
         error instanceof BadRequestException ||

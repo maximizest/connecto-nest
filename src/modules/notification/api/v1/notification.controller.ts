@@ -485,6 +485,8 @@ export class NotificationController {
   /**
    * 테스트 알림 전송 API (개발/테스트용)
    * POST /api/v1/notifications/test
+   * 
+   * 개발 환경에서만 사용 가능
    */
   @Post('test')
   async sendTestNotification(
@@ -499,6 +501,11 @@ export class NotificationController {
     @CurrentUser() currentUser: CurrentUserData,
   ) {
     const user: User = currentUser as User;
+
+    // 개발 환경에서만 허용
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('테스트 알림은 개발 환경에서만 사용 가능합니다.');
+    }
 
     try {
       const {

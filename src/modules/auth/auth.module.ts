@@ -13,6 +13,7 @@ import { TravelUser } from '../travel-user/travel-user.entity';
 import { UserDeletionService } from '../user/services/user-deletion.service';
 import { User } from '../user/user.entity';
 import { VideoProcessing } from '../video-processing/video-processing.entity';
+import { PushNotificationService } from '../notification/services/push-notification.service';
 import { AuthController } from './api/v1/auth.controller';
 import { AuthService } from './auth.service';
 
@@ -46,6 +47,7 @@ import { AuthService } from './auth.service';
   providers: [
     AuthService,
     UserDeletionService, // 회원탈퇴 기능을 위해 포함
+    PushNotificationService, // 로그인 시 푸시 토큰 등록
   ],
   exports: [
     AuthService,

@@ -1,4 +1,4 @@
-import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { SocialProvider } from '../../user/user.entity';
 
 export class SocialSigninDto {
@@ -11,4 +11,21 @@ export class SocialSigninDto {
   @IsString({ message: '토큰은 문자열이어야 합니다.' })
   @IsNotEmpty({ message: '소셜 로그인 토큰을 입력해주세요.' })
   token: string;
+
+  // 푸시 알림 설정 (선택적)
+  @IsOptional()
+  @IsString()
+  pushToken?: string;
+
+  @IsOptional()
+  @IsEnum(['ios', 'android', 'web'])
+  platform?: 'ios' | 'android' | 'web';
+
+  @IsOptional()
+  @IsString()
+  deviceId?: string;
+
+  @IsOptional()
+  @IsString()
+  appVersion?: string;
 }
