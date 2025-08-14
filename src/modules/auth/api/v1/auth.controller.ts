@@ -6,11 +6,14 @@ import {
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Request } from 'express';
+import { Repository } from 'typeorm';
 import {
   ERROR_MESSAGES,
   SUCCESS_MESSAGES,
 } from 'src/common/constants/app.constants';
+import { Profile } from '../../../profile/profile.entity';
 import { User } from '../../../user/user.entity';
 import { PushNotificationService } from '../../../notification/services/push-notification.service';
 import { AuthService, JwtPayload } from '../../auth.service';
@@ -24,6 +27,8 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly pushNotificationService: PushNotificationService,
+    @InjectRepository(Profile)
+    private readonly profileRepository: Repository<Profile>,
   ) {}
 
   @Post('sign/social')
@@ -60,6 +65,9 @@ export class AuthController {
         });
 
         user = await user.save();
+        
+        // 프로필 자동 생성
+        await this.createDefaultProfile(user.id);
       } else {
         // 기존 사용자인 경우 프로필 정보 업데이트
         user.name = socialUserInfo.name;
@@ -179,6 +187,24 @@ export class AuthController {
       }
 
       throw new BadRequestException(ERROR_MESSAGES.LOGOUT_ERROR);
+    }
+  }
+
+  /**
+   * 기본 프로필 자동 생성
+   */
+  private async createDefaultProfile(userId: number): Promise<void> {
+    try {
+      const profile = this.profileRepository.create({
+        userId,
+        bio: '',
+        occupation: '',
+      });
+      
+      await this.profileRepository.save(profile);
+    } catch (error) {
+      // 프로필 생성 실패해도 로그인은 성공
+      console.error('프로필 자동 생성 실패:', error);
     }
   }
 }

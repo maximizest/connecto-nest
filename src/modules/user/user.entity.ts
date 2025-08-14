@@ -28,15 +28,6 @@ export enum SocialProvider {
   APPLE = 'apple',
 }
 
-/**
- * 사용자 온라인 상태
- */
-export enum UserStatus {
-  ONLINE = 'online',
-  OFFLINE = 'offline',
-  AWAY = 'away',
-  BUSY = 'busy',
-}
 
 @Entity('users')
 @Index(['socialId', 'provider'], { unique: true }) // 소셜 ID + 제공자 조합 고유
@@ -91,18 +82,6 @@ export class User extends BaseEntity {
   @Index() // 전화번호 검색 최적화
   phone?: string;
 
-  /**
-   * 온라인 상태 관리
-   */
-  @Column({
-    type: 'enum',
-    enum: UserStatus,
-    default: UserStatus.OFFLINE,
-    comment: '사용자 온라인 상태',
-  })
-  @IsEnum(UserStatus)
-  @Index() // 사용자 상태 필터링
-  status: UserStatus;
 
   /**
    * 추가 설정
@@ -245,11 +224,6 @@ export class User extends BaseEntity {
    */
   @BeforeInsert()
   beforeInsert() {
-    // 기본 프로필 설정
-    if (!this.status) {
-      this.status = UserStatus.OFFLINE;
-    }
-
     console.log(`🟢 User creating: ${this.email}`);
   }
 

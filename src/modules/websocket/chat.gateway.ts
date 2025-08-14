@@ -186,16 +186,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         rooms: this.roomService.getUserRooms(authenticatedClient.userId),
       });
 
-      // 사용자 온라인 상태 브로드캐스트
-      await this.broadcastService.broadcastOnlineStatus(this.server, {
-        userId: authenticatedClient.userId,
-        userName: authenticatedClient.user.name,
-        isOnline: true,
-        deviceType: this.extractDeviceType(
-          client.handshake.headers['user-agent'],
-        ),
-        connectedAt: new Date(),
-      });
+      // 온라인 상태 추적 제거됨
 
       this.logger.log(
         `User ${authenticatedClient.userId} connected via WebSocket`,
@@ -226,20 +217,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.server,
         );
 
-        // 온라인 상태 업데이트
-        await WebSocketAuthGuard.updateUserOfflineStatus(
-          authenticatedClient.userId,
-          client.id,
-          this.logger,
-        );
-
-        // 사용자 오프라인 상태 브로드캐스트
-        await this.broadcastService.broadcastOnlineStatus(this.server, {
-          userId: authenticatedClient.userId,
-          userName: authenticatedClient.user.name,
-          isOnline: false,
-          lastSeenAt: new Date(),
-        });
+        // 온라인 상태 추적 제거됨
 
         this.logger.log(
           `User ${authenticatedClient.userId} disconnected from WebSocket`,

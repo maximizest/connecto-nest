@@ -55,9 +55,6 @@ export class WebSocketAuthGuard implements CanActivate {
       client.userId = user.id;
       client.authenticated = true;
 
-      // 온라인 상태 업데이트
-      await this.updateUserOnlineStatus(user, client.id);
-
       this.logger.debug(`User ${user.id} authenticated via WebSocket`);
       return true;
     } catch (error) {
@@ -91,41 +88,4 @@ export class WebSocketAuthGuard implements CanActivate {
     return null;
   }
 
-  /**
-   * 사용자 온라인 상태 업데이트
-   */
-  private async updateUserOnlineStatus(
-    user: User,
-    socketId: string,
-  ): Promise<void> {
-    try {
-      // 사용자를 온라인으로 설정 (onlinePresenceService 제거됨)
-      // TODO: 온라인 상태 관리 로직 구현 필요
-
-      this.logger.debug(
-        `User ${user.id} online status updated with socket ${socketId}`,
-      );
-    } catch (error) {
-      this.logger.warn(
-        `Failed to update online status for user ${user.id}: ${error.message}`,
-      );
-    }
-  }
-
-  /**
-   * 사용자 오프라인 상태 업데이트
-   */
-  static async updateUserOfflineStatus(
-    userId: number,
-    socketId: string,
-    logger: Logger,
-  ): Promise<void> {
-    try {
-      logger.debug(`User ${userId} socket ${socketId} disconnected`);
-    } catch (error) {
-      logger.warn(
-        `Failed to update offline status for user ${userId}: ${error.message}`,
-      );
-    }
-  }
 }

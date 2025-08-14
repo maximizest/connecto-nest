@@ -22,7 +22,7 @@ import { AuthService } from './auth.service';
     TypeOrmModule.forFeature([
       // Auth 관련 기본 entities
       User,
-      Profile,
+      Profile, // 프로필 자동 생성을 위해 필요
 
       // UserDeletionService용 추가 entities (회원탈퇴 기능을 위해)
       Admin,

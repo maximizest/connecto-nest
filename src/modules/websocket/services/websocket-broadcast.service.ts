@@ -129,14 +129,6 @@ export class WebSocketBroadcastService {
     }
   }
 
-  /**
-   * 온라인 상태 브로드캐스트 (간소화 버전)
-   */
-  async broadcastOnlineStatus(server: Server, data: any): Promise<void> {
-    this.logger.debug(
-      'Online status broadcast disabled (cache services removed)',
-    );
-  }
 
   /**
    * 읽음 상태 브로드캐스트 (간소화 버전)

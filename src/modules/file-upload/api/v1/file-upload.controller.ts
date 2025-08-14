@@ -254,6 +254,16 @@ export class FileUploadController {
         });
       }
       
+      // 이미지 파일인 경우 자동 리사이징 (대용량 이미지 최적화)
+      if (entity.mimeType && entity.mimeType.startsWith('image/')) {
+        this.startAutoImageOptimization(entity).catch(err => {
+          this.logger.error(
+            `이미지 자동 최적화 실패: ${entity.originalFileName}`,
+            err.stack
+          );
+        });
+      }
+      
       this.logger.log(
         `Upload completed: ${entity.originalFileName} for user ${entity.userId}`
       );
@@ -340,6 +350,42 @@ export class FileUploadController {
         error.stack
       );
       // 자동 처리 실패해도 업로드는 성공으로 처리
+    }
+  }
+
+  /**
+   * 이미지 자동 최적화
+   * 대용량 이미지를 자동으로 리사이징합니다.
+   */
+  private async startAutoImageOptimization(fileUpload: FileUpload): Promise<void> {
+    try {
+      // 5MB 이상인 이미지만 최적화
+      if (fileUpload.fileSize < 5 * 1024 * 1024) {
+        return;
+      }
+      
+      // 이미지 최적화 이벤트 발행
+      this.eventEmitter.emit('image.optimization.start', {
+        fileUploadId: fileUpload.id,
+        storageKey: fileUpload.storageKey,
+        originalSize: fileUpload.fileSize,
+        userId: fileUpload.userId,
+        metadata: {
+          maxWidth: 1920,
+          maxHeight: 1080,
+          quality: 85,
+          format: 'webp', // 자동으로 WebP 변환
+        },
+      });
+      
+      this.logger.log(
+        `이미지 자동 최적화 시작: ${fileUpload.originalFileName} (${Math.round(fileUpload.fileSize / 1024 / 1024)}MB)`
+      );
+    } catch (error) {
+      this.logger.error(
+        `이미지 최적화 이벤트 발행 실패: ${fileUpload.originalFileName}`,
+        error.stack
+      );
     }
   }
 
