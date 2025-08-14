@@ -131,7 +131,7 @@ export class ReadReceiptController {
     if (existing) {
       // 이미 읽음 처리된 경우 업데이트
       existing.readAt = new Date();
-      existing.readCount = (existing.readCount || 0) + 1;
+      // readCount 필드 제거 (엔티티에 없는 필드)
       existing.deviceType = body.deviceType || existing.deviceType;
       existing.metadata = {
         ...existing.metadata,
@@ -254,7 +254,20 @@ export class ReadReceiptController {
       userAgent: req.headers['user-agent']
     };
     
-    const result = await this.crudService.create(createBody);
+    // BeforeCreate hook을 통해 처리
+    const processedBody = await this.beforeCreate(createBody, { request: { user: req.user } });
+    
+    if ((processedBody as any).skipCreate) {
+      return crudResponse((processedBody as any).existingEntity);
+    }
+    
+    const entity = this.readReceiptRepository.create(processedBody);
+    const result = await this.readReceiptRepository.save(entity);
+    
+    // AfterCreate 훅 호출 - result가 배열인 경우 첫 번째 요소 사용
+    const savedEntity = Array.isArray(result) ? result[0] : result;
+    await this.afterCreate(savedEntity, { request: { user: req.user } });
+    
     return crudResponse(result);
   }
 

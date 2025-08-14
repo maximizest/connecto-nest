@@ -176,7 +176,6 @@
    }
    → 업로드 확인
    → 공개 URL 생성
-   → 비디오 파일인 경우 자동으로 최적화 시작 (MEDIUM 품질)
 
 3. 이미지 메시지 전송
    POST /api/v1/messages
@@ -199,29 +198,38 @@
    GET /api/v1/file-uploads/:id/stream
    → HLS 스트리밍 URL
    → HTTP Range 지원
-   → 자동 최적화된 비디오 스트리밍
 ```
 
-### 3.4 비디오 처리 (완전 자동화)
+### 3.4 비디오 처리
 ```
-자동 처리:
-- 비디오 업로드 시 자동으로 MEDIUM 품질로 최적화
-- 별도의 API 호출 없이 백그라운드에서 처리
-- 처리 완료 시 WebSocket으로 실시간 알림
-- 처리된 비디오는 자동으로 스트리밍 가능
+1. 비디오 품질 프로필 조회
+   GET /api/v1/video-processing/quality-profiles
+   → LOW, MEDIUM, HIGH, ULTRA 프로필
 
-주요 특징:
-- 사용자 개입 불필요
-- 최적화된 기본 설정 (MEDIUM 품질)
-- 원본 파일 보존
-- 자동 썸네일 생성
-- HLS 스트리밍 지원
+2. 예상 크기 계산
+   POST /api/v1/video-processing/estimate-size
+   {
+     "inputSizeMB": 100,
+     "durationSeconds": 60,
+     "qualityProfile": "MEDIUM"
+   }
+   → 예상 출력 크기
+   → 예상 처리 시간
 
-WebSocket 이벤트:
-- 'video.processing.started' - 처리 시작
-- 'video.processing.progress' - 진행률 업데이트
-- 'video.processing.completed' - 처리 완료
-- 'video.processing.failed' - 처리 실패
+3. 비디오 압축 시작
+   POST /api/v1/video-processing/compress
+   {
+     "inputStorageKey": "uploads/video.mp4",
+     "qualityProfile": "MEDIUM",
+     "fileUploadId": 789
+   }
+   → 처리 작업 ID 반환
+
+4. 처리 진행률 확인
+   GET /api/v1/video-processing/progress/:jobId
+   → 실시간 진행률 (0-100%)
+   → 예상 완료 시간
+   → 처리 로그
 ```
 
 ## 🔔 4. 알림 및 읽음 상태

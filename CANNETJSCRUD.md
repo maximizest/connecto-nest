@@ -7,7 +7,8 @@
 ### 전체 통계
 - **초기 커스텀 라우트**: 약 70개
 - **변환 완료**: 15개 (21.4%)
-- **여전히 커스텀**: 55개 (78.6%)
+- **제거됨 (자동화)**: 6개 (8.6%) - Video Processing 모듈
+- **여전히 커스텀**: 49개 (70%)
 
 ## ✅ 변환 완료된 라우트
 
@@ -15,12 +16,8 @@
 - ~~DELETE /api/v1/file-uploads/:id~~ → `destroy` 액션으로 변환
 - ~~POST /api/v1/file-uploads/complete~~ → `create` 액션으로 변환 (upsert 로직)
 
-### Video Processing 모듈
-- ~~GET /api/v1/video-processing~~ → `index` 액션으로 변환
-- ~~GET /api/v1/video-processing/:id~~ → `show` 액션으로 변환
-- ~~POST /api/v1/video-processing/process~~ → `create` 액션으로 변환
-- ~~PATCH /api/v1/video-processing/:id/cancel~~ → `update` 액션으로 변환
-- ~~PATCH /api/v1/video-processing/:id/retry~~ → `update` 액션으로 변환
+### Video Processing 모듈 
+**모든 API 제거됨 - 자동 처리로 전환**
 
 ### Read Receipt 모듈
 - ~~POST /api/v1/read-receipts/mark-read~~ → `create` 액션으로 변환 (upsert 로직)
@@ -61,16 +58,13 @@ GET  /api/v1/file-uploads/:id/download-url // 다운로드 URL 생성
 GET  /api/v1/file-uploads/:id/stream       // 스트리밍 URL 생성
 ```
 
-### 3. Video Processing 모듈 (6개)
-특화된 처리 및 메타데이터 조회
+### 3. Video Processing 모듈 (0개)
+**모든 API 제거됨** - 비디오 처리는 이제 자동으로만 동작
 
 ```typescript
-POST /api/v1/video-processing/compress     // 압축 작업 (단축 API)
-POST /api/v1/video-processing/thumbnails   // 썸네일 추출 (단축 API)
-POST /api/v1/video-processing/full         // 전체 처리 (단축 API)
-GET  /api/v1/video-processing/progress/:id // 실시간 진행률
-GET  /api/v1/video-processing/quality-profiles // 품질 프로필 목록
-POST /api/v1/video-processing/estimate-size    // 크기 예측
+// 비디오 업로드 시 자동으로 MEDIUM 품질로 최적화
+// 사용자가 직접 호출할 수 있는 API는 없음
+// 처리 상태는 WebSocket을 통해 실시간 알림
 ```
 
 ### 4. Read Receipt 모듈 (4개)

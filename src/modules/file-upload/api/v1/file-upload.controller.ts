@@ -3,8 +3,6 @@ import {
   AfterDestroy,
   BeforeCreate,
   BeforeDestroy,
-  BeforeIndex,
-  BeforeShow,
   Crud,
   crudResponse,
 } from '@foryourdev/nestjs-crud';
@@ -12,6 +10,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Logger,
@@ -33,6 +32,11 @@ import { STORAGE_SETTINGS } from '../../../../config/storage.config';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { StorageService } from '../../../storage/storage.service';
 import { User } from '../../../user/user.entity';
+import { VideoProcessingService } from '../../../video-processing/video-processing.service';
+import {
+  VideoProcessingType,
+  VideoQualityProfile,
+} from '../../../video-processing/video-processing.entity';
 import {
   FileUpload,
   FileUploadStatus,
@@ -103,6 +107,7 @@ export class FileUploadController {
     @InjectRepository(FileUpload)
     private readonly fileUploadRepository: Repository<FileUpload>,
     private readonly storageService: StorageService,
+    private readonly videoProcessingService: VideoProcessingService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -139,7 +144,7 @@ export class FileUploadController {
       );
 
       // 업로드 레코드 생성
-      const uploadRecord = await this.fileUploadService.createUploadRecord({
+      const uploadRecord = await this.crudService.createUploadRecord({
         userId: user.id,
         originalFileName: fileName,
         storageKey: presignedUrl.key,
@@ -171,35 +176,6 @@ export class FileUploadController {
     }
   }
 
-  /**
-   * 목록 조회 전 필터 처리
-   * 사용자는 자신의 파일만 조회 가능
-   */
-  @BeforeIndex()
-  async beforeIndex(query: any, context: any): Promise<any> {
-    const user: User = context.request?.user;
-    
-    // 사용자 필터 강제 적용
-    query.filters = query.filters || {};
-    query.filters.userId = user.id;
-    
-    this.logger.log(`Filtering uploads for user ${user.id}`);
-    return query;
-  }
-
-  /**
-   * 단일 조회 전 권한 확인
-   */
-  @BeforeShow()
-  async beforeShow(entity: FileUpload, context: any): Promise<FileUpload> {
-    const user: User = context.request?.user;
-    
-    if (entity.userId !== user.id) {
-      throw new ForbiddenException('파일 조회 권한이 없습니다.');
-    }
-    
-    return entity;
-  }
 
   /**
    * 파일 업로드 완료 처리 (create 액션으로 통합)
@@ -259,7 +235,7 @@ export class FileUploadController {
       return context.existingEntity;
     }
     
-    if (context.isUpdate) {
+    if (context.isUpdate && entity) {
       // 업로드 완료 이벤트 발행
       this.eventEmitter.emit('file.upload.completed', {
         id: entity.id,
@@ -267,6 +243,16 @@ export class FileUploadController {
         storageKey: entity.storageKey,
         fileName: entity.originalFileName,
       });
+      
+      // 비디오 파일인 경우 자동으로 처리 시작
+      if (entity.mimeType && entity.mimeType.startsWith('video/')) {
+        this.startAutoVideoProcessing(entity).catch(err => {
+          this.logger.error(
+            `비디오 자동 처리 실패: ${entity.originalFileName}`,
+            err.stack
+          );
+        });
+      }
       
       this.logger.log(
         `Upload completed: ${entity.originalFileName} for user ${entity.userId}`
@@ -322,6 +308,42 @@ export class FileUploadController {
   }
 
   /**
+   * 비디오 자동 처리 시작
+   * 업로드된 비디오를 자동으로 최적화합니다.
+   */
+  private async startAutoVideoProcessing(fileUpload: FileUpload): Promise<void> {
+    try {
+      // 기본 품질 프로필 설정 (MEDIUM)
+      const qualityProfile = VideoQualityProfile.MEDIUM;
+      
+      // 비디오 처리 시작 이벤트 발행 (실제 처리는 이벤트 리스너에서)
+      this.eventEmitter.emit('video.processing.start', {
+        fileUploadId: fileUpload.id,
+        inputStorageKey: fileUpload.storageKey,
+        outputStorageKey: `processed/videos/${Date.now()}_${fileUpload.originalFileName}`,
+        userId: fileUpload.userId,
+        type: VideoProcessingType.COMPRESSION,
+        qualityProfile,
+        metadata: {
+          originalSize: fileUpload.fileSize,
+          originalMimeType: fileUpload.mimeType,
+          autoProcessing: true,
+        },
+      });
+      
+      this.logger.log(
+        `자동 비디오 처리 시작 이벤트 발행: ${fileUpload.originalFileName}`
+      );
+    } catch (error) {
+      this.logger.error(
+        `비디오 자동 처리 이벤트 발행 실패: ${fileUpload.originalFileName}`,
+        error.stack
+      );
+      // 자동 처리 실패해도 업로드는 성공으로 처리
+    }
+  }
+
+  /**
    * 업로드 취소
    * DELETE /api/v1/file-upload/:id/cancel
    * 
@@ -338,7 +360,7 @@ export class FileUploadController {
       const uploadId = parseInt(id);
       
       // 업로드 레코드 조회
-      const uploadRecord = await this.fileUploadService.findById(uploadId);
+      const uploadRecord = await this.crudService.findById(uploadId);
       if (!uploadRecord) {
         throw new NotFoundException(`Upload record not found: ${uploadId}`);
       }
@@ -361,7 +383,7 @@ export class FileUploadController {
       }
 
       // 업로드 레코드 상태 업데이트
-      const cancelledUpload = await this.fileUploadService.updateStatus(
+      const cancelledUpload = await this.crudService.updateStatus(
         uploadId,
         FileUploadStatus.CANCELLED,
       );
@@ -399,7 +421,7 @@ export class FileUploadController {
     body['uploadId'] = body.uploadId;
     body['storageKey'] = body.storageKey;
     
-    const result = await this.crudService.create(body);
+    const result = await this.crudService.completeUpload(body.uploadId, body.storageKey);
     return crudResponse(result);
   }
 
@@ -422,7 +444,7 @@ export class FileUploadController {
       const uploadId = parseInt(id);
       
       // 업로드 레코드 조회
-      const uploadRecord = await this.fileUploadService.findById(uploadId);
+      const uploadRecord = await this.crudService.findById(uploadId);
       if (!uploadRecord) {
         throw new NotFoundException(`Upload record not found: ${uploadId}`);
       }
@@ -483,7 +505,7 @@ export class FileUploadController {
       const uploadId = parseInt(id);
       
       // 업로드 레코드 조회
-      const uploadRecord = await this.fileUploadService.findById(uploadId);
+      const uploadRecord = await this.crudService.findById(uploadId);
       if (!uploadRecord) {
         throw new NotFoundException(`Upload record not found: ${uploadId}`);
       }

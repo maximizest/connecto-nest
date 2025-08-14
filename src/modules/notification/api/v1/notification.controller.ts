@@ -1,8 +1,6 @@
 import {
   AfterUpdate,
   BeforeCreate,
-  BeforeIndex,
-  BeforeShow,
   BeforeUpdate,
   Crud,
   crudResponse,
@@ -93,33 +91,6 @@ export class NotificationController {
     private readonly userRepository: Repository<User>,
   ) {}
 
-  /**
-   * 사용자별 알림 필터링 및 권한 제어
-   * - 사용자는 자신의 알림만 생성, 조회, 수정 가능
-   * - @Crud index와 show 라우트에서 userId 기반 필터링 적용
-   */
-  @BeforeIndex()
-  async beforeIndex(query: any, context: any): Promise<any> {
-    const user: User = context.request?.user;
-    
-    // 사용자 필터 강제 적용
-    query.filters = query.filters || {};
-    query.filters.userId = user.id;
-    
-    this.logger.log(`Filtering notifications for user ${user.id}`);
-    return query;
-  }
-
-  @BeforeShow()
-  async beforeShow(entity: Notification, context: any): Promise<Notification> {
-    const user: User = context.request?.user;
-    
-    if (entity.userId !== user.id) {
-      throw new Error('알림 조회 권한이 없습니다.');
-    }
-    
-    return entity;
-  }
 
   @BeforeCreate()
   async beforeCreate(body: any, context: any) {
@@ -217,10 +188,21 @@ export class NotificationController {
     @Param('id') notificationId: number,
     @CurrentUser() currentUser: CurrentUserData,
   ) {
-    // update 액션으로 위임
-    const result = await this.crudService.update(notificationId, {
-      markAsRead: true
+    const user: User = currentUser as User;
+    
+    // 사용자의 알림인지 확인
+    const notification = await this.crudService.repository.findOne({
+      where: { id: notificationId, userId: user.id }
     });
+    
+    if (!notification) {
+      throw new Error('알림을 찾을 수 없습니다.');
+    }
+    
+    // 읽음 처리
+    notification.isRead = true;
+    notification.readAt = new Date();
+    const result = await this.crudService.repository.save(notification);
     
     return crudResponse(result);
   }
@@ -296,7 +278,7 @@ export class NotificationController {
       });
       
       // 각 알림에 BeforeUpdate 적용
-      const results = [];
+      const results: Notification[] = [];
       for (const notification of unreadNotifications) {
         await this.beforeUpdate(notification, { markAsRead: true }, { request: { user } });
         notification.isRead = true;

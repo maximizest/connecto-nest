@@ -294,4 +294,38 @@ export class FileUploadService extends CrudService<FileUpload> {
 
     this.logger.log(`Upload record deleted: ${id}`);
   }
+
+  /**
+   * 업로드 완료 처리 (Direct Upload 완료 확인)
+   */
+  async completeUpload(uploadId: number, storageKey: string): Promise<FileUpload> {
+    const upload = await this.findById(uploadId);
+    if (!upload) {
+      throw new NotFoundException(`Upload record not found: ${uploadId}`);
+    }
+
+    if (upload.storageKey !== storageKey) {
+      throw new Error('Storage key mismatch');
+    }
+
+    upload.status = FileUploadStatus.COMPLETED;
+    upload.completedAt = new Date();
+
+    const updatedUpload = await this.repository.save(upload);
+
+    this.logger.log(`Upload completed via direct upload: ${uploadId}`);
+    return updatedUpload;
+  }
+
+  /**
+   * 비디오 처리 작업 생성 (VideoProcessingService 대신 임시 처리)
+   */
+  async createProcessingJob(data: any): Promise<any> {
+    // 실제 구현은 VideoProcessingService에서 처리
+    // 여기서는 임시로 데이터만 반환
+    return {
+      id: Math.floor(Math.random() * 10000),
+      ...data,
+    };
+  }
 }
