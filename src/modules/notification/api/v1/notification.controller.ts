@@ -1,5 +1,8 @@
 import {
+  AfterUpdate,
   BeforeCreate,
+  BeforeIndex,
+  BeforeShow,
   BeforeUpdate,
   Crud,
   crudResponse,
@@ -55,9 +58,12 @@ import { PushNotificationService } from '../../services/push-notification.servic
     'planetId',
     'createdAt',
   ],
-  allowedParams: [],
+  allowedParams: [
+    'isRead',
+    'readAt'
+  ],
   allowedIncludes: ['triggerUser', 'travel', 'planet'],
-  only: ['index', 'show'],
+  only: ['index', 'show', 'update'],
   routes: {
     index: {
       allowedFilters: [
@@ -92,16 +98,66 @@ export class NotificationController {
    * - 사용자는 자신의 알림만 생성, 조회, 수정 가능
    * - @Crud index와 show 라우트에서 userId 기반 필터링 적용
    */
+  @BeforeIndex()
+  async beforeIndex(query: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
+    
+    // 사용자 필터 강제 적용
+    query.filters = query.filters || {};
+    query.filters.userId = user.id;
+    
+    this.logger.log(`Filtering notifications for user ${user.id}`);
+    return query;
+  }
+
+  @BeforeShow()
+  async beforeShow(entity: Notification, context: any): Promise<Notification> {
+    const user: User = context.request?.user;
+    
+    if (entity.userId !== user.id) {
+      throw new Error('알림 조회 권한이 없습니다.');
+    }
+    
+    return entity;
+  }
+
   @BeforeCreate()
-  @BeforeUpdate()
-  async preprocessData(entity: Notification, context: any) {
+  async beforeCreate(body: any, context: any) {
     // 헬퍼 함수를 사용하여 현재 사용자 ID 추출
     const userId = getCurrentUserIdFromContext(context);
 
-    // 생성/수정 시 userId 자동 설정
-    entity.userId = userId;
+    // 생성 시 userId 자동 설정
+    body.userId = userId;
 
-    return entity;
+    return body;
+  }
+
+  @BeforeUpdate()
+  async beforeUpdate(entity: Notification, body: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
+    
+    // 권한 확인
+    if (entity.userId !== user.id) {
+      throw new Error('알림 수정 권한이 없습니다.');
+    }
+    
+    // 읽음 처리 요청인 경우
+    if (context.request?.url?.includes('/read') || body.markAsRead === true) {
+      body.isRead = true;
+      body.readAt = new Date();
+      context.isReadOperation = true;
+    }
+    
+    return body;
+  }
+
+  @AfterUpdate()
+  async afterUpdate(entity: Notification, context: any): Promise<void> {
+    if (context.isReadOperation) {
+      this.logger.log(
+        `Notification marked as read: id=${entity.id}, userId=${entity.userId}`
+      );
+    }
   }
 
   // 내 알림 목록 조회는 @Crud index 라우트를 사용합니다.
@@ -151,29 +207,22 @@ export class NotificationController {
   // @BeforeCreate/@BeforeUpdate 훅에서 userId 권한 확인을 자동으로 처리합니다.
 
   /**
-   * 알림 읽음 처리 API
+   * 알림 읽음 처리 API (커스텀 엔드포인트)
    * PATCH /api/v1/notifications/:id/read
+   * 
+   * update 액션으로 위임
    */
   @Patch(':id/read')
   async markAsRead(
     @Param('id') notificationId: number,
     @CurrentUser() currentUser: CurrentUserData,
   ) {
-    const user: User = currentUser as User;
-
-    try {
-      const notification = await this.crudService.markAsRead(
-        notificationId,
-        user.id,
-      );
-
-      return crudResponse(notification);
-    } catch (error) {
-      this.logger.error(
-        `Mark as read failed: notificationId=${notificationId}, userId=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
+    // update 액션으로 위임
+    const result = await this.crudService.update(notificationId, {
+      markAsRead: true
+    });
+    
+    return crudResponse(result);
   }
 
   /**
@@ -231,28 +280,44 @@ export class NotificationController {
   }
 
   /**
-   * 모든 알림 읽음 처리 API
+   * 모든 알림 읽음 처리 API (커스텀 엔드포인트)
    * PATCH /api/v1/notifications/read-all
+   * 
+   * 벼크 업데이트로 처리
    */
   @Patch('read-all')
   async markAllAsRead(@CurrentUser() currentUser: CurrentUserData) {
     const user: User = currentUser as User;
 
     try {
-      const affectedCount = await this.crudService.markAllAsRead(user.id);
+      // 사용자의 모든 읽지 않은 알림 조회
+      const unreadNotifications = await this.crudService.repository.find({
+        where: { userId: user.id, isRead: false }
+      });
+      
+      // 각 알림에 BeforeUpdate 적용
+      const results = [];
+      for (const notification of unreadNotifications) {
+        await this.beforeUpdate(notification, { markAsRead: true }, { request: { user } });
+        notification.isRead = true;
+        notification.readAt = new Date();
+        const updated = await this.crudService.repository.save(notification);
+        await this.afterUpdate(updated, { isReadOperation: true });
+        results.push(updated);
+      }
 
       // Create virtual Notification entity with read all info
       const readAllEntity = Object.assign(new Notification(), {
         id: 0,
         type: NotificationType.SYSTEM_ANNOUNCEMENT,
         title: '모든 알림 읽음 처리',
-        content: `모든 알림 ${affectedCount}개 읽음 완료`,
+        content: `모든 알림 ${results.length}개 읽음 완료`,
         userId: user.id,
         priority: NotificationPriority.NORMAL,
         channels: [NotificationChannel.IN_APP],
         isRead: true,
         data: {
-          affectedCount,
+          affectedCount: results.length,
           readBy: user.id,
           readAt: new Date(),
         },

@@ -1,20 +1,36 @@
 import {
+  AfterCreate,
+  AfterUpdate,
+  BeforeCreate,
+  BeforeIndex,
+  BeforeShow,
+  BeforeUpdate,
+  Crud,
+  crudResponse,
+} from '@foryourdev/nestjs-crud';
+import {
+  BadRequestException,
   Body,
   Controller,
-  Delete,
+  ForbiddenException,
   Get,
   Logger,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { FileUploadService } from '../../../file-upload/file-upload.service';
 import { User } from '../../../user/user.entity';
 import {
+  VideoProcessing,
   VideoProcessingStatus,
   VideoProcessingType,
   VideoQualityProfile,
@@ -37,112 +53,266 @@ interface VideoProcessingRequest {
  * - 썸네일 추출
  * - 메타데이터 추출
  * - 진행률 실시간 추적
+ * - @Crud 패턴으로 일부 라우트 통합
  */
 @Controller({ path: 'video-processing', version: '1' })
+@Crud({
+  entity: VideoProcessing,
+  only: ['index', 'show', 'create', 'update'],
+  allowedFilters: [
+    'userId',
+    'status',
+    'processingType',
+    'qualityProfile',
+    'createdAt',
+  ],
+  allowedParams: [
+    'inputStorageKey',
+    'originalFileName',
+    'inputFileSize',
+    'inputMimeType',
+    'processingType',
+    'qualityProfile',
+    'fileUploadId',
+  ],
+  allowedIncludes: ['user', 'fileUpload'],
+  routes: {
+    index: {
+      allowedFilters: ['status', 'processingType', 'qualityProfile'],
+    },
+    show: {
+      allowedIncludes: ['user', 'fileUpload'],
+    },
+  },
+})
 @UseGuards(AuthGuard)
 export class VideoProcessingController {
   private readonly logger = new Logger(VideoProcessingController.name);
 
   constructor(
-    private readonly videoProcessingService: VideoProcessingService,
+    public readonly crudService: VideoProcessingService,
+    @InjectRepository(VideoProcessing)
+    private readonly videoProcessingRepository: Repository<VideoProcessing>,
     private readonly fileUploadService: FileUploadService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
-   * 비디오 프로세싱 작업 시작
-   * POST /api/v1/video-processing/process
+   * 목록 조회 전 필터 처리
+   * 사용자는 자신의 작업만 조회 가능
    */
-  @Post('process')
-  async startVideoProcessing(
-    @Body() body: VideoProcessingRequest,
-    @Request() req?: any,
-  ) {
-    const user: User = req.user;
+  @BeforeIndex()
+  async beforeIndex(query: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
+    
+    // 사용자 필터 강제 적용
+    query.filters = query.filters || {};
+    query.filters.userId = user.id;
+    
+    this.logger.log(`Filtering video processing jobs for user ${user.id}`);
+    return query;
+  }
 
-    try {
-      // 파일 업로드 정보 조회 (선택적)
-      let inputFileSize = 0;
-      let inputMimeType = 'video/mp4';
-      let originalFileName = body.originalFileName || 'video.mp4';
-
-      if (body.fileUploadId) {
-        const fileUpload = await this.fileUploadService.findById(
-          body.fileUploadId,
-        );
-        if (!fileUpload) {
-          throw new NotFoundException(
-            `File upload not found: ${body.fileUploadId}`,
-          );
-        }
-
-        // 사용자 권한 확인
-        if (fileUpload.userId !== user.id) {
-          throw new Error('파일 접근 권한이 없습니다.');
-        }
-
-        inputFileSize = fileUpload.fileSize;
-        inputMimeType = fileUpload.mimeType;
-        originalFileName = fileUpload.originalFileName;
-      }
-
-      // 프로세싱 타입 검증
-      if (
-        body.processingType === VideoProcessingType.COMPRESSION &&
-        !body.qualityProfile
-      ) {
-        throw new Error('압축 작업에는 품질 프로필이 필요합니다.');
-      }
-
-      // 프로세싱 작업 생성
-      const processingJob =
-        await this.videoProcessingService.createProcessingJob({
-          userId: user.id,
-          inputStorageKey: body.inputStorageKey,
-          originalFileName,
-          inputFileSize,
-          inputMimeType,
-          processingType: body.processingType,
-          qualityProfile: body.qualityProfile,
-          fileUploadId: body.fileUploadId,
-        });
-
-      this.logger.log(
-        `Video processing started: ${processingJob.id}, user: ${user.id}`,
-      );
-
-      // 비동기로 프로세싱 시작 (백그라운드에서 실행)
-      this.videoProcessingService
-        .processVideo(processingJob.id)
-        .then(() => {
-          this.logger.log(`Video processing completed: ${processingJob.id}`);
-        })
-        .catch((error) => {
-          this.logger.error(
-            `Video processing failed: ${processingJob.id} - ${error.message}`,
-          );
-        });
-
-      return {
-        success: true,
-        message: '비디오 프로세싱이 시작되었습니다.',
-        data: {
-          jobId: processingJob.id,
-          status: processingJob.status,
-          processingType: processingJob.processingType,
-          qualityProfile: processingJob.qualityProfile,
-          originalFileName: processingJob.originalFileName,
-          inputFileSize: processingJob.inputFileSize,
-          estimatedDuration: processingJob.estimatedDurationSeconds,
-          createdAt: processingJob.createdAt,
-        },
-      };
-    } catch (error) {
-      this.logger.error(
-        `Video processing start failed: ${error.message}`,
-        error.stack,
-      );
-      throw error;
+  /**
+   * 단일 조회 전 권한 확인
+   */
+  @BeforeShow()
+  async beforeShow(entity: VideoProcessing, context: any): Promise<VideoProcessing> {
+    const user: User = context.request?.user;
+    
+    if (entity.userId !== user.id) {
+      throw new ForbiddenException('작업 조회 권한이 없습니다.');
     }
+    
+    return entity;
+  }
+
+  /**
+   * 프로세싱 작업 생성 전 처리
+   * 파일 검증 및 데이터 준비
+   */
+  @BeforeCreate()
+  async beforeCreate(body: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
+    
+    // 파일 업로드 정보 조회
+    if (body.fileUploadId) {
+      const fileUpload = await this.fileUploadService.findById(body.fileUploadId);
+      if (!fileUpload) {
+        throw new NotFoundException(`File upload not found: ${body.fileUploadId}`);
+      }
+      
+      // 권한 확인
+      if (fileUpload.userId !== user.id) {
+        throw new ForbiddenException('파일 접근 권한이 없습니다.');
+      }
+      
+      // 메타데이터 추가
+      body.inputFileSize = fileUpload.fileSize;
+      body.inputMimeType = fileUpload.mimeType;
+      body.originalFileName = fileUpload.originalFileName;
+      body.inputStorageKey = fileUpload.storageKey;
+    }
+    
+    // 프로세싱 타입 검증
+    if (body.processingType === VideoProcessingType.COMPRESSION && !body.qualityProfile) {
+      throw new BadRequestException('압축 작업에는 품질 프로필이 필요합니다.');
+    }
+    
+    // 기본값 설정
+    body.userId = user.id;
+    body.status = VideoProcessingStatus.PENDING;
+    body.progress = 0;
+    body.retryCount = 0;
+    
+    return body;
+  }
+
+  /**
+   * 프로세싱 작업 생성 후 처리
+   * 비동기 프로세싱 시작
+   */
+  @AfterCreate()
+  async afterCreate(entity: VideoProcessing, context: any): Promise<void> {
+    // 비동기 프로세싱 시작 이벤트 발행
+    this.eventEmitter.emit('video.processing.start', {
+      jobId: entity.id,
+      type: entity.processingType,
+      quality: entity.qualityProfile,
+      userId: entity.userId,
+    });
+    
+    // 실제 FFmpeg 프로세싱은 이벤트 리스너에서 처리
+    this.crudService.processVideo(entity.id)
+      .then(() => {
+        this.logger.log(`Video processing completed: ${entity.id}`);
+      })
+      .catch((error) => {
+        this.logger.error(
+          `Video processing failed: ${entity.id} - ${error.message}`,
+        );
+      });
+    
+    this.logger.log(
+      `Video processing job created: ${entity.id} for user ${entity.userId}`
+    );
+  }
+
+  /**
+   * 작업 업데이트 전 처리
+   * 취소/재시도 로직 처리
+   */
+  @BeforeUpdate()
+  async beforeUpdate(entity: VideoProcessing, body: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
+    
+    // 권한 확인
+    if (entity.userId !== user.id) {
+      throw new ForbiddenException('작업 수정 권한이 없습니다.');
+    }
+    
+    // 취소 요청
+    if (body.status === VideoProcessingStatus.CANCELLED) {
+      if (entity.status !== VideoProcessingStatus.PROCESSING) {
+        throw new BadRequestException('진행 중인 작업만 취소할 수 있습니다.');
+      }
+      context.isCancellation = true;
+    }
+    
+    // 재시도 요청
+    if (body.retry === true) {
+      if (!entity.canRetry()) {
+        throw new BadRequestException('최대 재시도 횟수를 초과했습니다.');
+      }
+      
+      body.status = VideoProcessingStatus.PENDING;
+      body.progress = 0;
+      body.retryCount = entity.retryCount + 1;
+      body.startedAt = null;
+      body.completedAt = null;
+      body.errorMessage = null;
+      context.isRetry = true;
+    }
+    
+    return body;
+  }
+
+  /**
+   * 작업 업데이트 후 처리
+   */
+  @AfterUpdate()
+  async afterUpdate(entity: VideoProcessing, context: any): Promise<void> {
+    // 취소 처리
+    if (context.isCancellation) {
+      this.eventEmitter.emit('video.processing.cancel', {
+        jobId: entity.id,
+        userId: entity.userId,
+      });
+      
+      this.logger.log(`Video processing cancelled: ${entity.id}`);
+    }
+    
+    // 재시도 처리
+    if (context.isRetry) {
+      this.eventEmitter.emit('video.processing.retry', {
+        jobId: entity.id,
+        retryCount: entity.retryCount,
+        userId: entity.userId,
+      });
+      
+      // 다시 프로세싱 시작
+      this.crudService.processVideo(entity.id);
+      
+      this.logger.log(`Video processing retry: ${entity.id} (attempt ${entity.retryCount})`);
+    }
+  }
+
+  /**
+   * 작업 취소 (커스텀 엔드포인트)
+   * PATCH /api/v1/video-processing/:id/cancel
+   */
+  @Patch(':id/cancel')
+  async cancelProcessing(
+    @Param('id') id: string,
+    @Request() req: any,
+  ) {
+    const jobId = parseInt(id);
+    const job = await this.crudService.findById(jobId);
+    
+    if (!job) {
+      throw new NotFoundException(`Processing job not found: ${jobId}`);
+    }
+    
+    // update 액션으로 위임
+    const updated = await this.crudService.update(jobId, {
+      status: VideoProcessingStatus.CANCELLED,
+    });
+    
+    return crudResponse(updated);
+  }
+
+  /**
+   * 작업 재시도 (커스텀 엔드포인트)
+   * PATCH /api/v1/video-processing/:id/retry
+   */
+  @Patch(':id/retry')
+  async retryProcessing(
+    @Param('id') id: string,
+    @Request() req: any,
+  ) {
+    const jobId = parseInt(id);
+    const job = await this.crudService.findById(jobId);
+    
+    if (!job) {
+      throw new NotFoundException(`Processing job not found: ${jobId}`);
+    }
+    
+    // update 액션으로 위임
+    const updated = await this.crudService.update(jobId, {
+      retry: true,
+    });
+    
+    return crudResponse(updated);
   }
 
   /**

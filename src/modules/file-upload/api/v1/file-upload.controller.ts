@@ -1,15 +1,30 @@
 import {
+  AfterCreate,
+  AfterDestroy,
+  BeforeCreate,
+  BeforeDestroy,
+  BeforeIndex,
+  BeforeShow,
+  Crud,
+  crudResponse,
+} from '@foryourdev/nestjs-crud';
+import {
+  BadRequestException,
   Body,
   Controller,
-  Delete,
+  ForbiddenException,
   Get,
   Logger,
   NotFoundException,
   Param,
   Post,
   Query,
+  Request,
   UseGuards,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import {
   CurrentUser,
   CurrentUserData,
@@ -45,15 +60,50 @@ interface CompleteUploadDto {
  * - 프론트엔드에서 직접 Cloudflare R2로 업로드
  * - 서버는 Presigned URL 발급 및 업로드 완료 확인만 처리
  * - 최대 500MB 파일 지원
+ * - @Crud 패턴으로 일부 라우트 통합
  */
-@Controller({ path: 'file-upload', version: '1' })
+@Controller({ path: 'file-uploads', version: '1' })
+@Crud({
+  entity: FileUpload,
+  only: ['index', 'show', 'create', 'destroy'],
+  allowedFilters: [
+    'status',
+    'userId',
+    'mimeType',
+    'uploadType',
+    'folder',
+    'createdAt',
+  ],
+  allowedParams: [
+    'originalFileName',
+    'storageKey',
+    'mimeType',
+    'fileSize',
+    'uploadType',
+    'folder',
+    'publicUrl',
+    'metadata',
+  ],
+  allowedIncludes: ['user'],
+  routes: {
+    index: {
+      allowedFilters: ['status', 'mimeType', 'folder', 'createdAt'],
+    },
+    show: {
+      allowedIncludes: ['user'],
+    },
+  },
+})
 @UseGuards(AuthGuard)
 export class FileUploadController {
   private readonly logger = new Logger(FileUploadController.name);
 
   constructor(
-    private readonly fileUploadService: FileUploadService,
+    public readonly crudService: FileUploadService,
+    @InjectRepository(FileUpload)
+    private readonly fileUploadRepository: Repository<FileUpload>,
     private readonly storageService: StorageService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -122,84 +172,152 @@ export class FileUploadController {
   }
 
   /**
-   * 업로드 완료 확인
-   * POST /api/v1/file-upload/complete
-   * 
-   * 클라이언트가 Cloudflare R2로 직접 업로드를 완료한 후,
-   * 서버에서 업로드 완료를 확인하고 검증합니다.
+   * 목록 조회 전 필터 처리
+   * 사용자는 자신의 파일만 조회 가능
    */
-  @Post('complete')
-  async completeUpload(
-    @Body() body: CompleteUploadDto,
-    @CurrentUser() currentUser?: CurrentUserData,
-  ) {
-    const user: User = currentUser as User;
+  @BeforeIndex()
+  async beforeIndex(query: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
+    
+    // 사용자 필터 강제 적용
+    query.filters = query.filters || {};
+    query.filters.userId = user.id;
+    
+    this.logger.log(`Filtering uploads for user ${user.id}`);
+    return query;
+  }
 
-    try {
-      const { uploadId, storageKey } = body;
+  /**
+   * 단일 조회 전 권한 확인
+   */
+  @BeforeShow()
+  async beforeShow(entity: FileUpload, context: any): Promise<FileUpload> {
+    const user: User = context.request?.user;
+    
+    if (entity.userId !== user.id) {
+      throw new ForbiddenException('파일 조회 권한이 없습니다.');
+    }
+    
+    return entity;
+  }
 
-      // 업로드 레코드 조회
-      const uploadRecord = await this.fileUploadService.findById(uploadId);
-      if (!uploadRecord) {
-        throw new NotFoundException(`Upload record not found: ${uploadId}`);
+  /**
+   * 파일 업로드 완료 처리 (create 액션으로 통합)
+   * Direct Upload 완료 후 메타데이터 저장
+   */
+  @BeforeCreate()
+  async beforeCreate(body: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
+    
+    // Complete upload 로직인 경우
+    if (body.storageKey && body.uploadId) {
+      // 기존 업로드 레코드 조회
+      const existing = await this.fileUploadRepository.findOne({
+        where: { id: body.uploadId, userId: user.id }
+      });
+      
+      if (!existing) {
+        throw new NotFoundException('업로드 레코드를 찾을 수 없습니다.');
       }
-
-      // 권한 검증
-      if (uploadRecord.userId !== user.id) {
-        throw new Error('업로드 완료 권한이 없습니다.');
+      
+      if (existing.status === FileUploadStatus.COMPLETED) {
+        // 이미 완료된 경우 업데이트 스킵
+        context.skipCreate = true;
+        context.existingEntity = existing;
+        return null;
       }
-
-      // 이미 완료된 업로드인지 확인
-      if (uploadRecord.status === FileUploadStatus.COMPLETED) {
-        return {
-          success: true,
-          message: '이미 완료된 업로드입니다.',
-          data: uploadRecord,
-        };
-      }
-
-      // Cloudflare R2에서 파일 존재 확인
-      const uploadResult = await this.storageService.verifyUpload(storageKey);
+      
+      // Cloudflare R2 업로드 확인
+      const uploadResult = await this.storageService.verifyUpload(body.storageKey);
       if (!uploadResult) {
-        throw new Error('업로드된 파일을 찾을 수 없습니다.');
+        throw new BadRequestException('업로드된 파일을 찾을 수 없습니다.');
       }
+      
+      // 업데이트용 데이터 준비
+      context.isUpdate = true;
+      context.updateId = body.uploadId;
+      body.status = FileUploadStatus.COMPLETED;
+      body.publicUrl = uploadResult.url;
+      body.completedAt = new Date();
+    } else {
+      // 일반 create 로직
+      body.userId = user.id;
+      body.status = body.status || FileUploadStatus.PENDING;
+      body.uploadType = body.uploadType || FileUploadType.DIRECT;
+    }
+    
+    return body;
+  }
 
-      // 업로드 레코드 완료 처리
-      const completedUpload = await this.fileUploadService.markAsCompleted(
-        uploadId,
-        uploadResult.url,
-      );
-
+  /**
+   * 파일 생성/완료 후 처리
+   */
+  @AfterCreate()
+  async afterCreate(entity: FileUpload | null, context: any): Promise<void> {
+    if (context.skipCreate && context.existingEntity) {
+      // 이미 완료된 경우 기존 엔티티 반환
+      return context.existingEntity;
+    }
+    
+    if (context.isUpdate) {
+      // 업로드 완료 이벤트 발행
+      this.eventEmitter.emit('file.upload.completed', {
+        id: entity.id,
+        userId: entity.userId,
+        storageKey: entity.storageKey,
+        fileName: entity.originalFileName,
+      });
+      
       this.logger.log(
-        `Upload completed for user ${user.id}: ${completedUpload.originalFileName}`,
+        `Upload completed: ${entity.originalFileName} for user ${entity.userId}`
       );
+    }
+  }
 
-      return {
-        success: true,
-        message: '파일 업로드가 완료되었습니다.',
-        data: {
-          id: completedUpload.id,
-          fileName: completedUpload.originalFileName,
-          fileSize: completedUpload.fileSize,
-          publicUrl: completedUpload.publicUrl,
-          storageKey: completedUpload.storageKey,
-          status: completedUpload.status,
-        },
-      };
-    } catch (error) {
-      this.logger.error(`Upload completion failed: ${error.message}`, error.stack);
+  /**
+   * 파일 삭제 전 권한 확인 및 준비
+   */
+  @BeforeDestroy()
+  async beforeDestroy(entity: FileUpload, context: any): Promise<void> {
+    const user: User = context.request?.user;
+    
+    // 권한 확인
+    if (entity.userId !== user.id) {
+      throw new ForbiddenException('파일 삭제 권한이 없습니다.');
+    }
+    
+    // 스토리지 키 저장 (AfterDestroy에서 사용)
+    context.storageKey = entity.storageKey;
+    context.fileName = entity.originalFileName;
+    
+    this.logger.log(
+      `Preparing to delete file: ${entity.originalFileName} for user ${user.id}`
+    );
+  }
+
+  /**
+   * 파일 삭제 후 스토리지 정리
+   */
+  @AfterDestroy()
+  async afterDestroy(entity: FileUpload, context: any): Promise<void> {
+    if (context.storageKey) {
+      // Cloudflare R2에서 파일 삭제 (비동기)
+      this.eventEmitter.emit('file.storage.delete', {
+        storageKey: context.storageKey,
+        fileName: context.fileName,
+      });
       
-      // 실패한 업로드 상태 업데이트
-      if (body.uploadId) {
-        await this.fileUploadService.markAsFailed(
-          body.uploadId,
-          error.message,
-        ).catch(err => {
-          this.logger.error(`Failed to mark upload as failed: ${err.message}`);
-        });
-      }
+      // 실제 삭제는 이벤트 리스너에서 처리
+      this.storageService.deleteFile(context.storageKey).catch(err => {
+        this.logger.error(
+          `Failed to delete file from storage: ${context.storageKey}`,
+          err.stack
+        );
+      });
       
-      throw error;
+      this.logger.log(
+        `File deleted: ${context.fileName} (${context.storageKey})`
+      );
     }
   }
 
@@ -267,162 +385,24 @@ export class FileUploadController {
   }
 
   /**
-   * 파일 삭제
-   * DELETE /api/v1/file-upload/:id
+   * 업로드 완료 확인 (커스텀 엔드포인트)
+   * POST /api/v1/file-uploads/complete
    * 
-   * 업로드된 파일을 삭제합니다.
+   * Direct Upload 완료 후 서버 확인
    */
-  @Delete(':id')
-  async deleteFile(
-    @Param('id') id: string,
-    @CurrentUser() currentUser?: CurrentUserData,
+  @Post('complete')
+  async completeUpload(
+    @Body() body: { uploadId: number; storageKey: string },
+    @Request() req: any,
   ) {
-    const user: User = currentUser as User;
-
-    try {
-      const uploadId = parseInt(id);
-      
-      // 업로드 레코드 조회
-      const uploadRecord = await this.fileUploadService.findById(uploadId);
-      if (!uploadRecord) {
-        throw new NotFoundException(`Upload record not found: ${uploadId}`);
-      }
-
-      // 권한 검증
-      if (uploadRecord.userId !== user.id) {
-        throw new Error('파일 삭제 권한이 없습니다.');
-      }
-
-      // Cloudflare R2에서 파일 삭제
-      if (uploadRecord.storageKey) {
-        await this.storageService.deleteFile(uploadRecord.storageKey);
-      }
-
-      // 업로드 레코드 삭제
-      await this.fileUploadService.deleteUploadRecord(uploadId);
-
-      this.logger.log(
-        `File deleted for user ${user.id}: ${uploadRecord.originalFileName}`,
-      );
-
-      return {
-        success: true,
-        message: '파일이 삭제되었습니다.',
-      };
-    } catch (error) {
-      this.logger.error(`File deletion failed: ${error.message}`, error.stack);
-      throw error;
-    }
+    // create 액션으로 위임
+    body['uploadId'] = body.uploadId;
+    body['storageKey'] = body.storageKey;
+    
+    const result = await this.crudService.create(body);
+    return crudResponse(result);
   }
 
-  /**
-   * 내 업로드 목록 조회
-   * GET /api/v1/file-upload/my
-   * 
-   * 현재 사용자의 업로드 목록을 조회합니다.
-   */
-  @Get('my')
-  async getMyUploads(
-    @Query('status') status?: FileUploadStatus,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 20,
-    @CurrentUser() currentUser?: CurrentUserData,
-  ) {
-    const user: User = currentUser as User;
-
-    try {
-      const validatedLimit = Math.min(Math.max(1, limit), 100);
-      const offset = (page - 1) * validatedLimit;
-
-      const result = await this.fileUploadService.findByUser(user.id, {
-        status,
-        limit: validatedLimit,
-        offset,
-      });
-
-      return {
-        success: true,
-        message: '업로드 목록을 가져왔습니다.',
-        data: {
-          uploads: result.uploads.map(upload => ({
-            id: upload.id,
-            fileName: upload.originalFileName,
-            fileSize: upload.fileSize,
-            mimeType: upload.mimeType,
-            status: upload.status,
-            publicUrl: upload.publicUrl,
-            uploadType: upload.uploadType,
-            progress: upload.progress,
-            createdAt: upload.createdAt,
-            completedAt: upload.completedAt,
-          })),
-          pagination: {
-            total: result.total,
-            page,
-            limit: validatedLimit,
-            totalPages: Math.ceil(result.total / validatedLimit),
-          },
-        },
-      };
-    } catch (error) {
-      this.logger.error(`Failed to get user uploads: ${error.message}`, error.stack);
-      throw error;
-    }
-  }
-
-  /**
-   * 업로드 상세 정보 조회
-   * GET /api/v1/file-upload/:id
-   * 
-   * 특정 업로드의 상세 정보를 조회합니다.
-   */
-  @Get(':id')
-  async getUploadDetail(
-    @Param('id') id: string,
-    @CurrentUser() currentUser?: CurrentUserData,
-  ) {
-    const user: User = currentUser as User;
-
-    try {
-      const uploadId = parseInt(id);
-      
-      // 업로드 레코드 조회
-      const uploadRecord = await this.fileUploadService.findById(uploadId);
-      if (!uploadRecord) {
-        throw new NotFoundException(`Upload record not found: ${uploadId}`);
-      }
-
-      // 권한 검증
-      if (uploadRecord.userId !== user.id) {
-        throw new Error('업로드 조회 권한이 없습니다.');
-      }
-
-      return {
-        success: true,
-        message: '업로드 정보를 가져왔습니다.',
-        data: {
-          id: uploadRecord.id,
-          fileName: uploadRecord.originalFileName,
-          fileSize: uploadRecord.fileSize,
-          mimeType: uploadRecord.mimeType,
-          status: uploadRecord.status,
-          publicUrl: uploadRecord.publicUrl,
-          storageKey: uploadRecord.storageKey,
-          uploadType: uploadRecord.uploadType,
-          folder: uploadRecord.folder,
-          metadata: uploadRecord.metadata,
-          progress: uploadRecord.progress,
-          errorMessage: uploadRecord.errorMessage,
-          createdAt: uploadRecord.createdAt,
-          startedAt: uploadRecord.startedAt,
-          completedAt: uploadRecord.completedAt,
-        },
-      };
-    } catch (error) {
-      this.logger.error(`Failed to get upload detail: ${error.message}`, error.stack);
-      throw error;
-    }
-  }
 
   /**
    * 다운로드 URL 생성

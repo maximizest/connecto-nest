@@ -1,4 +1,5 @@
 import {
+  AfterCreate,
   BeforeCreate,
   BeforeUpdate,
   Crud,
@@ -43,7 +44,7 @@ import { ReadReceiptService } from '../../read-receipt.service';
   entity: MessageReadReceipt,
 
   // 허용할 CRUD 액션
-  only: ['index', 'show'],
+  only: ['index', 'show', 'create'],
 
   // 필터링 허용 필드 (보안)
   allowedFilters: [
@@ -109,6 +110,7 @@ export class ReadReceiptController {
 
   /**
    * 읽음 영수증 생성 전 검증 및 전처리
+   * mark-read 라우트의 upsert 로직 통합
    */
   @BeforeCreate()
   async beforeCreate(body: any, context: any): Promise<any> {
@@ -117,11 +119,101 @@ export class ReadReceiptController {
     // 사용자 정보 설정
     body.userId = user.id;
 
+    // 메시지 존재 및 접근 권한 확인
+    const message = await this.validateMessageAccess(body.messageId, user.id);
+    body.planetId = message.planetId;
+
+    // 기존 읽음 확인 체크 (upsert 로직)
+    const existing = await this.readReceiptRepository.findOne({
+      where: { messageId: body.messageId, userId: user.id }
+    });
+
+    if (existing) {
+      // 이미 읽음 처리된 경우 업데이트
+      existing.readAt = new Date();
+      existing.readCount = (existing.readCount || 0) + 1;
+      existing.deviceType = body.deviceType || existing.deviceType;
+      existing.metadata = {
+        ...existing.metadata,
+        ...body.metadata,
+        lastReadSource: body.readSource || 'manual',
+        lastReadDuration: body.readDuration,
+        lastSessionId: body.sessionId,
+        updatedAt: new Date().toISOString()
+      };
+      
+      const updated = await this.readReceiptRepository.save(existing);
+      context.skipCreate = true;
+      context.existingEntity = updated;
+      context.isUpdate = true;
+      
+      this.logger.log(
+        `Updated existing read receipt: messageId=${body.messageId}, userId=${user.id}`,
+      );
+      
+      return null;
+    }
+
+    // 새 읽음 확인 생성
+    body.isRead = true;
+    body.readAt = new Date();
+    body.readCount = 1;
+    body.metadata = {
+      ...body.metadata,
+      readSource: body.readSource || 'manual',
+      readDuration: body.readDuration,
+      sessionId: body.sessionId,
+      createdAt: new Date().toISOString()
+    };
+
     this.logger.log(
-      `Creating read receipt: messageId=${body.messageId}, userId=${user.id}`,
+      `Creating new read receipt: messageId=${body.messageId}, userId=${user.id}`,
     );
 
     return body;
+  }
+
+  /**
+   * 읽음 영수증 생성/업데이트 후 처리
+   * 이벤트 발행 및 메시지 카운트 업데이트
+   */
+  @AfterCreate()
+  async afterCreate(entity: MessageReadReceipt | null, context: any): Promise<void> {
+    // upsert로 업데이트된 경우
+    if (context.skipCreate && context.existingEntity) {
+      entity = context.existingEntity;
+    }
+
+    if (!entity) return;
+
+    const user: User = context.request?.user;
+
+    // 실시간 읽음 상태 동기화 이벤트 발생
+    this.eventEmitter.emit('message.read', {
+      messageId: entity.messageId,
+      planetId: entity.planetId,
+      userId: user.id,
+      userName: user.name,
+      readAt: entity.readAt,
+      deviceType: entity.deviceType,
+      isUpdate: context.isUpdate || false
+    });
+
+    // 메시지 readCount 업데이트 (새로 생성된 경우만)
+    if (!context.isUpdate) {
+      const message = await this.messageRepository.findOne({
+        where: { id: entity.messageId }
+      });
+      
+      if (message) {
+        message.readCount = (message.readCount || 0) + 1;
+        await this.messageRepository.save(message);
+      }
+    }
+
+    this.logger.log(
+      `Read receipt ${context.isUpdate ? 'updated' : 'created'}: messageId=${entity.messageId}, userId=${user.id}`,
+    );
   }
 
   /**
@@ -139,8 +231,10 @@ export class ReadReceiptController {
   }
 
   /**
-   * 메시지 읽음 처리 API
+   * 메시지 읽음 처리 API (커스텀 엔드포인트)
    * POST /api/v1/read-receipts/mark-read
+   * 
+   * create 액션으로 위임
    */
   @Post('mark-read')
   async markMessageAsRead(
@@ -154,49 +248,14 @@ export class ReadReceiptController {
     },
     @Request() req: any,
   ) {
-    const user: User = req.user;
-
-    try {
-      const { messageId, deviceType, readSource, readDuration, sessionId } =
-        body;
-
-      // 메시지 존재 및 접근 권한 확인
-      await this.validateMessageAccess(messageId, user.id);
-
-      // 읽음 처리
-      const receipt = await this.crudService.markMessageAsRead(
-        messageId,
-        user.id,
-        {
-          deviceType,
-          userAgent: req.headers['user-agent'],
-          readSource,
-          readDuration,
-          sessionId,
-        },
-      );
-
-      // 실시간 읽음 상태 동기화 이벤트 발생
-      this.eventEmitter.emit('message.read', {
-        messageId: receipt.messageId,
-        planetId: receipt.planetId,
-        userId: user.id,
-        userName: user.name,
-        readAt: receipt.readAt,
-        deviceType: receipt.deviceType,
-      });
-
-      this.logger.log(
-        `Message marked as read: messageId=${messageId}, userId=${user.id}`,
-      );
-
-      return crudResponse(receipt);
-    } catch (error) {
-      this.logger.error(
-        `Mark message as read failed: messageId=${body.messageId}, userId=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
+    // create 액션으로 위임
+    const createBody = {
+      ...body,
+      userAgent: req.headers['user-agent']
+    };
+    
+    const result = await this.crudService.create(createBody);
+    return crudResponse(result);
   }
 
   /**
