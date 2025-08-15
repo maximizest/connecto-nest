@@ -74,7 +74,7 @@ export class PlanetAccessDeniedException extends ForbiddenException {
 }
 
 export class PlanetInactiveException extends ForbiddenException {
-  constructor(planetId?: number | string) {
+  constructor() {
     super('비활성화된 Planet입니다.', 'PLANET_INACTIVE');
   }
 }

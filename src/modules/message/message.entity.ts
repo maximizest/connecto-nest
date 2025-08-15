@@ -86,7 +86,6 @@ interface SystemMessageMetadata {
 @Index(['type', 'createdAt']) // 타입별 시간순 조회
 @Index(['status', 'createdAt']) // 상태별 시간순 조회
 @Index(['planetId', 'type', 'createdAt']) // Planet 내 타입별 시간순 조회
-@Index(['planetId', 'createdAt']) // Planet 내 메시지 시간순
 @Index(['senderId', 'type', 'createdAt']) // 사용자별 타입별 시간순 조회
 export class Message extends BaseEntity {
   @PrimaryGeneratedColumn()

@@ -45,11 +45,7 @@ import { UserService } from '../../user.service';
   only: ['show', 'update', 'destroy'],
 
   // 필터링 허용 필드 (보안)
-  allowedFilters: [
-    'name',
-    'provider',
-    'createdAt',
-  ],
+  allowedFilters: ['name', 'provider', 'createdAt'],
 
   // Body에서 허용할 파라미터 (수정 시)
   allowedParams: [
