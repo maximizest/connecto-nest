@@ -3,6 +3,7 @@ import {
   AfterRecover,
   AfterUpdate,
   BeforeDestroy,
+  BeforeShow,
   BeforeUpdate,
   Crud,
 } from '@foryourdev/nestjs-crud';
@@ -26,7 +27,7 @@ import { UserService } from '../../user.service';
  * @foryourdev/nestjs-crud를 활용하여 표준 RESTful API를 제공합니다.
  *
  * 주요 기능:
- * - 소셜 프로필 조회 및 수정
+ * - 본인 프로필 조회 및 수정
  * - Travel 멤버십 목록 조회
  * - Planet 멤버십 목록 조회
  * - 온라인 상태 및 활동 로그 관리
@@ -34,15 +35,15 @@ import { UserService } from '../../user.service';
  *
  * 권한 규칙:
  * - 모든 작업에 인증 필요 (AuthGuard)
- * - 본인의 정보만 조회/수정 가능
- * - 다른 사용자의 기본 정보는 조회 가능 (제한적)
+ * - 본인의 정보만 조회/수정/삭제 가능
+ * - 사용자 목록 조회 불가 (index route 제거됨)
  */
 @Controller({ path: 'users', version: '1' })
 @Crud({
   entity: User,
 
-  // 허용할 CRUD 액션 (destroy 추가)
-  only: ['index', 'show', 'update', 'destroy'],
+  // 허용할 CRUD 액션 (index 제거)
+  only: ['show', 'update', 'destroy'],
 
   // 필터링 허용 필드 (보안)
   allowedFilters: [
@@ -77,13 +78,7 @@ import { UserService } from '../../user.service';
 
   // 라우트별 개별 설정
   routes: {
-    // 목록 조회: 제한적 정보만 공개
-    index: {
-      allowedFilters: ['name', 'isOnline', 'provider', 'status'],
-      allowedIncludes: ['profile'], // 프로필 정보 포함 허용
-    },
-
-    // 단일 조회: 본인은 모든 정보, 타인은 제한적 정보
+    // 단일 조회: 본인의 정보만 조회 가능
     show: {
       allowedIncludes: [
         'profile', // 프로필 정보 포함 허용
@@ -123,6 +118,23 @@ export class UserController {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
   ) {}
+
+  /**
+   * 사용자 정보 조회 전 권한 검증 - 본인만 조회 가능
+   */
+  @BeforeShow()
+  async beforeShow(params: any, context: any): Promise<any> {
+    // 헬퍼 함수를 사용하여 현재 사용자 정보 추출
+    const user = getCurrentUserFromContext(context);
+    const targetUserId = parseInt(params.id, 10);
+
+    // 본인의 정보만 조회 가능
+    if (user.id !== targetUserId) {
+      throw new ForbiddenException('본인의 정보만 조회할 수 있습니다.');
+    }
+
+    return params;
+  }
 
   /**
    * 사용자 정보 수정 전 권한 검증 (온라인 상태 처리는 User 엔티티에서 자동 처리)
