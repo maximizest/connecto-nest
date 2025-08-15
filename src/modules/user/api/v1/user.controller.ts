@@ -30,7 +30,6 @@ import { UserService } from '../../user.service';
  * - 본인 프로필 조회 및 수정
  * - Travel 멤버십 목록 조회
  * - Planet 멤버십 목록 조회
- * - 온라인 상태 및 활동 로그 관리
  * - 사용자 설정 관리
  *
  * 권한 규칙:
@@ -48,23 +47,18 @@ import { UserService } from '../../user.service';
   // 필터링 허용 필드 (보안)
   allowedFilters: [
     'name',
-    'isOnline',
     'provider',
-    'status',
     'createdAt',
-    'lastSeenAt',
   ],
 
   // Body에서 허용할 파라미터 (수정 시)
   allowedParams: [
     'name',
-    'avatar',
     'phone',
     'language',
     'timezone',
     'notificationsEnabled',
     'advertisingConsentEnabled',
-    'isOnline', // 온라인 상태 업데이트
   ],
 
   // 관계 포함 허용 필드
@@ -93,13 +87,11 @@ import { UserService } from '../../user.service';
     update: {
       allowedParams: [
         'name',
-        'avatar',
         'phone',
         'language',
         'timezone',
         'notificationsEnabled',
         'advertisingConsentEnabled',
-        'isOnline',
       ],
     },
 
@@ -137,7 +129,7 @@ export class UserController {
   }
 
   /**
-   * 사용자 정보 수정 전 권한 검증 (온라인 상태 처리는 User 엔티티에서 자동 처리)
+   * 사용자 정보 수정 전 권한 검증
    */
   @BeforeUpdate()
   async beforeUpdate(entity: User, context: any): Promise<User> {
@@ -154,7 +146,6 @@ export class UserController {
       throw new ForbiddenException('차단된 계정입니다.');
     }
 
-    // lastSeenAt 갱신은 User 엔티티에서 자동 처리됨
     this.logger.log(`User profile updating: userId=${user.id}`);
 
     return entity;
@@ -166,9 +157,6 @@ export class UserController {
   @AfterUpdate()
   async afterUpdate(entity: User): Promise<User> {
     try {
-      // 온라인 상태 변경 시 관련 Travel/Planet에 브로드캐스트
-      // (WebSocket 연동은 추후 구현)
-
       this.logger.log(`User profile updated: userId=${entity.id}`);
       return entity;
     } catch (error) {

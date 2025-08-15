@@ -18,7 +18,6 @@ export interface TypingStatusResponse {
 export interface TypingUserInfo {
   userId: number;
   userName: string;
-  avatarUrl?: string;
   deviceType?: string;
   typingType?: string;
   startedAt: Date;

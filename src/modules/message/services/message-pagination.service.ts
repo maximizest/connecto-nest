@@ -344,7 +344,6 @@ export class MessagePaginationService {
         'message.readCount',
         'sender.id',
         'sender.name',
-        'sender.avatar',
         'planet.id',
         'planet.name',
         'planet.type',
