@@ -151,3 +151,4 @@ Critical environment variables required:
 - **MUST use yarn only** - npm is prohibited
 - Lock file: `yarn.lock`
 - Node.js version requirement: `>=20.0.0`
+- 한글 꺠졌다. 앞으로 한글 작성에 유의하라.
