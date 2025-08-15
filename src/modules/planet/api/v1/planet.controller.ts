@@ -33,9 +33,9 @@ import { PlanetService } from '../../planet.service';
   // 관계 포함 허용 필드
   allowedIncludes: [
     'travel',
-    'messages',
-    'directMembers', // PlanetUser (1:1 Planet용)
-    'directMembers.user',
+    'partner', // Direct Planet의 상대방
+    'planetUsers',
+    'planetUsers.user',
   ],
 
   // 라우트별 개별 설정
@@ -54,7 +54,7 @@ import { PlanetService } from '../../planet.service';
 
     // 단일 조회: 상세 정보 포함
     show: {
-      allowedIncludes: ['travel', 'directMembers', 'directMembers.user'],
+      allowedIncludes: ['travel', 'partner', 'planetUsers', 'planetUsers.user'],
     },
 
     // 삭제: Hard Delete (기본값)

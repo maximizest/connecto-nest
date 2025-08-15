@@ -31,8 +31,8 @@ import { TravelService } from '../../travel.service';
 
   // 관계 포함 허용 필드
   allowedIncludes: [
-    'members',
-    'members.user', // TravelUser -> User
+    'travelUsers',
+    'travelUsers.user', // TravelUser -> User
     'planets',
   ],
 
@@ -41,12 +41,12 @@ import { TravelService } from '../../travel.service';
     // 목록 조회: 사용자가 참여한 Travel만 조회
     index: {
       allowedFilters: ['name', 'status', 'visibility', 'endDate', 'createdAt'],
-      allowedIncludes: ['members'],
+      allowedIncludes: ['travelUsers'],
     },
 
     // 단일 조회: 상세 정보 포함
     show: {
-      allowedIncludes: ['members', 'members.user', 'planets'],
+      allowedIncludes: ['travelUsers', 'travelUsers.user', 'planets'],
     },
 
     // 삭제: Hard Delete (기본값)

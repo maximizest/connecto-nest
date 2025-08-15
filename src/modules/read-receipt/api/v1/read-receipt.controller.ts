@@ -131,7 +131,6 @@ export class ReadReceiptController {
     if (existing) {
       // 이미 읽음 처리된 경우 업데이트
       existing.readAt = new Date();
-      // readCount 필드 제거 (엔티티에 없는 필드)
       existing.deviceType = body.deviceType || existing.deviceType;
       existing.metadata = {
         ...existing.metadata,
@@ -157,7 +156,6 @@ export class ReadReceiptController {
     // 새 읽음 확인 생성
     body.isRead = true;
     body.readAt = new Date();
-    body.readCount = 1;
     body.metadata = {
       ...body.metadata,
       readSource: body.readSource || 'manual',
