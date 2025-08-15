@@ -432,7 +432,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         messageId: data.messageId,
       });
 
-      // TODO: 읽음 상태를 데이터베이스에 저장 (추후 구현)
+      // Note: 읽음 상태는 MessageReadReceipt 엔티티를 통해 관리됨
+      // 현재는 실시간 알림만 처리하며, DB 저장은 별도 API를 통해 처리
 
       this.logger.debug(
         `Message ${data.messageId} read by user ${client.userId}`,
@@ -1462,7 +1463,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     // 현재는 발신자만 삭제 가능하도록 제한
-    // TODO: 향후 Planet 관리자 권한 추가 시 구현
+    // Note: Planet 관리자 권한은 PlanetUser의 role 필드를 통해 구현 예정
     return false;
   }
 

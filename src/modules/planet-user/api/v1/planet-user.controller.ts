@@ -1,10 +1,10 @@
 import { BeforeShow, BeforeUpdate, Crud } from '@foryourdev/nestjs-crud';
-import { 
-  Controller, 
+import {
+  Controller,
   ForbiddenException,
-  Logger, 
+  Logger,
   NotFoundException,
-  UseGuards 
+  UseGuards,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -12,7 +12,10 @@ import { AuthGuard } from '../../../../guards/auth.guard';
 import { PlanetUser, PlanetUserStatus } from '../../planet-user.entity';
 import { PlanetUserService } from '../../planet-user.service';
 import { Planet } from '../../../planet/planet.entity';
-import { TravelUser, TravelUserStatus } from '../../../travel-user/travel-user.entity';
+import {
+  TravelUser,
+  TravelUserStatus,
+} from '../../../travel-user/travel-user.entity';
 import { User } from '../../../user/user.entity';
 
 /**
@@ -71,11 +74,7 @@ import { User } from '../../../user/user.entity';
 
     // 수정: 본인 정보만 수정 가능
     update: {
-      allowedParams: [
-        'bio',
-        'nickname',
-        'settings',
-      ],
+      allowedParams: ['bio', 'nickname', 'settings'],
     },
   },
 })
@@ -121,7 +120,9 @@ export class PlanetUserController {
     });
 
     if (!userTravelMembership) {
-      throw new ForbiddenException('행성에 참여한 유저만 멤버십 정보를 조회할 수 있습니다.');
+      throw new ForbiddenException(
+        '행성에 참여한 유저만 멤버십 정보를 조회할 수 있습니다.',
+      );
     }
 
     return params;
@@ -131,7 +132,11 @@ export class PlanetUserController {
    * PlanetUser 수정 전 권한 확인 (본인의 멤버십만 수정 가능)
    */
   @BeforeUpdate()
-  async beforeUpdate(entity: PlanetUser, body: any, context: any): Promise<any> {
+  async beforeUpdate(
+    entity: PlanetUser,
+    body: any,
+    context: any,
+  ): Promise<any> {
     const user: User = context.request?.user;
 
     // 본인의 멤버십만 수정 가능

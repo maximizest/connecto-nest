@@ -48,11 +48,6 @@ import { TravelService } from '../../travel.service';
     show: {
       allowedIncludes: ['travelUsers', 'travelUsers.user', 'planets'],
     },
-
-    // 삭제: Hard Delete (기본값)
-    destroy: {
-      softDelete: false, // 🔥 Travel은 Hard Delete (명시적 설정)
-    },
   },
 })
 @UseGuards(AuthGuard)

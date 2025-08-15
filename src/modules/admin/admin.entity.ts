@@ -63,6 +63,6 @@ export class Admin extends BaseEntity {
       );
     }
 
-    console.log(`🔐 Admin password hashed: ${this.email}`);
+    // Password hash completed
   }
 }

@@ -480,12 +480,8 @@ export class FileUploadController {
   @Post('complete')
   async completeUpload(
     @Body() body: { uploadId: number; storageKey: string },
-    @Request() req: any,
+    @Request() _req: any,
   ) {
-    // create 액션으로 위임
-    body['uploadId'] = body.uploadId;
-    body['storageKey'] = body.storageKey;
-
     const result = await this.crudService.completeUpload(
       body.uploadId,
       body.storageKey,

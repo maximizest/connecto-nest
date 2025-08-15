@@ -2,6 +2,15 @@ import { ArgumentsHost, Catch, HttpException, Logger } from '@nestjs/common';
 import { BaseWsExceptionFilter, WsException } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 
+interface HttpExceptionResponse {
+  message?: string;
+  code?: string;
+}
+
+interface ExtendedSocket extends Socket {
+  userId?: string;
+}
+
 /**
  * WebSocket 예외 필터
  */
@@ -47,7 +56,7 @@ export class WebSocketExceptionFilter extends BaseWsExceptionFilter {
       let code = 'HTTP_ERROR';
 
       if (typeof response === 'object' && response !== null) {
-        const responseObj = response as any;
+        const responseObj = response as HttpExceptionResponse;
         message = responseObj.message || message;
         code = responseObj.code || code;
       }
@@ -86,14 +95,14 @@ export class WebSocketExceptionFilter extends BaseWsExceptionFilter {
   /**
    * 에러 로깅
    */
-  private logError(exception: unknown, client: Socket, data: any) {
-    const userId = (client as any).userId || 'anonymous';
+  private logError(exception: unknown, client: Socket, data: unknown) {
+    const userId = (client as ExtendedSocket).userId || 'anonymous';
     const clientId = client.id;
 
     const logContext = {
       userId,
       clientId,
-      eventData: data,
+      eventData: data as Record<string, unknown>,
       timestamp: new Date().toISOString(),
     };
 

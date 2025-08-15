@@ -13,8 +13,8 @@ import {
 export class IsValidDateOrderConstraint
   implements ValidatorConstraintInterface
 {
-  validate(value: any, args: ValidationArguments) {
-    const object = args.object as any;
+  validate(value: any, _args: ValidationArguments) {
+    const object = _args.object as any;
     const { startDate, endDate } = object;
 
     if (!startDate || !endDate) {
@@ -43,7 +43,7 @@ export class IsValidDateOrderConstraint
     return true;
   }
 
-  defaultMessage(args: ValidationArguments) {
+  defaultMessage(_args: ValidationArguments) {
     return '날짜 순서가 올바르지 않습니다. (시작일 ≤ 종료일, 종료일은 미래)';
   }
 }
@@ -55,7 +55,7 @@ export class IsValidDateOrderConstraint
 export class IsValidTravelSettingsConstraint
   implements ValidatorConstraintInterface
 {
-  validate(value: any, args: ValidationArguments) {
+  validate(value: any, _args: ValidationArguments) {
     if (!value || typeof value !== 'object') {
       return true; // 선택적 필드
     }
@@ -105,7 +105,7 @@ export class IsValidTravelSettingsConstraint
     return true;
   }
 
-  defaultMessage(args: ValidationArguments) {
+  defaultMessage(_args: ValidationArguments) {
     return '유효하지 않은 Travel 설정입니다.';
   }
 }
@@ -117,7 +117,7 @@ export class IsValidTravelSettingsConstraint
 export class IsValidTimeRestrictionConstraint
   implements ValidatorConstraintInterface
 {
-  validate(value: any, args: ValidationArguments) {
+  validate(value: any, _args: ValidationArguments) {
     if (!value || typeof value !== 'object') {
       return true; // 선택적 필드
     }
@@ -159,7 +159,7 @@ export class IsValidTimeRestrictionConstraint
     return true;
   }
 
-  defaultMessage(args: ValidationArguments) {
+  defaultMessage(_args: ValidationArguments) {
     return '유효하지 않은 시간 제한 설정입니다.';
   }
 }
@@ -171,8 +171,8 @@ export class IsValidTimeRestrictionConstraint
 export class IsValidMemberLimitConstraint
   implements ValidatorConstraintInterface
 {
-  validate(value: any, args: ValidationArguments) {
-    const object = args.object as any;
+  validate(value: any, _args: ValidationArguments) {
+    const object = _args.object as any;
     const { type, maxMembers } = object;
 
     if (maxMembers === undefined || maxMembers === null) {
@@ -195,7 +195,7 @@ export class IsValidMemberLimitConstraint
     return true;
   }
 
-  defaultMessage(args: ValidationArguments) {
+  defaultMessage(_args: ValidationArguments) {
     return '멤버 제한이 유효하지 않습니다. (1:1: 2명, 그룹: 2-1000명)';
   }
 }

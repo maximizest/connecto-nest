@@ -384,9 +384,7 @@ export class FileUpload extends BaseEntity {
     this.progress = this.progress || 0;
     this.retryCount = this.retryCount || 0;
 
-    console.log(
-      `🟢 FileUpload creating: ${this.originalFileName}, userId=${this.userId}`,
-    );
+    // Log creation for debugging
   }
 
   /**
@@ -402,9 +400,7 @@ export class FileUpload extends BaseEntity {
       );
     }
 
-    console.log(
-      `🟡 FileUpload updating: id=${this.id}, progress=${this.progress}%`,
-    );
+    // Log update for debugging
   }
 
   /**

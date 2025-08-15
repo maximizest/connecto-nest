@@ -1,9 +1,9 @@
 import { BeforeShow, Crud } from '@foryourdev/nestjs-crud';
-import { 
-  Controller, 
-  ForbiddenException, 
+import {
+  Controller,
+  ForbiddenException,
   NotFoundException,
-  UseGuards 
+  UseGuards,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -11,7 +11,10 @@ import { Repository } from 'typeorm';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { Planet } from '../../planet.entity';
 import { PlanetService } from '../../planet.service';
-import { TravelUser, TravelUserStatus } from '../../../travel-user/travel-user.entity';
+import {
+  TravelUser,
+  TravelUserStatus,
+} from '../../../travel-user/travel-user.entity';
 import { User } from '../../../user/user.entity';
 
 /**
@@ -109,7 +112,9 @@ export class PlanetController {
     });
 
     if (!userTravelMembership) {
-      throw new ForbiddenException('본인이 참여한 여행의 행성만 조회할 수 있습니다.');
+      throw new ForbiddenException(
+        '본인이 참여한 여행의 행성만 조회할 수 있습니다.',
+      );
     }
 
     return params;

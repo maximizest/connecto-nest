@@ -249,7 +249,7 @@ export class User extends BaseEntity {
    */
   @BeforeInsert()
   beforeInsert() {
-    console.log(`🟢 User creating: ${this.email}`);
+    // Hook for future use
   }
 
   /**
@@ -257,6 +257,6 @@ export class User extends BaseEntity {
    */
   @BeforeUpdate()
   beforeUpdate() {
-    console.log(`🟡 User updating: ${this.email}`);
+    // Hook for future use
   }
 }

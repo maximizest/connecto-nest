@@ -19,8 +19,20 @@ interface ErrorResponse {
   code?: string;
   timestamp: string;
   path: string;
-  details?: any;
+  details?: unknown;
   stack?: string;
+}
+
+interface HttpExceptionResponse {
+  message?: string | string[];
+  error?: string;
+  code?: string;
+  details?: unknown;
+}
+
+interface PostgresError extends Error {
+  code?: string;
+  detail?: string;
 }
 
 /**
@@ -61,7 +73,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const exceptionResponse = exception.getResponse();
 
       if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-        const responseObj = exceptionResponse as any;
+        const responseObj = exceptionResponse as HttpExceptionResponse;
 
         return {
           statusCode: status,
@@ -130,7 +142,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     timestamp: string,
     path: string,
   ): ErrorResponse {
-    const driverError = error.driverError as any;
+    const driverError = error.driverError as PostgresError;
 
     // PostgreSQL 에러 코드별 처리
     switch (driverError?.code) {
@@ -224,7 +236,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   ) {
     const { method, url, ip, headers } = request;
     const userAgent = headers['user-agent'] || '';
-    const userId = (request as any).user?.id || 'anonymous';
+    const userId =
+      (request as Request & { user?: { id: string } }).user?.id || 'anonymous';
 
     const logContext = {
       method,

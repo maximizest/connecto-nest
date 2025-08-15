@@ -1,5 +1,5 @@
 import { JestSwagModule } from '@foryourdev/jest-swag';
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Module, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -83,12 +83,14 @@ modules.push(WebSocketModule);
   imports: modules,
 })
 export class AppModule implements OnModuleInit {
+  private readonly logger = new Logger(AppModule.name);
+
   onModuleInit() {
-    console.log('🚀 Application Configuration Validation:');
+    this.logger.log('🚀 Application Configuration Validation:');
     validateDatabaseConfig();
     validateJwtConfig();
     validateRedisConfig();
     validateStorageConfig();
-    console.log('✅ All configurations validated successfully!\n');
+    this.logger.log('✅ All configurations validated successfully!');
   }
 }

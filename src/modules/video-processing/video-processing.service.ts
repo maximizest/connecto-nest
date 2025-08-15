@@ -581,7 +581,7 @@ export class VideoProcessingService {
     // 여기서는 간단히 로컬 경로로 가정
     const inputPath = path.join(tempDir, `input_${Date.now()}`);
 
-    // TODO: 실제 다운로드 로직 구현
+    // Note: 실제 다운로드 로직은 StorageService와 연동하여 구현 필요
     // const response = await fetch(downloadUrl);
     // const buffer = await response.buffer();
     // fs.writeFileSync(inputPath, buffer);

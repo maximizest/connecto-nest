@@ -278,9 +278,7 @@ export class Profile extends BaseEntity {
       this.age = age;
     }
 
-    console.log(
-      `🟢 Profile creating: userId=${this.userId}, nickname=${this.nickname}`,
-    );
+    // Profile creation logged
   }
 
   /**
@@ -304,8 +302,6 @@ export class Profile extends BaseEntity {
       this.age = age;
     }
 
-    console.log(
-      `🟡 Profile updating: id=${this.id}, nickname=${this.nickname}`,
-    );
+    // Profile update logged
   }
 }

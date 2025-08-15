@@ -170,7 +170,8 @@ export class SchemaController {
           tableName: entityMetadata.tableName,
           schema: entityMetadata.schema,
           database: entityMetadata.database,
-          targetName: (entityMetadata.target as Function).name || 'Unknown',
+          targetName:
+            (entityMetadata.target as { name?: string }).name || 'Unknown',
           primaryKeys,
           columns,
           relations,
@@ -281,7 +282,8 @@ export class SchemaController {
       const entityInfo: SchemaEntityInfo = {
         entityName: entityMetadata.name,
         tableName: entityMetadata.tableName,
-        targetName: (entityMetadata.target as Function).name || 'Unknown',
+        targetName:
+          (entityMetadata.target as { name?: string }).name || 'Unknown',
         primaryKeys: entityMetadata.primaryColumns.map((column) => ({
           name: column.propertyName,
           databaseName: column.databaseName,

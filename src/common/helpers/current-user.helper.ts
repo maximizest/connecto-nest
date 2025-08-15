@@ -2,6 +2,13 @@ import { UnauthorizedException } from '@nestjs/common';
 import { User } from '../../modules/user/user.entity';
 import { CurrentUserData } from '../decorators/current-user.decorator';
 
+interface CrudContext {
+  request?: {
+    user?: CurrentUserData;
+    method?: string;
+  };
+}
+
 /**
  * @foryourdev/nestjs-crud lifecycle hooks용 현재 사용자 추출 헬퍼
  *
@@ -19,8 +26,8 @@ import { CurrentUserData } from '../decorators/current-user.decorator';
  * }
  * ```
  */
-export function getCurrentUserFromContext(context: any): User {
-  const userData: CurrentUserData = context.request?.user;
+export function getCurrentUserFromContext(context: CrudContext): User {
+  const userData: CurrentUserData | undefined = context.request?.user;
 
   if (!userData) {
     throw new UnauthorizedException('사용자 인증이 필요합니다.');
@@ -46,7 +53,7 @@ export function getCurrentUserFromContext(context: any): User {
  * }
  * ```
  */
-export function getCurrentUserIdFromContext(context: any): number {
+export function getCurrentUserIdFromContext(context: CrudContext): number {
   const user = getCurrentUserFromContext(context);
   return user.id;
 }
@@ -70,10 +77,12 @@ export function getCurrentUserIdFromContext(context: any): number {
  * }
  * ```
  */
-export function tryGetCurrentUserFromContext(context: any): User | null {
+export function tryGetCurrentUserFromContext(
+  context: CrudContext,
+): User | null {
   try {
     return getCurrentUserFromContext(context);
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -84,7 +93,7 @@ export function tryGetCurrentUserFromContext(context: any): User | null {
  * @param context - CRUD hook의 context 객체
  * @returns HTTP 메서드 (GET, POST, PUT, DELETE 등)
  */
-export function getRequestMethodFromContext(context: any): string {
+export function getRequestMethodFromContext(context: CrudContext): string {
   return context.request?.method || 'UNKNOWN';
 }
 
@@ -106,7 +115,7 @@ export function getRequestMethodFromContext(context: any): string {
  * }
  * ```
  */
-export function isRequestMethod(context: any, method: string): boolean {
+export function isRequestMethod(context: CrudContext, method: string): boolean {
   return (
     getRequestMethodFromContext(context).toUpperCase() === method.toUpperCase()
   );

@@ -28,7 +28,6 @@ export const MessageFactory = Factory.define<Message>(({ sequence }) => {
 
   // 메시지 상태
   message.status = MessageStatus.SENT;
-  message.isDeleted = false;
   message.deletedAt = undefined;
   message.deletedBy = undefined;
 

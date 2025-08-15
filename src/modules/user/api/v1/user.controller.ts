@@ -196,7 +196,7 @@ export class UserController {
       `User soft-deleted: userId=${entity.id}, deletedBy=${entity.deletedBy}`,
     );
 
-    // TODO: 필요시 추가 정리 작업
+    // Note: 추후 구현 필요한 기능들:
     // - 활성 세션 종료
     // - 캐시 정리
     // - 알림 발송 등

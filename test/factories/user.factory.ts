@@ -1,9 +1,5 @@
 import { Factory } from 'fishery';
-import {
-  SocialProvider,
-  User,
-  UserStatus,
-} from '../../src/modules/user/user.entity';
+import { SocialProvider, User } from '../../src/modules/user/user.entity';
 
 /**
  * User Factory - Fishery를 사용한 사용자 테스트 데이터 생성
@@ -18,9 +14,6 @@ export const UserFactory = Factory.define<User>(({ sequence }) => {
   // 기본 사용자 정보
   user.name = `테스트유저${sequence}`;
   user.email = `test-user-${sequence}@example.com`;
-
-  // 온라인 상태
-  user.status = UserStatus.OFFLINE;
 
   // 설정
   user.notificationsEnabled = true;

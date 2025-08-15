@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Logger,
   Post,
   Req,
   UnauthorizedException,
@@ -24,6 +25,8 @@ import { SocialSigninDto } from '../../dto/social-signin.dto';
   version: '1',
 })
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(
     private readonly authService: AuthService,
     private readonly pushNotificationService: PushNotificationService,
@@ -98,7 +101,7 @@ export class AuthController {
           );
         } catch (error) {
           // 푸시 토큰 등록 실패해도 로그인은 성공
-          console.error('푸시 토큰 등록 실패:', error);
+          this.logger.error('푸시 토큰 등록 실패:', error);
         }
       }
 
@@ -208,7 +211,7 @@ export class AuthController {
       await this.profileRepository.save(profile);
     } catch (error) {
       // 프로필 생성 실패해도 로그인은 성공
-      console.error('프로필 자동 생성 실패:', error);
+      this.logger.error('프로필 자동 생성 실패:', error);
     }
   }
 }

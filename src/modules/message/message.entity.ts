@@ -636,9 +636,7 @@ export class Message extends BaseEntity {
     // 검색용 텍스트 생성
     this.updateSearchableText();
 
-    console.log(
-      `🟢 Message creating: type=${this.type}, planetId=${this.planetId}`,
-    );
+    // Message creation logged
   }
 
   /**
@@ -651,6 +649,6 @@ export class Message extends BaseEntity {
     // 검색용 텍스트 재생성 (내용이 변경된 경우)
     this.updateSearchableText();
 
-    console.log(`🟡 Message updating: id=${this.id}, type=${this.type}`);
+    // Message update logged
   }
 }

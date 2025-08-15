@@ -40,7 +40,7 @@ export const ALL_ALLOWED_TYPES: string[] = [
  */
 @ValidatorConstraint({ name: 'isValidFileSize', async: false })
 export class IsValidFileSizeConstraint implements ValidatorConstraintInterface {
-  validate(value: any, args: ValidationArguments) {
+  validate(value: any, _args: ValidationArguments) {
     if (!value || typeof value !== 'object') {
       return true; // 다른 검증에서 처리
     }
@@ -60,7 +60,7 @@ export class IsValidFileSizeConstraint implements ValidatorConstraintInterface {
     return fileSize <= FILE_SIZE_LIMITS.MAX_FILE_SIZE;
   }
 
-  defaultMessage(args: ValidationArguments) {
+  defaultMessage(_args: ValidationArguments) {
     return '파일 크기가 허용된 범위를 초과합니다. (최대 500MB, 이미지 50MB)';
   }
 }
@@ -70,7 +70,7 @@ export class IsValidFileSizeConstraint implements ValidatorConstraintInterface {
  */
 @ValidatorConstraint({ name: 'isValidFileType', async: false })
 export class IsValidFileTypeConstraint implements ValidatorConstraintInterface {
-  validate(value: any, args: ValidationArguments) {
+  validate(value: any, _args: ValidationArguments) {
     if (!value || typeof value !== 'object') {
       return true; // 다른 검증에서 처리
     }
@@ -84,7 +84,7 @@ export class IsValidFileTypeConstraint implements ValidatorConstraintInterface {
     return ALL_ALLOWED_TYPES.includes(fileType);
   }
 
-  defaultMessage(args: ValidationArguments) {
+  defaultMessage(_args: ValidationArguments) {
     return '허용되지 않은 파일 타입입니다.';
   }
 }
@@ -94,7 +94,7 @@ export class IsValidFileTypeConstraint implements ValidatorConstraintInterface {
  */
 @ValidatorConstraint({ name: 'isValidFileName', async: false })
 export class IsValidFileNameConstraint implements ValidatorConstraintInterface {
-  validate(value: any, args: ValidationArguments) {
+  validate(value: any, _args: ValidationArguments) {
     if (!value || typeof value !== 'object') {
       return true; // 다른 검증에서 처리
     }
@@ -114,7 +114,7 @@ export class IsValidFileNameConstraint implements ValidatorConstraintInterface {
     );
   }
 
-  defaultMessage(args: ValidationArguments) {
+  defaultMessage(_args: ValidationArguments) {
     return '유효하지 않은 파일명입니다. (확장자 포함, 255자 이하, 특수문자 제한)';
   }
 }
@@ -152,7 +152,7 @@ export function IsValidFileMetadata(validationOptions?: ValidationOptions) {
             fileNameValidator.validate(value, args)
           );
         },
-        defaultMessage(args: ValidationArguments) {
+        defaultMessage(_args: ValidationArguments) {
           return '파일 메타데이터가 유효하지 않습니다.';
         },
       },

@@ -1,9 +1,9 @@
-import { 
-  AfterCreate, 
-  BeforeCreate, 
-  BeforeShow, 
+import {
+  AfterCreate,
+  BeforeCreate,
+  BeforeShow,
   BeforeUpdate,
-  Crud 
+  Crud,
 } from '@foryourdev/nestjs-crud';
 import {
   Controller,
@@ -105,11 +105,7 @@ import { TravelUserService } from '../../travel-user.service';
 
     // 수정: 본인 정보만 수정 가능
     update: {
-      allowedParams: [
-        'bio',
-        'nickname', 
-        'settings',
-      ],
+      allowedParams: ['bio', 'nickname', 'settings'],
     },
   },
 })
@@ -147,16 +143,20 @@ export class TravelUserController {
     }
 
     // 현재 유저가 해당 여행에 참여했는지 확인
-    const currentUserTravelMembership = await this.travelUserRepository.findOne({
-      where: {
-        travelId: targetTravelUser.travelId,
-        userId: user.id,
-        status: TravelUserStatus.ACTIVE,
+    const currentUserTravelMembership = await this.travelUserRepository.findOne(
+      {
+        where: {
+          travelId: targetTravelUser.travelId,
+          userId: user.id,
+          status: TravelUserStatus.ACTIVE,
+        },
       },
-    });
+    );
 
     if (!currentUserTravelMembership) {
-      throw new ForbiddenException('여행에 참여한 유저만 멤버십 정보를 조회할 수 있습니다.');
+      throw new ForbiddenException(
+        '여행에 참여한 유저만 멤버십 정보를 조회할 수 있습니다.',
+      );
     }
 
     return params;
@@ -166,7 +166,11 @@ export class TravelUserController {
    * 멤버십 수정 전 권한 확인 (본인의 정보만 수정 가능)
    */
   @BeforeUpdate()
-  async beforeUpdate(entity: TravelUser, body: any, context: any): Promise<any> {
+  async beforeUpdate(
+    entity: TravelUser,
+    body: any,
+    context: any,
+  ): Promise<any> {
     const user: User = context.request?.user;
 
     // 본인의 멤버십만 수정 가능
@@ -235,9 +239,13 @@ export class TravelUserController {
 
     if (existingMember) {
       if (existingMember.status === TravelUserStatus.ACTIVE) {
-        throw new ForbiddenException('이미 해당 여행에 참여하고 있습니다. 중복 참여는 불가능합니다.');
+        throw new ForbiddenException(
+          '이미 해당 여행에 참여하고 있습니다. 중복 참여는 불가능합니다.',
+        );
       } else if (existingMember.status === TravelUserStatus.BANNED) {
-        throw new ForbiddenException('이 여행에서 차단된 사용자입니다. 참여할 수 없습니다.');
+        throw new ForbiddenException(
+          '이 여행에서 차단된 사용자입니다. 참여할 수 없습니다.',
+        );
       } else if (existingMember.status === TravelUserStatus.LEFT) {
         // 기존 탈퇴 기록을 재활성화
         body.status = TravelUserStatus.ACTIVE;
