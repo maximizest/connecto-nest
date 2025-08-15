@@ -5,6 +5,7 @@ import {
   AfterUpdate,
   BeforeCreate,
   BeforeDestroy,
+  BeforeShow,
   BeforeUpdate,
   Crud,
   crudResponse,
@@ -17,7 +18,6 @@ import {
   Logger,
   NotFoundException,
   Param,
-  Put,
   Query,
   Request,
   UseGuards,
@@ -50,8 +50,9 @@ import { MessagePaginationService } from '../../services/message-pagination.serv
  *
  * 권한 규칙:
  * - 모든 작업에 인증 필요 (AuthGuard)
- * - Planet 접근 권한 확인 (PlanetAccessGuard)
- * - 메시지 수정/삭제는 발신자만 가능
+ * - 행성 아이디를 필수 필터로 받아야 함 (planetId 필터 필수)
+ * - 본인이 속해있는 행성의 메시지만 조회/생성 가능
+ * - 메시지 수정/삭제는 본인의 메시지만 가능
  * - 시스템 메시지는 생성/수정 불가
  */
 @Controller({ path: 'messages', version: '1' })
@@ -94,7 +95,8 @@ import { MessagePaginationService } from '../../services/message-pagination.serv
 
   // 라우트별 개별 설정 - 단순화
   routes: {
-    // 목록 조회: 모든 필터링 허용, 기본 정렬은 최신순
+    // 목록 조회: planetId 필터 필수, 본인이 속한 행성의 메시지만 조회
+    // 클라이언트는 반드시 ?filter[planetId_eq]=123 형태로 요청해야 함
     index: {
       allowedIncludes: ['sender', 'planet', 'replyToMessage'],
     },
@@ -153,6 +155,30 @@ export class MessageController {
     private readonly planetUserRepository: Repository<PlanetUser>,
     private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  /**
+   * 메시지 조회 전 권한 확인 (본인이 속해있는 행성의 메시지만 조회 가능)
+   */
+  @BeforeShow()
+  async beforeShow(params: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
+    const messageId = parseInt(params.id, 10);
+
+    // 조회하려는 메시지 정보 가져오기
+    const message = await this.messageRepository.findOne({
+      where: { id: messageId },
+      relations: ['planet'],
+    });
+
+    if (!message) {
+      throw new NotFoundException('메시지를 찾을 수 없습니다.');
+    }
+
+    // Planet 접근 권한 확인
+    await this.validatePlanetAccess(message.planetId, user.id);
+
+    return params;
+  }
 
   /**
    * 메시지 생성 전 검증 및 전처리
@@ -267,7 +293,22 @@ export class MessageController {
    * 메시지 수정 후 처리
    */
   @AfterUpdate()
-  async afterUpdate(entity: Message): Promise<Message> {
+  async afterUpdate(entity: Message, context: any): Promise<Message> {
+    const user = context.request?.user;
+
+    // 편집된 경우 실시간 알림 이벤트 발생
+    if (entity.isEdited) {
+      this.eventEmitter.emit('message.edited', {
+        messageId: entity.id,
+        planetId: entity.planetId,
+        content: entity.content,
+        originalContent: entity.originalContent,
+        isEdited: entity.isEdited,
+        editedAt: entity.editedAt,
+        editedBy: { id: user.id, name: user.name },
+      });
+    }
+
     this.logger.log(`Message updated: id=${entity.id}`);
     return entity;
   }
@@ -462,90 +503,6 @@ export class MessageController {
     }
 
     return searchText.trim().toLowerCase();
-  }
-
-  /**
-   * 메시지 편집 전용 API
-   * PUT /api/v1/messages/:id/edit
-   */
-  @Put(':id/edit')
-  @UseGuards(AuthGuard)
-  async editMessage(
-    @Param('id') messageId: number,
-    @Body() editData: { content: string },
-    @Request() req: any,
-  ) {
-    const user: User = req.user;
-
-    try {
-      // 메시지 조회 및 권한 확인
-      const message = await this.messageRepository.findOne({
-        where: { id: messageId },
-        relations: ['sender', 'planet', 'planet.travel'],
-      });
-
-      if (!message) {
-        throw new NotFoundException('메시지를 찾을 수 없습니다.');
-      }
-
-      // Planet 접근 권한 확인
-      await this.validatePlanetAccess(message.planetId, user.id);
-
-      // 편집 권한 확인
-      if (message.senderId !== user.id) {
-        throw new ForbiddenException('메시지 편집 권한이 없습니다.');
-      }
-
-      if (message.deletedAt) {
-        throw new ForbiddenException('삭제된 메시지는 편집할 수 없습니다.');
-      }
-
-      if (!message.isTextMessage()) {
-        throw new ForbiddenException('텍스트 메시지만 편집 가능합니다.');
-      }
-
-      if (!message.canEdit(user.id)) {
-        throw new ForbiddenException('메시지 편집 시간이 만료되었습니다.');
-      }
-
-      // 내용이 동일하면 수정하지 않음
-      if (editData.content === message.content) {
-        return crudResponse(message);
-      }
-
-      // 편집 처리
-      if (!message.isEdited) {
-        message.originalContent = message.content; // 원본 보존
-      }
-
-      message.content = editData.content;
-      message.isEdited = true;
-      message.editedAt = new Date();
-      message.updateSearchableText();
-
-      // 메시지 저장
-      const updatedMessage = await this.messageRepository.save(message);
-
-      // 실시간 편집 알림 이벤트 발생
-      this.eventEmitter.emit('message.edited', {
-        messageId: updatedMessage.id,
-        planetId: updatedMessage.planetId,
-        content: updatedMessage.content,
-        originalContent: updatedMessage.originalContent,
-        isEdited: updatedMessage.isEdited,
-        editedAt: updatedMessage.editedAt,
-        editedBy: { id: user.id, name: user.name },
-      });
-
-      this.logger.log(`Message edited: id=${messageId}, senderId=${user.id}`);
-
-      return crudResponse(updatedMessage);
-    } catch (error) {
-      this.logger.error(
-        `Message edit failed: id=${messageId}, user=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
   }
 
   /**

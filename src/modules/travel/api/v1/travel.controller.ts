@@ -24,7 +24,7 @@ import { TravelService } from '../../travel.service';
   entity: Travel,
 
   // 허용할 CRUD 액션 (사용자는 조회만 가능, 생성/수정/삭제는 관리자만)
-  only: ['index', 'show', 'destroy'],
+  only: ['index', 'show'],
 
   // 필터링 허용 필드 (보안)
   allowedFilters: ['status', 'name', 'visibility', 'endDate', 'createdAt'],

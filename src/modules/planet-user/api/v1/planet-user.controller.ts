@@ -1,8 +1,19 @@
-import { Crud } from '@foryourdev/nestjs-crud';
-import { Controller, Logger, UseGuards } from '@nestjs/common';
+import { BeforeShow, BeforeUpdate, Crud } from '@foryourdev/nestjs-crud';
+import { 
+  Controller, 
+  ForbiddenException,
+  Logger, 
+  NotFoundException,
+  UseGuards 
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { AuthGuard } from '../../../../guards/auth.guard';
-import { PlanetUser } from '../../planet-user.entity';
+import { PlanetUser, PlanetUserStatus } from '../../planet-user.entity';
 import { PlanetUserService } from '../../planet-user.service';
+import { Planet } from '../../../planet/planet.entity';
+import { TravelUser, TravelUserStatus } from '../../../travel-user/travel-user.entity';
+import { User } from '../../../user/user.entity';
 
 /**
  * PlanetUser API Controller (v1)
@@ -16,8 +27,9 @@ import { PlanetUserService } from '../../planet-user.service';
  *
  * 권한 규칙:
  * - 모든 작업에 인증 필요 (AuthGuard)
- * - 조회만 가능: 본인의 멤버십만 조회 가능
- * - 생성/수정/삭제: 관리자 전용 (별도 Admin API에서 구현)
+ * - 조회: 행성에 참여한 유저만 조회 가능
+ * - 수정: 본인의 멤버십만 수정 가능
+ * - 생성/삭제: 사용자는 직접 참여하거나 나갈 수 없음 (관리자 전용)
  *
  * 참고:
  * - 단체 Planet: Travel 참여 시 자동 참여됨
@@ -28,11 +40,18 @@ import { PlanetUserService } from '../../planet-user.service';
 @Crud({
   entity: PlanetUser,
 
-  // 허용할 CRUD 액션 (읽기 전용)
-  only: ['index', 'show'],
+  // 허용할 CRUD 액션 (조회, 수정만 가능 - 생성/삭제 불가)
+  only: ['index', 'show', 'update'],
 
   // 필터링 허용 필드 (조회용)
   allowedFilters: ['planetId', 'status', 'role', 'joinedAt'],
+
+  // Body에서 허용할 파라미터 (수정 시)
+  allowedParams: [
+    'bio', // 멤버 소개
+    'nickname', // 멤버 닉네임
+    'settings', // 개인 설정
+  ],
 
   // 관계 포함 허용 필드
   allowedIncludes: ['user', 'planet'],
@@ -49,11 +68,85 @@ import { PlanetUserService } from '../../planet-user.service';
     show: {
       allowedIncludes: ['user', 'planet'],
     },
+
+    // 수정: 본인 정보만 수정 가능
+    update: {
+      allowedParams: [
+        'bio',
+        'nickname',
+        'settings',
+      ],
+    },
   },
 })
 @UseGuards(AuthGuard)
 export class PlanetUserController {
   private readonly logger = new Logger(PlanetUserController.name);
 
-  constructor(public readonly crudService: PlanetUserService) {}
+  constructor(
+    public readonly crudService: PlanetUserService,
+    @InjectRepository(PlanetUser)
+    private readonly planetUserRepository: Repository<PlanetUser>,
+    @InjectRepository(Planet)
+    private readonly planetRepository: Repository<Planet>,
+    @InjectRepository(TravelUser)
+    private readonly travelUserRepository: Repository<TravelUser>,
+  ) {}
+
+  /**
+   * PlanetUser 조회 전 권한 확인 (행성에 참여한 유저만 조회 가능)
+   */
+  @BeforeShow()
+  async beforeShow(params: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
+    const planetUserId = parseInt(params.id, 10);
+
+    // 조회하려는 PlanetUser 정보 가져오기
+    const targetPlanetUser = await this.planetUserRepository.findOne({
+      where: { id: planetUserId },
+      relations: ['planet'],
+    });
+
+    if (!targetPlanetUser) {
+      throw new NotFoundException('행성 멤버십을 찾을 수 없습니다.');
+    }
+
+    // 현재 유저가 해당 여행에 참여했는지 확인
+    const userTravelMembership = await this.travelUserRepository.findOne({
+      where: {
+        travelId: targetPlanetUser.planet.travelId,
+        userId: user.id,
+        status: TravelUserStatus.ACTIVE,
+      },
+    });
+
+    if (!userTravelMembership) {
+      throw new ForbiddenException('행성에 참여한 유저만 멤버십 정보를 조회할 수 있습니다.');
+    }
+
+    return params;
+  }
+
+  /**
+   * PlanetUser 수정 전 권한 확인 (본인의 멤버십만 수정 가능)
+   */
+  @BeforeUpdate()
+  async beforeUpdate(entity: PlanetUser, body: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
+
+    // 본인의 멤버십만 수정 가능
+    if (entity.userId !== user.id) {
+      throw new ForbiddenException('본인의 멤버십 정보만 수정할 수 있습니다.');
+    }
+
+    // 중요한 필드는 수정 불가 (role, status 등)
+    delete body.userId;
+    delete body.planetId;
+    delete body.role;
+    delete body.status;
+    delete body.joinedAt;
+    delete body.invitedBy;
+
+    return body;
+  }
 }

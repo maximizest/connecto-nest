@@ -49,12 +49,6 @@
 
 ## 3. Message Module (`/api/v1/messages`)
 
-### 메시지 편집 관련
-- **PUT `/:id/edit`**
-  - 역할: 메시지 내용 수정
-  - 본인이 작성한 메시지만 수정 가능
-  - 수정 시간 및 수정 여부 기록
-
 ### 메시지 컨텍스트 관련
 - **GET `/:messageId/context`**
   - 역할: 특정 메시지 주변 컨텍스트 조회
@@ -99,10 +93,6 @@
   - 실시간 업데이트 지원
 
 ### 알림 읽음 처리 관련
-- **PATCH `/:id/read`**
-  - 역할: 개별 알림 읽음 처리
-  - 특정 알림을 읽음 상태로 변경
-
 - **PATCH `/read-multiple`**
   - 역할: 여러 알림 일괄 읽음 처리
   - notificationIds 배열로 다수 알림 동시 처리
@@ -170,3 +160,119 @@ WebSocket은 별도의 Gateway를 통해 구현되며, HTTP API와는 별개로 
 - 경로: `ws://[host]/socket.io`
 - 인증: JWT 토큰 기반
 - 주요 이벤트: 메시지 송수신, 타이핑 인디케이터, 온라인 상태 등
+
+## CRUD 전환 완료 현황
+
+### ✅ CRUD로 전환 완료된 라우트
+
+#### 1. Message Module
+- **~~PUT `/:id/edit`~~** → CRUD `update` 액션으로 전환 완료
+  - `BeforeUpdate` 훅에서 편집 권한과 시간 제한 검증
+  - `AfterUpdate` 훅에서 실시간 이벤트 발생
+
+#### 2. Notification Module
+- **~~PATCH `/:id/read`~~** → CRUD `update` 액션으로 전환 완료
+  - `BeforeUpdate` 훅에서 isRead 필드 업데이트 처리
+  - 권한 검증 포함
+
+### 🔄 CRUD로 전환 가능하지만 미전환 라우트
+
+#### 1. Read Receipt Module  
+- **POST `/mark-read`** → `create` 액션으로 부분 전환 가능
+  - 이유: 기본적으로 엔티티 생성/업데이트 작업
+  - 현재 구현: 이미 `BeforeCreate` 훅에서 upsert 로직 처리 중
+  - 개선점: 완전한 CRUD 전환을 위해 리팩토링 필요
+
+#### 2. Notification Module
+- **GET `/push-tokens`** → `index` 액션으로 전환 가능
+  - 이유: 표준 목록 조회 작업
+  - 전환 방법: PushToken 엔티티 생성 후 CRUD `index` 사용
+
+#### 3. Schema Module
+- **GET `/`** → `index` 액션으로 전환 가능
+- **GET `/:entityName`** → `show` 액션으로 전환 가능
+  - 이유: 표준 조회 작업
+  - 단, 동적 스키마 정보 제공이므로 별도 엔티티 설계 필요
+
+### ❌ CRUD로 전환 불가능한 라우트
+
+#### 1. Auth Module (모든 라우트)
+- **POST `/sign/social`**, **POST `/sign/refresh`**, **POST `/sign/out`**
+  - 이유: 인증/토큰 관련 특수 로직으로 엔티티 CRUD와 무관
+  - JWT 토큰 생성, 검증, 폐기 등 상태 없는(stateless) 작업
+
+#### 2. File Upload Module
+- **POST `/presigned-url`**
+  - 이유: 외부 서비스(Cloudflare R2) URL 생성 작업
+  - 엔티티 생성이 아닌 임시 URL 발급
+
+- **POST `/complete`**
+  - 이유: 복잡한 검증 및 외부 서비스 확인 로직
+  - 현재 구현: `BeforeCreate` 훅 활용 중이나 완전한 CRUD 패턴과 불일치
+
+- **DELETE `/:id/cancel`**
+  - 이유: 삭제가 아닌 상태 변경 + 외부 리소스 정리
+  - 트랜잭션 처리와 외부 서비스 호출 포함
+
+- **GET `/:id/download-url`**, **GET `/:id/stream`**
+  - 이유: 엔티티 조회가 아닌 동적 URL 생성
+  - 외부 서비스와의 통신 필요
+
+#### 3. Message Module
+- **GET `/:messageId/context`**
+  - 이유: 단순 조회가 아닌 복잡한 컨텍스트 계산
+  - 전후 메시지 조회 및 정렬 등 커스텀 로직
+
+#### 4. Read Receipt Module
+- **POST `/mark-multiple-read`**, **POST `/mark-all-read/:planetId`**
+  - 이유: 일괄 처리 작업으로 단일 엔티티 CRUD 패턴 벗어남
+  - 복수 레코드 동시 생성/업데이트 및 트랜잭션 처리
+
+- **GET `/unread-count/:planetId`**, **GET `/unread-counts/my`**
+  - 이유: 집계 쿼리로 엔티티 조회가 아닌 계산 작업
+  - COUNT, GROUP BY 등 복잡한 SQL 필요
+
+#### 5. Notification Module
+- **GET `/unread-count`**
+  - 이유: 집계 쿼리 (COUNT)
+  
+- **PATCH `/read-multiple`**, **PATCH `/read-all`**
+  - 이유: 일괄 업데이트 작업
+  - 복수 레코드 동시 처리 필요
+
+- **POST `/push-token`**, **POST `/push-token/unregister`**
+  - 이유: 외부 서비스(FCM) 연동 및 복잡한 디바이스 관리
+  - 토큰 검증, 중복 확인, 디바이스별 처리 등
+
+- **POST `/test`**
+  - 이유: 테스트 전용 특수 목적 API
+  - 개발 환경 전용 디버깅 도구
+
+### 🎯 전환 권장 사항
+
+#### 우선순위 높음 (간단한 전환)
+1. Message의 `PUT /:id/edit` → CRUD `update`
+2. Notification의 `PATCH /:id/read` → CRUD `update`
+
+#### 우선순위 중간 (엔티티 재설계 필요)
+1. PushToken을 별도 엔티티로 분리하여 CRUD 적용
+2. ReadReceipt의 `mark-read`를 완전한 CRUD `create`로 전환
+
+#### 전환 불필요 (커스텀 유지)
+- 인증 관련 모든 API
+- 일괄 처리 API
+- 집계/카운트 API
+- 외부 서비스 연동 API
+
+### 📊 전환 통계
+- 전체 커스텀 라우트: 28개 → 26개 (2개 전환 완료)
+- CRUD로 전환 완료: 2개 
+  - Message의 `PUT /:id/edit`
+  - Notification의 `PATCH /:id/read`
+- CRUD로 전환 가능하지만 미전환: 3개
+  - ReadReceipt의 `POST /mark-read`
+  - Notification의 `GET /push-tokens`  
+  - Schema의 조회 API들
+- CRUD로 전환 불가능: 23개 (82.1%)
+
+대부분의 커스텀 라우트는 비즈니스 로직의 복잡성, 외부 서비스 연동, 일괄 처리, 집계 연산 등의 이유로 CRUD 패턴으로 전환하기 어렵습니다.

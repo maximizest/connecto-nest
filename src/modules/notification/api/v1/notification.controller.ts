@@ -112,9 +112,8 @@ export class NotificationController {
       throw new Error('알림 수정 권한이 없습니다.');
     }
 
-    // 읽음 처리 요청인 경우
-    if (context.request?.url?.includes('/read') || body.markAsRead === true) {
-      body.isRead = true;
+    // 읽음 처리 요청인 경우 (isRead 필드만 수정 허용)
+    if (body.isRead === true && !entity.isRead) {
       body.readAt = new Date();
       context.isReadOperation = true;
     }
@@ -176,36 +175,6 @@ export class NotificationController {
   // 알림 상세 조회는 @Crud show 라우트를 사용합니다.
   // GET /api/v1/notifications/:id?include=triggerUser,travel,planet
   // @BeforeCreate/@BeforeUpdate 훅에서 userId 권한 확인을 자동으로 처리합니다.
-
-  /**
-   * 알림 읽음 처리 API (커스텀 엔드포인트)
-   * PATCH /api/v1/notifications/:id/read
-   *
-   * update 액션으로 위임
-   */
-  @Patch(':id/read')
-  async markAsRead(
-    @Param('id') notificationId: number,
-    @CurrentUser() currentUser: CurrentUserData,
-  ) {
-    const user: User = currentUser as User;
-
-    // 사용자의 알림인지 확인
-    const notification = await this.crudService.repository.findOne({
-      where: { id: notificationId, userId: user.id },
-    });
-
-    if (!notification) {
-      throw new Error('알림을 찾을 수 없습니다.');
-    }
-
-    // 읽음 처리
-    notification.isRead = true;
-    notification.readAt = new Date();
-    const result = await this.crudService.repository.save(notification);
-
-    return crudResponse(result);
-  }
 
   /**
    * 여러 알림 일괄 읽음 처리 API

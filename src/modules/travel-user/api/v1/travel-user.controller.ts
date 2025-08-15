@@ -1,4 +1,10 @@
-import { AfterCreate, BeforeCreate, Crud } from '@foryourdev/nestjs-crud';
+import { 
+  AfterCreate, 
+  BeforeCreate, 
+  BeforeShow, 
+  BeforeUpdate,
+  Crud 
+} from '@foryourdev/nestjs-crud';
 import {
   Controller,
   ForbiddenException,
@@ -36,9 +42,10 @@ import { TravelUserService } from '../../travel-user.service';
  *
  * 권한 규칙:
  * - 모든 작업에 인증 필요 (AuthGuard)
- * - 가입: 초대 코드 필수 (관리자가 Travel 생성 시 제공)
- * - 조회: Travel 멤버만 가능
- * - 탈퇴/추방/권한관리: 관리자 전용 (별도 Admin API에서 구현)
+ * - 가입: 초대 코드 필수, 현재 로그인한 유저 자동 설정, 중복 참여 시 오류
+ * - 조회: 여행에 참여한 유저만 가능 (travelId 필터 필수)
+ * - 수정: 본인의 멤버십 정보만 수정 가능
+ * - 탈퇴: 사용자는 직접 탈퇴할 수 없음 (관리자 전용)
  *
  * 자동 기능:
  * - Travel 가입 시 해당 Travel의 모든 단체 Planet에 자동 참여
@@ -48,15 +55,18 @@ import { TravelUserService } from '../../travel-user.service';
 @Crud({
   entity: TravelUser,
 
-  // 허용할 CRUD 액션 (읽기 및 가입만 가능)
-  only: ['index', 'show', 'create'],
+  // 허용할 CRUD 액션 (읽기, 가입, 수정만 가능 - 삭제 불가)
+  only: ['index', 'show', 'create', 'update'],
 
   // 필터링 허용 필드 (보안)
   allowedFilters: ['travelId', 'userId', 'status', 'role', 'joinedAt'],
 
-  // Body에서 허용할 파라미터 (가입 시)
+  // Body에서 허용할 파라미터 (가입/수정 시)
   allowedParams: [
     'inviteCode', // Travel 참여용 초대코드 (필수)
+    'bio', // 멤버 소개
+    'nickname', // 멤버 닉네임
+    'settings', // 개인 설정
   ],
 
   // 관계 포함 허용 필드
@@ -68,10 +78,12 @@ import { TravelUserService } from '../../travel-user.service';
 
   // 라우트별 개별 설정
   routes: {
-    // 목록 조회: Travel 범위로 제한
+    // 목록 조회: Travel 범위로 제한 (travelId 필터 필수)
+    // 클라이언트는 반드시 ?filter[travelId_eq]=123 형태로 요청해야 함
+    // 해당 여행에 참여한 유저만 조회 가능 (서비스 레벨에서 권한 확인)
     index: {
       allowedFilters: [
-        'travelId', // 필수 필터
+        'travelId', // 필수 필터 - 반드시 포함되어야 함
         'status',
         'role',
         'joinedAt',
@@ -88,6 +100,15 @@ import { TravelUserService } from '../../travel-user.service';
     create: {
       allowedParams: [
         'inviteCode', // 초대 코드로만 참여 가능
+      ],
+    },
+
+    // 수정: 본인 정보만 수정 가능
+    update: {
+      allowedParams: [
+        'bio',
+        'nickname', 
+        'settings',
       ],
     },
   },
@@ -107,6 +128,62 @@ export class TravelUserController {
     @InjectRepository(PlanetUser)
     private readonly planetUserRepository: Repository<PlanetUser>,
   ) {}
+
+  /**
+   * 멤버십 조회 전 권한 확인 (여행에 참여한 유저만 조회 가능)
+   */
+  @BeforeShow()
+  async beforeShow(params: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
+    const targetTravelUserId = parseInt(params.id, 10);
+
+    // 조회하려는 TravelUser 정보 가져오기
+    const targetTravelUser = await this.travelUserRepository.findOne({
+      where: { id: targetTravelUserId },
+    });
+
+    if (!targetTravelUser) {
+      throw new NotFoundException('여행 멤버십을 찾을 수 없습니다.');
+    }
+
+    // 현재 유저가 해당 여행에 참여했는지 확인
+    const currentUserTravelMembership = await this.travelUserRepository.findOne({
+      where: {
+        travelId: targetTravelUser.travelId,
+        userId: user.id,
+        status: TravelUserStatus.ACTIVE,
+      },
+    });
+
+    if (!currentUserTravelMembership) {
+      throw new ForbiddenException('여행에 참여한 유저만 멤버십 정보를 조회할 수 있습니다.');
+    }
+
+    return params;
+  }
+
+  /**
+   * 멤버십 수정 전 권한 확인 (본인의 정보만 수정 가능)
+   */
+  @BeforeUpdate()
+  async beforeUpdate(entity: TravelUser, body: any, context: any): Promise<any> {
+    const user: User = context.request?.user;
+
+    // 본인의 멤버십만 수정 가능
+    if (entity.userId !== user.id) {
+      throw new ForbiddenException('본인의 멤버십 정보만 수정할 수 있습니다.');
+    }
+
+    // 중요한 필드는 수정 불가 (role, status 등)
+    delete body.userId;
+    delete body.travelId;
+    delete body.role;
+    delete body.status;
+    delete body.joinedAt;
+    delete body.invitedBy;
+
+    return body;
+  }
 
   /**
    * Travel 가입 전 검증 및 전처리
@@ -158,9 +235,9 @@ export class TravelUserController {
 
     if (existingMember) {
       if (existingMember.status === TravelUserStatus.ACTIVE) {
-        throw new ForbiddenException('이미 가입된 Travel입니다.');
+        throw new ForbiddenException('이미 해당 여행에 참여하고 있습니다. 중복 참여는 불가능합니다.');
       } else if (existingMember.status === TravelUserStatus.BANNED) {
-        throw new ForbiddenException('이 Travel에서 차단된 사용자입니다.');
+        throw new ForbiddenException('이 여행에서 차단된 사용자입니다. 참여할 수 없습니다.');
       } else if (existingMember.status === TravelUserStatus.LEFT) {
         // 기존 탈퇴 기록을 재활성화
         body.status = TravelUserStatus.ACTIVE;
