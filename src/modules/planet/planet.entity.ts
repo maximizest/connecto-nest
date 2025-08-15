@@ -126,7 +126,7 @@ export class Planet extends BaseEntity {
   @Index() // Travel별 조회 최적화
   travelId: number;
 
-  @ManyToOne(() => Travel, { eager: false })
+  @ManyToOne(() => Travel, { eager: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'travelId' })
   travel: Travel;
 

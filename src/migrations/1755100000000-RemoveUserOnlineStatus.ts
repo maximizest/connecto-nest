@@ -6,10 +6,12 @@ export class RemoveUserOnlineStatus1755100000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // status 컬럼 인덱스 제거
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_user_status"`);
-    
+
     // status 컬럼 제거
-    await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "status"`);
-    
+    await queryRunner.query(
+      `ALTER TABLE "users" DROP COLUMN IF EXISTS "status"`,
+    );
+
     console.log('✅ User online status tracking removed successfully');
   }
 
@@ -24,12 +26,12 @@ export class RemoveUserOnlineStatus1755100000000 implements MigrationInterface {
         END IF;
       END $$;
     `);
-    
+
     // status 컬럼 인덱스 재생성
     await queryRunner.query(`
       CREATE INDEX IF NOT EXISTS "IDX_user_status" ON "users" ("status")
     `);
-    
+
     console.log('⚠️ User online status tracking restored (rollback)');
   }
 }

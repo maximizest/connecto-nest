@@ -1,7 +1,10 @@
 import {
   AfterCreate,
+  AfterDestroy,
+  AfterRecover,
   AfterUpdate,
   BeforeCreate,
+  BeforeDestroy,
   BeforeUpdate,
   Crud,
   crudResponse,
@@ -9,7 +12,6 @@ import {
 import {
   Body,
   Controller,
-  Delete,
   ForbiddenException,
   Get,
   Logger,
@@ -56,8 +58,8 @@ import { MessagePaginationService } from '../../services/message-pagination.serv
 @Crud({
   entity: Message,
 
-  // 허용할 CRUD 액션 (소프트 삭제는 update로 처리)
-  only: ['index', 'show', 'create', 'update'],
+  // 허용할 CRUD 액션 (destroy 추가)
+  only: ['index', 'show', 'create', 'update', 'destroy'],
 
   // 필터링 허용 필드 (보안) - 고급 필터링 지원
   allowedFilters: [
@@ -65,7 +67,6 @@ import { MessagePaginationService } from '../../services/message-pagination.serv
     'senderId', // 발신자 필터: senderId_in=1,2,3
     'type', // 메시지 타입: type_eq=text
     'status', // 상태: status_ne=deleted
-    'isDeleted', // 삭제 여부: isDeleted_eq=false
     'isEdited', // 편집 여부: isEdited_eq=true
     'replyToMessageId', // 답장: replyToMessageId_not_null
     'createdAt', // 생성일: createdAt_gte=2024-01-01, createdAt_between=2024-01-01,2024-12-31
@@ -116,19 +117,20 @@ import { MessagePaginationService } from '../../services/message-pagination.serv
       ],
     },
 
-    // 수정: content와 소프트 삭제 필드 허용
+    // 수정: content 편집만 허용
     update: {
       allowedParams: [
         'content',
-        'status',
-        'isDeleted',
-        'deletedAt',
-        'deletedBy',
         'isEdited',
         'editedAt',
         'originalContent',
         'searchableText',
       ],
+    },
+
+    // 삭제: Soft Delete 활성화
+    destroy: {
+      softDelete: true, // ✅ Message는 Soft Delete 사용
     },
   },
 })
@@ -217,45 +219,21 @@ export class MessageController {
     return entity;
   }
 
-
   /**
-   * 메시지 수정 전 검증 (편집 및 소프트 삭제 처리)
+   * 메시지 수정 전 검증 (편집 처리)
    */
   @BeforeUpdate()
   async beforeUpdate(entity: Message, context: any): Promise<Message> {
     const user: User = context.request?.user;
     const messageId = entity.id;
 
-    // 소프트 삭제 요청 처리
-    if (entity.isDeleted === true) {
-      // 권한 확인: 발신자만 삭제 가능
-      if (!entity.canDelete(user.id)) {
-        throw new ForbiddenException('메시지 삭제 권한이 없습니다.');
-      }
-
-      // 소프트 삭제 데이터 설정
-      entity.isDeleted = true;
-      entity.deletedAt = new Date();
-      entity.deletedBy = user.id;
-      entity.content = undefined; // 내용 제거
-      entity.fileMetadata = undefined; // 파일 정보 제거
-
-      this.logger.log(
-        `Soft deleting message: id=${messageId}, senderId=${user.id}`,
-      );
-
-      return entity;
-    }
-
-    // 일반 편집 처리
     // 권한 확인: 발신자만 수정 가능
     if (entity.senderId !== user.id) {
       throw new ForbiddenException('메시지 수정 권한이 없습니다.');
     }
 
     // 삭제된 메시지는 수정 불가
-    const originalDeleted = context.currentEntity?.isDeleted;
-    if (originalDeleted) {
+    if (entity.deletedAt) {
       throw new ForbiddenException('삭제된 메시지는 수정할 수 없습니다.');
     }
 
@@ -291,6 +269,69 @@ export class MessageController {
   @AfterUpdate()
   async afterUpdate(entity: Message): Promise<Message> {
     this.logger.log(`Message updated: id=${entity.id}`);
+    return entity;
+  }
+
+  /**
+   * 메시지 삭제 전 처리 (Soft Delete)
+   */
+  @BeforeDestroy()
+  async beforeDestroy(entity: Message, context: any): Promise<Message> {
+    const user = context.request?.user;
+
+    // Planet 접근 권한 확인
+    await this.validatePlanetAccess(entity.planetId, user.id);
+
+    // 삭제 권한 확인 (발신자만)
+    if (!entity.canDelete(user.id)) {
+      throw new ForbiddenException('메시지 삭제 권한이 없습니다.');
+    }
+
+    // 삭제 메타데이터 설정
+    entity.prepareForSoftDelete(user.id, context.request?.body?.reason);
+
+    this.logger.log(
+      `Message soft-delete initiated: id=${entity.id}, deletedBy=${user.id}`,
+    );
+
+    return entity;
+  }
+
+  /**
+   * 메시지 삭제 후 처리
+   */
+  @AfterDestroy()
+  async afterDestroy(entity: Message, context: any): Promise<Message> {
+    // 실시간 삭제 알림 이벤트 발생
+    this.eventEmitter.emit('message.deleted', {
+      messageId: entity.id,
+      planetId: entity.planetId,
+      deletedAt: entity.deletedAt,
+      deletedBy: entity.deletedBy,
+    });
+
+    this.logger.log(`Message soft-deleted: id=${entity.id}`);
+
+    return entity;
+  }
+
+  /**
+   * 메시지 복구 후 처리 (Soft Delete 복구)
+   */
+  @AfterRecover()
+  async afterRecover(entity: Message, context: any): Promise<Message> {
+    // 복구 시 메타데이터 정리
+    entity.deletedBy = undefined;
+    entity.deletionReason = undefined;
+
+    // 실시간 복구 알림 이벤트 발생
+    this.eventEmitter.emit('message.recovered', {
+      messageId: entity.id,
+      planetId: entity.planetId,
+    });
+
+    this.logger.log(`Message recovered: id=${entity.id}`);
+
     return entity;
   }
 
@@ -397,7 +438,7 @@ export class MessageController {
       );
     }
 
-    if (replyMessage.isDeleted) {
+    if (replyMessage.deletedAt) {
       throw new ForbiddenException('삭제된 메시지에는 답장할 수 없습니다.');
     }
   }
@@ -455,7 +496,7 @@ export class MessageController {
         throw new ForbiddenException('메시지 편집 권한이 없습니다.');
       }
 
-      if (message.isDeleted) {
+      if (message.deletedAt) {
         throw new ForbiddenException('삭제된 메시지는 편집할 수 없습니다.');
       }
 
@@ -505,113 +546,6 @@ export class MessageController {
       );
       throw error;
     }
-  }
-
-  /**
-   * 메시지 삭제 전용 API
-   * DELETE /api/v1/messages/:id
-   */
-  @Delete(':id')
-  @UseGuards(AuthGuard)
-  async deleteMessage(@Param('id') messageId: number, @Request() req: any) {
-    const user: User = req.user;
-
-    try {
-      // 메시지 조회 및 권한 확인
-      const message = await this.messageRepository.findOne({
-        where: { id: messageId },
-        relations: ['sender', 'planet', 'planet.travel'],
-      });
-
-      if (!message) {
-        throw new NotFoundException('메시지를 찾을 수 없습니다.');
-      }
-
-      // Planet 접근 권한 확인
-      await this.validatePlanetAccess(message.planetId, user.id);
-
-      // 이미 삭제된 메시지 확인
-      if (message.isDeleted) {
-        return crudResponse(message);
-      }
-
-      // 삭제 권한 확인 (발신자 또는 Planet 관리자)
-      const hasDeletePermission = await this.checkDeletePermission(
-        message,
-        user.id,
-      );
-
-      if (!hasDeletePermission) {
-        throw new ForbiddenException('메시지 삭제 권한이 없습니다.');
-      }
-
-      // 소프트 삭제 처리
-      message.softDelete(user.id);
-
-      // 메시지 저장
-      const deletedMessage = await this.messageRepository.save(message);
-
-      // 실시간 삭제 알림 이벤트 발생
-      this.eventEmitter.emit('message.deleted', {
-        messageId: deletedMessage.id,
-        planetId: deletedMessage.planetId,
-        isDeleted: deletedMessage.isDeleted,
-        deletedAt: deletedMessage.deletedAt,
-        deletedBy: { id: user.id, name: user.name },
-      });
-
-      this.logger.log(`Message deleted: id=${messageId}, deletedBy=${user.id}`);
-
-      return crudResponse(deletedMessage);
-    } catch (error) {
-      this.logger.error(
-        `Message delete failed: id=${messageId}, user=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * 삭제 권한 확인 (발신자 또는 Planet 관리자)
-   */
-  private async checkDeletePermission(
-    message: Message,
-    userId: number,
-  ): Promise<boolean> {
-    // 발신자는 항상 삭제 가능
-    if (message.senderId === userId) {
-      return true;
-    }
-
-    // Planet 관리자 권한 확인
-    if (message.planet.type === PlanetType.GROUP) {
-      // GROUP Planet: Travel 관리자 확인
-      const travelUser = await this.travelUserRepository.findOne({
-        where: {
-          userId,
-          travelId: message.planet.travelId,
-          status: TravelUserStatus.ACTIVE,
-        },
-      });
-
-      return !!(
-        travelUser &&
-        (travelUser.role === 'owner' || travelUser.role === 'admin')
-      );
-    } else if (message.planet.type === PlanetType.DIRECT) {
-      // DIRECT Planet: Planet 생성자만 관리자 권한
-      const planetUser = await this.planetUserRepository.findOne({
-        where: {
-          userId,
-          planetId: message.planetId,
-          status: PlanetUserStatus.ACTIVE,
-        },
-      });
-
-      return !!(planetUser && planetUser.role === 'moderator');
-    }
-
-    return false;
   }
 
   /**

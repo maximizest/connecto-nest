@@ -298,7 +298,10 @@ export class FileUploadService extends CrudService<FileUpload> {
   /**
    * 업로드 완료 처리 (Direct Upload 완료 확인)
    */
-  async completeUpload(uploadId: number, storageKey: string): Promise<FileUpload> {
+  async completeUpload(
+    uploadId: number,
+    storageKey: string,
+  ): Promise<FileUpload> {
     const upload = await this.findById(uploadId);
     if (!upload) {
       throw new NotFoundException(`Upload record not found: ${uploadId}`);

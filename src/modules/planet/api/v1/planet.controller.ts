@@ -24,8 +24,8 @@ import { PlanetService } from '../../planet.service';
 @Crud({
   entity: Planet,
 
-  // 허용할 CRUD 액션 (사용자는 조회만 가능, 생성/수정은 관리자만)
-  only: ['index', 'show'],
+  // 허용할 CRUD 액션 (사용자는 조회만 가능, 생성/수정/삭제는 관리자만)
+  only: ['index', 'show', 'destroy'],
 
   // 필터링 허용 필드 (보안)
   allowedFilters: ['travelId', 'type', 'isActive', 'name', 'createdAt'],
@@ -55,6 +55,11 @@ import { PlanetService } from '../../planet.service';
     // 단일 조회: 상세 정보 포함
     show: {
       allowedIncludes: ['travel', 'directMembers', 'directMembers.user'],
+    },
+
+    // 삭제: Hard Delete (기본값)
+    destroy: {
+      softDelete: false, // 🔥 Planet은 Hard Delete (명시적 설정)
     },
   },
 })

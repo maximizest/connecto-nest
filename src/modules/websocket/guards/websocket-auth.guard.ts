@@ -87,5 +87,4 @@ export class WebSocketAuthGuard implements CanActivate {
 
     return null;
   }
-
 }

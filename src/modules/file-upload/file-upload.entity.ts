@@ -147,7 +147,11 @@ export class FileUpload extends BaseEntity {
   @IsNumber()
   completedChunks: number;
 
-  @Column({ type: 'bigint', default: 0, comment: '업로드된 바이트 수 (레거시)' })
+  @Column({
+    type: 'bigint',
+    default: 0,
+    comment: '업로드된 바이트 수 (레거시)',
+  })
   @IsNumber()
   uploadedBytes: number;
 

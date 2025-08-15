@@ -178,7 +178,6 @@ export class UserDeletionService {
         result.anonymizedServiceData.videoProcessings =
           anonymizedVideoProcessings.affected || 0;
 
-
         this.logger.log('✅ Service data anonymization completed');
 
         // 3. 개인정보 완전 삭제

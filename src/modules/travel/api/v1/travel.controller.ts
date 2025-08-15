@@ -23,8 +23,8 @@ import { TravelService } from '../../travel.service';
 @Crud({
   entity: Travel,
 
-  // 허용할 CRUD 액션 (사용자는 조회만 가능, 생성/수정은 관리자만)
-  only: ['index', 'show'],
+  // 허용할 CRUD 액션 (사용자는 조회만 가능, 생성/수정/삭제는 관리자만)
+  only: ['index', 'show', 'destroy'],
 
   // 필터링 허용 필드 (보안)
   allowedFilters: ['status', 'name', 'visibility', 'endDate', 'createdAt'],
@@ -47,6 +47,11 @@ import { TravelService } from '../../travel.service';
     // 단일 조회: 상세 정보 포함
     show: {
       allowedIncludes: ['members', 'members.user', 'planets'],
+    },
+
+    // 삭제: Hard Delete (기본값)
+    destroy: {
+      softDelete: false, // 🔥 Travel은 Hard Delete (명시적 설정)
     },
   },
 })

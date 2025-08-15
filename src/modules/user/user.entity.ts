@@ -13,6 +13,7 @@ import {
   BeforeUpdate,
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   Index,
   OneToOne,
@@ -27,7 +28,6 @@ export enum SocialProvider {
   GOOGLE = 'google',
   APPLE = 'apple',
 }
-
 
 @Entity('users')
 @Index(['socialId', 'provider'], { unique: true }) // 소셜 ID + 제공자 조합 고유
@@ -81,7 +81,6 @@ export class User extends BaseEntity {
   @IsString()
   @Index() // 전화번호 검색 최적화
   phone?: string;
-
 
   /**
    * 추가 설정
@@ -172,6 +171,32 @@ export class User extends BaseEntity {
   @IsOptional()
   @IsDateString()
   updatedAt: Date;
+
+  /**
+   * Soft Delete 지원
+   */
+  @DeleteDateColumn({ comment: '계정 삭제 시간 (Soft Delete)' })
+  @IsOptional()
+  @IsDateString()
+  deletedAt?: Date;
+
+  @Column({
+    type: 'int',
+    nullable: true,
+    comment: '삭제한 사용자 ID',
+  })
+  @IsOptional()
+  deletedBy?: number;
+
+  @Column({
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    comment: '삭제 사유',
+  })
+  @IsOptional()
+  @IsString()
+  deletionReason?: string;
 
   /**
    * 관계 설정

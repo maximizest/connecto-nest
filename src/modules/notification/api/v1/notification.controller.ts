@@ -56,10 +56,7 @@ import { PushNotificationService } from '../../services/push-notification.servic
     'planetId',
     'createdAt',
   ],
-  allowedParams: [
-    'isRead',
-    'readAt'
-  ],
+  allowedParams: ['isRead', 'readAt'],
   allowedIncludes: ['triggerUser', 'travel', 'planet'],
   only: ['index', 'show', 'update'],
   routes: {
@@ -91,7 +88,6 @@ export class NotificationController {
     private readonly userRepository: Repository<User>,
   ) {}
 
-
   @BeforeCreate()
   async beforeCreate(body: any, context: any) {
     // 헬퍼 함수를 사용하여 현재 사용자 ID 추출
@@ -104,21 +100,25 @@ export class NotificationController {
   }
 
   @BeforeUpdate()
-  async beforeUpdate(entity: Notification, body: any, context: any): Promise<any> {
+  async beforeUpdate(
+    entity: Notification,
+    body: any,
+    context: any,
+  ): Promise<any> {
     const user: User = context.request?.user;
-    
+
     // 권한 확인
     if (entity.userId !== user.id) {
       throw new Error('알림 수정 권한이 없습니다.');
     }
-    
+
     // 읽음 처리 요청인 경우
     if (context.request?.url?.includes('/read') || body.markAsRead === true) {
       body.isRead = true;
       body.readAt = new Date();
       context.isReadOperation = true;
     }
-    
+
     return body;
   }
 
@@ -126,7 +126,7 @@ export class NotificationController {
   async afterUpdate(entity: Notification, context: any): Promise<void> {
     if (context.isReadOperation) {
       this.logger.log(
-        `Notification marked as read: id=${entity.id}, userId=${entity.userId}`
+        `Notification marked as read: id=${entity.id}, userId=${entity.userId}`,
       );
     }
   }
@@ -180,7 +180,7 @@ export class NotificationController {
   /**
    * 알림 읽음 처리 API (커스텀 엔드포인트)
    * PATCH /api/v1/notifications/:id/read
-   * 
+   *
    * update 액션으로 위임
    */
   @Patch(':id/read')
@@ -189,21 +189,21 @@ export class NotificationController {
     @CurrentUser() currentUser: CurrentUserData,
   ) {
     const user: User = currentUser as User;
-    
+
     // 사용자의 알림인지 확인
     const notification = await this.crudService.repository.findOne({
-      where: { id: notificationId, userId: user.id }
+      where: { id: notificationId, userId: user.id },
     });
-    
+
     if (!notification) {
       throw new Error('알림을 찾을 수 없습니다.');
     }
-    
+
     // 읽음 처리
     notification.isRead = true;
     notification.readAt = new Date();
     const result = await this.crudService.repository.save(notification);
-    
+
     return crudResponse(result);
   }
 
@@ -264,7 +264,7 @@ export class NotificationController {
   /**
    * 모든 알림 읽음 처리 API (커스텀 엔드포인트)
    * PATCH /api/v1/notifications/read-all
-   * 
+   *
    * 벼크 업데이트로 처리
    */
   @Patch('read-all')
@@ -274,13 +274,17 @@ export class NotificationController {
     try {
       // 사용자의 모든 읽지 않은 알림 조회
       const unreadNotifications = await this.crudService.repository.find({
-        where: { userId: user.id, isRead: false }
+        where: { userId: user.id, isRead: false },
       });
-      
+
       // 각 알림에 BeforeUpdate 적용
       const results: Notification[] = [];
       for (const notification of unreadNotifications) {
-        await this.beforeUpdate(notification, { markAsRead: true }, { request: { user } });
+        await this.beforeUpdate(
+          notification,
+          { markAsRead: true },
+          { request: { user } },
+        );
         notification.isRead = true;
         notification.readAt = new Date();
         const updated = await this.crudService.repository.save(notification);
@@ -467,7 +471,7 @@ export class NotificationController {
   /**
    * 테스트 알림 전송 API (개발/테스트용)
    * POST /api/v1/notifications/test
-   * 
+   *
    * 개발 환경에서만 사용 가능
    */
   @Post('test')

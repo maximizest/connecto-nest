@@ -115,7 +115,7 @@ export class Notification extends BaseEntity {
   @Index() // 사용자별 알림 조회 최적화
   userId: number;
 
-  @ManyToOne(() => User, { eager: false })
+  @ManyToOne(() => User, { eager: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
 
@@ -200,7 +200,7 @@ export class Notification extends BaseEntity {
   @Index() // Travel별 알림 조회
   travelId?: number;
 
-  @ManyToOne(() => Travel, { eager: false })
+  @ManyToOne(() => Travel, { eager: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'travelId' })
   travel?: Travel;
 
@@ -214,7 +214,7 @@ export class Notification extends BaseEntity {
   @Index() // Planet별 알림 조회
   planetId?: number;
 
-  @ManyToOne(() => Planet, { eager: false })
+  @ManyToOne(() => Planet, { eager: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'planetId' })
   planet?: Planet;
 
@@ -236,7 +236,7 @@ export class Notification extends BaseEntity {
   @IsNumber()
   triggeredBy?: number;
 
-  @ManyToOne(() => User, { eager: false })
+  @ManyToOne(() => User, { eager: false, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'triggeredBy' })
   triggerUser?: User;
 

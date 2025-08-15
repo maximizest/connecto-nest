@@ -114,7 +114,7 @@ export class FileUploadController {
   /**
    * Presigned Upload URL 발급
    * POST /api/v1/file-upload/presigned-url
-   * 
+   *
    * 클라이언트가 직접 Cloudflare R2로 업로드하기 위한 Presigned URL을 발급합니다.
    */
   @Post('presigned-url')
@@ -125,7 +125,13 @@ export class FileUploadController {
     const user: User = currentUser as User;
 
     try {
-      const { fileName, fileSize, mimeType, folder = 'files', metadata = {} } = body;
+      const {
+        fileName,
+        fileSize,
+        mimeType,
+        folder = 'files',
+        metadata = {},
+      } = body;
 
       // 사용자 정보를 메타데이터에 추가
       const enrichedMetadata = {
@@ -171,11 +177,13 @@ export class FileUploadController {
         },
       };
     } catch (error) {
-      this.logger.error(`Presigned URL generation failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `Presigned URL generation failed: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
-
 
   /**
    * 파일 업로드 완료 처리 (create 액션으로 통합)
@@ -184,31 +192,33 @@ export class FileUploadController {
   @BeforeCreate()
   async beforeCreate(body: any, context: any): Promise<any> {
     const user: User = context.request?.user;
-    
+
     // Complete upload 로직인 경우
     if (body.storageKey && body.uploadId) {
       // 기존 업로드 레코드 조회
       const existing = await this.fileUploadRepository.findOne({
-        where: { id: body.uploadId, userId: user.id }
+        where: { id: body.uploadId, userId: user.id },
       });
-      
+
       if (!existing) {
         throw new NotFoundException('업로드 레코드를 찾을 수 없습니다.');
       }
-      
+
       if (existing.status === FileUploadStatus.COMPLETED) {
         // 이미 완료된 경우 업데이트 스킵
         context.skipCreate = true;
         context.existingEntity = existing;
         return null;
       }
-      
+
       // Cloudflare R2 업로드 확인
-      const uploadResult = await this.storageService.verifyUpload(body.storageKey);
+      const uploadResult = await this.storageService.verifyUpload(
+        body.storageKey,
+      );
       if (!uploadResult) {
         throw new BadRequestException('업로드된 파일을 찾을 수 없습니다.');
       }
-      
+
       // 업데이트용 데이터 준비
       context.isUpdate = true;
       context.updateId = body.uploadId;
@@ -221,7 +231,7 @@ export class FileUploadController {
       body.status = body.status || FileUploadStatus.PENDING;
       body.uploadType = body.uploadType || FileUploadType.DIRECT;
     }
-    
+
     return body;
   }
 
@@ -234,7 +244,7 @@ export class FileUploadController {
       // 이미 완료된 경우 기존 엔티티 반환
       return context.existingEntity;
     }
-    
+
     if (context.isUpdate && entity) {
       // 업로드 완료 이벤트 발행
       this.eventEmitter.emit('file.upload.completed', {
@@ -243,29 +253,29 @@ export class FileUploadController {
         storageKey: entity.storageKey,
         fileName: entity.originalFileName,
       });
-      
+
       // 비디오 파일인 경우 자동으로 처리 시작
       if (entity.mimeType && entity.mimeType.startsWith('video/')) {
-        this.startAutoVideoProcessing(entity).catch(err => {
+        this.startAutoVideoProcessing(entity).catch((err) => {
           this.logger.error(
             `비디오 자동 처리 실패: ${entity.originalFileName}`,
-            err.stack
+            err.stack,
           );
         });
       }
-      
+
       // 이미지 파일인 경우 자동 리사이징 (대용량 이미지 최적화)
       if (entity.mimeType && entity.mimeType.startsWith('image/')) {
-        this.startAutoImageOptimization(entity).catch(err => {
+        this.startAutoImageOptimization(entity).catch((err) => {
           this.logger.error(
             `이미지 자동 최적화 실패: ${entity.originalFileName}`,
-            err.stack
+            err.stack,
           );
         });
       }
-      
+
       this.logger.log(
-        `Upload completed: ${entity.originalFileName} for user ${entity.userId}`
+        `Upload completed: ${entity.originalFileName} for user ${entity.userId}`,
       );
     }
   }
@@ -276,18 +286,18 @@ export class FileUploadController {
   @BeforeDestroy()
   async beforeDestroy(entity: FileUpload, context: any): Promise<void> {
     const user: User = context.request?.user;
-    
+
     // 권한 확인
     if (entity.userId !== user.id) {
       throw new ForbiddenException('파일 삭제 권한이 없습니다.');
     }
-    
+
     // 스토리지 키 저장 (AfterDestroy에서 사용)
     context.storageKey = entity.storageKey;
     context.fileName = entity.originalFileName;
-    
+
     this.logger.log(
-      `Preparing to delete file: ${entity.originalFileName} for user ${user.id}`
+      `Preparing to delete file: ${entity.originalFileName} for user ${user.id}`,
     );
   }
 
@@ -302,17 +312,17 @@ export class FileUploadController {
         storageKey: context.storageKey,
         fileName: context.fileName,
       });
-      
+
       // 실제 삭제는 이벤트 리스너에서 처리
-      this.storageService.deleteFile(context.storageKey).catch(err => {
+      this.storageService.deleteFile(context.storageKey).catch((err) => {
         this.logger.error(
           `Failed to delete file from storage: ${context.storageKey}`,
-          err.stack
+          err.stack,
         );
       });
-      
+
       this.logger.log(
-        `File deleted: ${context.fileName} (${context.storageKey})`
+        `File deleted: ${context.fileName} (${context.storageKey})`,
       );
     }
   }
@@ -321,11 +331,13 @@ export class FileUploadController {
    * 비디오 자동 처리 시작
    * 업로드된 비디오를 자동으로 최적화합니다.
    */
-  private async startAutoVideoProcessing(fileUpload: FileUpload): Promise<void> {
+  private async startAutoVideoProcessing(
+    fileUpload: FileUpload,
+  ): Promise<void> {
     try {
       // 기본 품질 프로필 설정 (MEDIUM)
       const qualityProfile = VideoQualityProfile.MEDIUM;
-      
+
       // 비디오 처리 시작 이벤트 발행 (실제 처리는 이벤트 리스너에서)
       this.eventEmitter.emit('video.processing.start', {
         fileUploadId: fileUpload.id,
@@ -340,14 +352,14 @@ export class FileUploadController {
           autoProcessing: true,
         },
       });
-      
+
       this.logger.log(
-        `자동 비디오 처리 시작 이벤트 발행: ${fileUpload.originalFileName}`
+        `자동 비디오 처리 시작 이벤트 발행: ${fileUpload.originalFileName}`,
       );
     } catch (error) {
       this.logger.error(
         `비디오 자동 처리 이벤트 발행 실패: ${fileUpload.originalFileName}`,
-        error.stack
+        error.stack,
       );
       // 자동 처리 실패해도 업로드는 성공으로 처리
     }
@@ -357,13 +369,15 @@ export class FileUploadController {
    * 이미지 자동 최적화
    * 대용량 이미지를 자동으로 리사이징합니다.
    */
-  private async startAutoImageOptimization(fileUpload: FileUpload): Promise<void> {
+  private async startAutoImageOptimization(
+    fileUpload: FileUpload,
+  ): Promise<void> {
     try {
       // 5MB 이상인 이미지만 최적화
       if (fileUpload.fileSize < 5 * 1024 * 1024) {
         return;
       }
-      
+
       // 이미지 최적화 이벤트 발행
       this.eventEmitter.emit('image.optimization.start', {
         fileUploadId: fileUpload.id,
@@ -377,14 +391,14 @@ export class FileUploadController {
           format: 'webp', // 자동으로 WebP 변환
         },
       });
-      
+
       this.logger.log(
-        `이미지 자동 최적화 시작: ${fileUpload.originalFileName} (${Math.round(fileUpload.fileSize / 1024 / 1024)}MB)`
+        `이미지 자동 최적화 시작: ${fileUpload.originalFileName} (${Math.round(fileUpload.fileSize / 1024 / 1024)}MB)`,
       );
     } catch (error) {
       this.logger.error(
         `이미지 최적화 이벤트 발행 실패: ${fileUpload.originalFileName}`,
-        error.stack
+        error.stack,
       );
     }
   }
@@ -392,7 +406,7 @@ export class FileUploadController {
   /**
    * 업로드 취소
    * DELETE /api/v1/file-upload/:id/cancel
-   * 
+   *
    * 진행 중인 업로드를 취소합니다.
    */
   @Delete(':id/cancel')
@@ -404,7 +418,7 @@ export class FileUploadController {
 
     try {
       const uploadId = parseInt(id);
-      
+
       // 업로드 레코드 조회
       const uploadRecord = await this.crudService.findById(uploadId);
       if (!uploadRecord) {
@@ -423,9 +437,11 @@ export class FileUploadController {
 
       // Cloudflare R2에서 파일 삭제 (존재하는 경우)
       if (uploadRecord.storageKey) {
-        await this.storageService.deleteFile(uploadRecord.storageKey).catch(err => {
-          this.logger.warn(`Failed to delete file from R2: ${err.message}`);
-        });
+        await this.storageService
+          .deleteFile(uploadRecord.storageKey)
+          .catch((err) => {
+            this.logger.warn(`Failed to delete file from R2: ${err.message}`);
+          });
       }
 
       // 업로드 레코드 상태 업데이트
@@ -447,7 +463,10 @@ export class FileUploadController {
         },
       };
     } catch (error) {
-      this.logger.error(`Upload cancellation failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `Upload cancellation failed: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -455,7 +474,7 @@ export class FileUploadController {
   /**
    * 업로드 완료 확인 (커스텀 엔드포인트)
    * POST /api/v1/file-uploads/complete
-   * 
+   *
    * Direct Upload 완료 후 서버 확인
    */
   @Post('complete')
@@ -466,16 +485,18 @@ export class FileUploadController {
     // create 액션으로 위임
     body['uploadId'] = body.uploadId;
     body['storageKey'] = body.storageKey;
-    
-    const result = await this.crudService.completeUpload(body.uploadId, body.storageKey);
+
+    const result = await this.crudService.completeUpload(
+      body.uploadId,
+      body.storageKey,
+    );
     return crudResponse(result);
   }
-
 
   /**
    * 다운로드 URL 생성
    * GET /api/v1/file-upload/:id/download-url
-   * 
+   *
    * 파일 다운로드를 위한 임시 URL을 생성합니다.
    */
   @Get(':id/download-url')
@@ -488,7 +509,7 @@ export class FileUploadController {
 
     try {
       const uploadId = parseInt(id);
-      
+
       // 업로드 레코드 조회
       const uploadRecord = await this.crudService.findById(uploadId);
       if (!uploadRecord) {
@@ -528,7 +549,10 @@ export class FileUploadController {
         },
       };
     } catch (error) {
-      this.logger.error(`Download URL generation failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `Download URL generation failed: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -536,7 +560,7 @@ export class FileUploadController {
   /**
    * 스트리밍 URL 조회 (비디오/오디오용)
    * GET /api/v1/file-upload/:id/stream
-   * 
+   *
    * 비디오/오디오 스트리밍을 위한 공개 URL을 반환합니다.
    * Cloudflare R2가 자동으로 HTTP Range 요청을 처리합니다.
    */
@@ -549,7 +573,7 @@ export class FileUploadController {
 
     try {
       const uploadId = parseInt(id);
-      
+
       // 업로드 레코드 조회
       const uploadRecord = await this.crudService.findById(uploadId);
       if (!uploadRecord) {
@@ -567,9 +591,10 @@ export class FileUploadController {
       }
 
       // 비디오/오디오 파일인지 확인
-      const isMedia = uploadRecord.mimeType.startsWith('video/') || 
-                     uploadRecord.mimeType.startsWith('audio/');
-      
+      const isMedia =
+        uploadRecord.mimeType.startsWith('video/') ||
+        uploadRecord.mimeType.startsWith('audio/');
+
       if (!isMedia) {
         throw new Error('스트리밍은 비디오/오디오 파일만 지원됩니다.');
       }
@@ -603,7 +628,10 @@ export class FileUploadController {
         },
       };
     } catch (error) {
-      this.logger.error(`Streaming URL generation failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `Streaming URL generation failed: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }

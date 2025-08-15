@@ -125,7 +125,7 @@ export class ReadReceiptController {
 
     // 기존 읽음 확인 체크 (upsert 로직)
     const existing = await this.readReceiptRepository.findOne({
-      where: { messageId: body.messageId, userId: user.id }
+      where: { messageId: body.messageId, userId: user.id },
     });
 
     if (existing) {
@@ -139,18 +139,18 @@ export class ReadReceiptController {
         lastReadSource: body.readSource || 'manual',
         lastReadDuration: body.readDuration,
         lastSessionId: body.sessionId,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
-      
+
       const updated = await this.readReceiptRepository.save(existing);
       context.skipCreate = true;
       context.existingEntity = updated;
       context.isUpdate = true;
-      
+
       this.logger.log(
         `Updated existing read receipt: messageId=${body.messageId}, userId=${user.id}`,
       );
-      
+
       return null;
     }
 
@@ -163,7 +163,7 @@ export class ReadReceiptController {
       readSource: body.readSource || 'manual',
       readDuration: body.readDuration,
       sessionId: body.sessionId,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
 
     this.logger.log(
@@ -178,7 +178,10 @@ export class ReadReceiptController {
    * 이벤트 발행 및 메시지 카운트 업데이트
    */
   @AfterCreate()
-  async afterCreate(entity: MessageReadReceipt | null, context: any): Promise<void> {
+  async afterCreate(
+    entity: MessageReadReceipt | null,
+    context: any,
+  ): Promise<void> {
     // upsert로 업데이트된 경우
     if (context.skipCreate && context.existingEntity) {
       entity = context.existingEntity;
@@ -196,15 +199,15 @@ export class ReadReceiptController {
       userName: user.name,
       readAt: entity.readAt,
       deviceType: entity.deviceType,
-      isUpdate: context.isUpdate || false
+      isUpdate: context.isUpdate || false,
     });
 
     // 메시지 readCount 업데이트 (새로 생성된 경우만)
     if (!context.isUpdate) {
       const message = await this.messageRepository.findOne({
-        where: { id: entity.messageId }
+        where: { id: entity.messageId },
       });
-      
+
       if (message) {
         message.readCount = (message.readCount || 0) + 1;
         await this.messageRepository.save(message);
@@ -233,7 +236,7 @@ export class ReadReceiptController {
   /**
    * 메시지 읽음 처리 API (커스텀 엔드포인트)
    * POST /api/v1/read-receipts/mark-read
-   * 
+   *
    * create 액션으로 위임
    */
   @Post('mark-read')
@@ -251,23 +254,25 @@ export class ReadReceiptController {
     // create 액션으로 위임
     const createBody = {
       ...body,
-      userAgent: req.headers['user-agent']
+      userAgent: req.headers['user-agent'],
     };
-    
+
     // BeforeCreate hook을 통해 처리
-    const processedBody = await this.beforeCreate(createBody, { request: { user: req.user } });
-    
-    if ((processedBody as any).skipCreate) {
-      return crudResponse((processedBody as any).existingEntity);
+    const processedBody = await this.beforeCreate(createBody, {
+      request: { user: req.user },
+    });
+
+    if (processedBody.skipCreate) {
+      return crudResponse(processedBody.existingEntity);
     }
-    
+
     const entity = this.readReceiptRepository.create(processedBody);
     const result = await this.readReceiptRepository.save(entity);
-    
+
     // AfterCreate 훅 호출 - result가 배열인 경우 첫 번째 요소 사용
     const savedEntity = Array.isArray(result) ? result[0] : result;
     await this.afterCreate(savedEntity, { request: { user: req.user } });
-    
+
     return crudResponse(result);
   }
 

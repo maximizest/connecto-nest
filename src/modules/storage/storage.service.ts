@@ -110,7 +110,10 @@ export class StorageService {
         expiresAt,
       };
     } catch (error) {
-      this.logger.error(`❌ Presigned URL generation failed: ${filename}`, error);
+      this.logger.error(
+        `❌ Presigned URL generation failed: ${filename}`,
+        error,
+      );
 
       // 이미 커스텀 예외인 경우 그대로 던지기
       if (
@@ -147,7 +150,7 @@ export class StorageService {
   async verifyUpload(key: string): Promise<UploadResult | null> {
     try {
       const fileInfo = await this.getFileInfo(key);
-      
+
       if (!fileInfo) {
         return null;
       }
@@ -166,10 +169,10 @@ export class StorageService {
 
   /**
    * 파일 다운로드 (Signed URL 생성 - Range 요청 지원)
-   * 
+   *
    * Cloudflare R2는 자동으로 HTTP Range 요청을 지원합니다.
    * 클라이언트는 생성된 URL에 Range 헤더를 포함하여 요청할 수 있습니다.
-   * 
+   *
    * 예시:
    * - Range: bytes=0-1048575 (첫 1MB)
    * - Range: bytes=1048576- (1MB 이후부터 끝까지)
@@ -191,7 +194,7 @@ export class StorageService {
 
   /**
    * 스트리밍용 URL 생성 (비디오/오디오용)
-   * 
+   *
    * Cloudflare R2의 공개 URL을 반환합니다.
    * 브라우저가 자동으로 Range 요청을 사용하여 스트리밍합니다.
    */

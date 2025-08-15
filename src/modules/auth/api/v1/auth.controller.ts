@@ -65,7 +65,7 @@ export class AuthController {
         });
 
         user = await user.save();
-        
+
         // 프로필 자동 생성
         await this.createDefaultProfile(user.id);
       } else {
@@ -105,7 +105,11 @@ export class AuthController {
       return {
         ...tokens,
         isNewUser: !user,
-        pushTokenRegistered: !!(data.pushToken && data.platform && data.deviceId),
+        pushTokenRegistered: !!(
+          data.pushToken &&
+          data.platform &&
+          data.deviceId
+        ),
       };
     } catch (error) {
       if (
@@ -200,7 +204,7 @@ export class AuthController {
         bio: '',
         occupation: '',
       });
-      
+
       await this.profileRepository.save(profile);
     } catch (error) {
       // 프로필 생성 실패해도 로그인은 성공

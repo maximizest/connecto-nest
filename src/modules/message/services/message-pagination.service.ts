@@ -490,7 +490,7 @@ export class MessagePaginationService {
       updatedAt: message.updatedAt,
       editedAt: message.editedAt,
       isEdited: message.isEdited,
-      isDeleted: message.isDeleted,
+      deletedAt: message.deletedAt,
       replyCount: message.replyCount || 0,
       readCount: message.readCount || 0,
       sender: message.sender

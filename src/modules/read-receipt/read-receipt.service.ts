@@ -319,12 +319,12 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
           order: { readAt: 'DESC' },
         });
 
-        // Planet의 총 메시지 수
+        // Planet의 총 메시지 수 (삭제되지 않은 메시지만)
         const totalMessages = await this.messageRepository.count({
           where: {
             planetId: planet.id,
-            isDeleted: false,
           },
+          withDeleted: false,
         });
 
         results.push({

@@ -1,4 +1,11 @@
-import { AfterUpdate, BeforeUpdate, Crud } from '@foryourdev/nestjs-crud';
+import {
+  AfterDestroy,
+  AfterRecover,
+  AfterUpdate,
+  BeforeDestroy,
+  BeforeUpdate,
+  Crud,
+} from '@foryourdev/nestjs-crud';
 import {
   Controller,
   ForbiddenException,
@@ -34,8 +41,8 @@ import { UserService } from '../../user.service';
 @Crud({
   entity: User,
 
-  // 허용할 CRUD 액션
-  only: ['index', 'show', 'update'],
+  // 허용할 CRUD 액션 (destroy 추가)
+  only: ['index', 'show', 'update', 'destroy'],
 
   // 필터링 허용 필드 (보안)
   allowedFilters: [
@@ -100,6 +107,11 @@ import { UserService } from '../../user.service';
         'isOnline',
       ],
     },
+
+    // 삭제: Soft Delete 활성화
+    destroy: {
+      softDelete: true, // ✅ User는 Soft Delete 사용
+    },
   },
 })
 @UseGuards(AuthGuard)
@@ -155,5 +167,58 @@ export class UserController {
 
       return entity;
     }
+  }
+
+  /**
+   * 사용자 삭제 전 처리 (Soft Delete)
+   */
+  @BeforeDestroy()
+  async beforeDestroy(entity: User, context: any): Promise<User> {
+    const user = getCurrentUserFromContext(context);
+
+    // 본인의 계정만 삭제 가능
+    if (user.id !== entity.id) {
+      throw new ForbiddenException('본인의 계정만 삭제할 수 있습니다.');
+    }
+
+    // 삭제 메타데이터 설정
+    entity.deletedBy = user.id;
+    entity.deletionReason =
+      context.request?.body?.reason || 'User requested account deletion';
+
+    this.logger.log(`User soft-delete initiated: userId=${entity.id}`);
+
+    return entity;
+  }
+
+  /**
+   * 사용자 삭제 후 처리
+   */
+  @AfterDestroy()
+  async afterDestroy(entity: User, context: any): Promise<User> {
+    this.logger.log(
+      `User soft-deleted: userId=${entity.id}, deletedBy=${entity.deletedBy}`,
+    );
+
+    // TODO: 필요시 추가 정리 작업
+    // - 활성 세션 종료
+    // - 캐시 정리
+    // - 알림 발송 등
+
+    return entity;
+  }
+
+  /**
+   * 사용자 복구 후 처리 (Soft Delete 복구)
+   */
+  @AfterRecover()
+  async afterRecover(entity: User, context: any): Promise<User> {
+    // 복구 시 메타데이터 정리
+    entity.deletedBy = undefined;
+    entity.deletionReason = undefined;
+
+    this.logger.log(`User recovered: userId=${entity.id}`);
+
+    return entity;
   }
 }

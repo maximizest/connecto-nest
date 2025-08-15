@@ -14,6 +14,7 @@ import {
   BeforeUpdate,
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   Index,
   JoinColumn,
@@ -82,11 +83,10 @@ interface SystemMessageMetadata {
 @Index(['senderId', 'createdAt']) // 사용자별 시간순 조회
 @Index(['planetId', 'type']) // Planet 내 타입별 조회
 @Index(['planetId', 'senderId']) // Planet 내 발신자별 조회
-@Index(['planetId', 'isDeleted']) // Planet 내 삭제되지 않은 메시지
 @Index(['type', 'createdAt']) // 타입별 시간순 조회
 @Index(['status', 'createdAt']) // 상태별 시간순 조회
 @Index(['planetId', 'type', 'createdAt']) // Planet 내 타입별 시간순 조회
-@Index(['planetId', 'isDeleted', 'createdAt']) // Planet 내 활성 메시지 시간순
+@Index(['planetId', 'createdAt']) // Planet 내 메시지 시간순
 @Index(['senderId', 'type', 'createdAt']) // 사용자별 타입별 시간순 조회
 export class Message extends BaseEntity {
   @PrimaryGeneratedColumn()
@@ -109,7 +109,7 @@ export class Message extends BaseEntity {
   @Index() // Planet별 조회 최적화
   planetId: number;
 
-  @ManyToOne(() => Planet, { eager: false })
+  @ManyToOne(() => Planet, { eager: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'planetId' })
   planet: Planet;
 
@@ -119,7 +119,7 @@ export class Message extends BaseEntity {
   @Index() // 발신자별 조회
   senderId?: number;
 
-  @ManyToOne(() => User, { eager: false, nullable: true })
+  @ManyToOne(() => User, { eager: false, nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'senderId' })
   sender?: User;
 
@@ -195,20 +195,10 @@ export class Message extends BaseEntity {
   @Index() // 상태별 필터링
   status: MessageStatus;
 
-  @Column({
-    type: 'boolean',
-    default: false,
-    comment: '삭제 여부 (소프트 삭제)',
-  })
-  @IsBoolean()
-  @Index() // 삭제되지 않은 메시지 필터링
-  isDeleted: boolean;
-
-  @Column({
-    type: 'timestamp',
-    nullable: true,
-    comment: '삭제 시간',
-  })
+  /**
+   * Soft Delete 지원 (TypeORM 내장)
+   */
+  @DeleteDateColumn({ comment: '메시지 삭제 시간 (Soft Delete)' })
   @IsOptional()
   @IsDateString()
   deletedAt?: Date;
@@ -221,6 +211,16 @@ export class Message extends BaseEntity {
   @IsOptional()
   @IsNumber()
   deletedBy?: number;
+
+  @Column({
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    comment: '삭제 사유',
+  })
+  @IsOptional()
+  @IsString()
+  deletionReason?: string;
 
   /**
    * 메시지 편집
@@ -407,7 +407,7 @@ export class Message extends BaseEntity {
    * 삭제 가능한지 확인 (발신자 또는 관리자)
    */
   canDelete(userId: number, isAdmin: boolean = false): boolean {
-    return !this.isDeleted && (this.senderId === userId || isAdmin);
+    return !this.deletedAt && (this.senderId === userId || isAdmin);
   }
 
   /**
@@ -415,7 +415,7 @@ export class Message extends BaseEntity {
    */
   canEdit(userId: number, timeLimit: number = 900000): boolean {
     // 15분 기본
-    if (this.isDeleted || this.senderId !== userId || !this.isTextMessage()) {
+    if (this.deletedAt || this.senderId !== userId || !this.isTextMessage()) {
       return false;
     }
 
@@ -424,14 +424,12 @@ export class Message extends BaseEntity {
   }
 
   /**
-   * 메시지 소프트 삭제
+   * 메시지 소프트 삭제 준비 (실제 삭제는 TypeORM이 처리)
    */
-  softDelete(deletedBy: number): void {
-    this.isDeleted = true;
-    this.deletedAt = new Date();
+  prepareForSoftDelete(deletedBy: number, reason?: string): void {
     this.deletedBy = deletedBy;
-    this.content = undefined; // 내용 제거
-    this.fileMetadata = undefined; // 파일 정보 제거
+    this.deletionReason = reason || 'User requested';
+    // TypeORM의 softRemove가 deletedAt을 자동으로 설정
   }
 
   /**
@@ -632,7 +630,6 @@ export class Message extends BaseEntity {
   beforeInsert() {
     // 기본 상태 설정
     this.status = this.status || MessageStatus.SENT;
-    this.isDeleted = this.isDeleted || false;
     this.isEdited = this.isEdited || false;
     this.readCount = this.readCount || 0;
     this.replyCount = this.replyCount || 0;

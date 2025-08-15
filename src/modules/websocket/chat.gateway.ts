@@ -549,7 +549,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      if (message.isDeleted) {
+      if (message.deletedAt) {
         client.emit('error', {
           message: '삭제된 메시지는 편집할 수 없습니다.',
         });
@@ -626,7 +626,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      if (message.isDeleted) {
+      if (message.deletedAt) {
         client.emit('error', { message: '이미 삭제된 메시지입니다.' });
         return;
       }
@@ -643,14 +643,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       // 소프트 삭제 처리
-      message.softDelete(client.user.id);
-      const deletedMessage = await this.messageRepository.save(message);
+      message.prepareForSoftDelete(client.user.id);
+      const deletedMessage = await this.messageRepository.softRemove(message);
 
       // Planet 방에 브로드캐스트
       const roomId = `planet_${message.planetId}`;
       this.server.to(roomId).emit('message:deleted', {
         messageId: deletedMessage.id,
-        isDeleted: deletedMessage.isDeleted,
         deletedAt: deletedMessage.deletedAt,
         deletedBy: {
           id: client.user.id,
@@ -696,7 +695,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      if (!message.isDeleted) {
+      if (!message.deletedAt) {
         client.emit('error', { message: '이미 활성화된 메시지입니다.' });
         return;
       }
@@ -724,18 +723,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       // 복구 처리
-      message.isDeleted = false;
-      message.deletedAt = undefined;
-      message.deletedBy = undefined;
-
-      const restoredMessage = await this.messageRepository.save(message);
+      const restoredMessage = await this.messageRepository.recover(message);
 
       // Planet 방에 브로드캐스트
       const roomId = `planet_${message.planetId}`;
       this.server.to(roomId).emit('message:restored', {
         messageId: restoredMessage.id,
         content: restoredMessage.content,
-        isDeleted: restoredMessage.isDeleted,
+        deletedAt: restoredMessage.deletedAt,
         restoredBy: {
           id: client.user.id,
           name: client.user.name,
