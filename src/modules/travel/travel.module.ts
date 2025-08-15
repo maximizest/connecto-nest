@@ -4,7 +4,6 @@ import { Planet } from '../planet/planet.entity';
 import { TravelUser } from '../travel-user/travel-user.entity';
 import { User } from '../user/user.entity';
 import { TravelController } from './api/v1/travel.controller';
-
 import { Travel } from './travel.entity';
 import { TravelService } from './travel.service';
 

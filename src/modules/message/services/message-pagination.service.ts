@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { SelectQueryBuilder } from 'typeorm';
 import {
   CursorPaginationResponseDto,
   MessagePaginationMeta,
@@ -28,10 +27,6 @@ export class MessagePaginationService {
   private readonly CACHE_TTL = 5 * 60; // 5분
 
   constructor(
-    @InjectRepository(Message)
-    private readonly messageRepository: Repository<Message>,
-    @InjectRepository(Planet)
-    private readonly planetRepository: Repository<Planet>,
     private readonly redisService: RedisService,
   ) {}
 
@@ -198,7 +193,7 @@ export class MessagePaginationService {
   ): Promise<CursorPaginationResponseDto<any>> {
     try {
       // 기준 메시지 조회
-      const targetMessage = await this.messageRepository.findOne({
+      const targetMessage = await Message.findOne({
         where: { id: messageId, planetId },
       });
 
@@ -261,7 +256,7 @@ export class MessagePaginationService {
       }
 
       // 통계 쿼리
-      const stats = await this.messageRepository
+      const stats = await Message
         .createQueryBuilder('message')
         .select([
           'COUNT(*) as totalMessages',
@@ -274,7 +269,7 @@ export class MessagePaginationService {
         .getRawOne();
 
       // 읽지 않은 메시지 수 조회 (별도 쿼리)
-      const unreadCount = await this.messageRepository
+      const unreadCount = await Message
         .createQueryBuilder('message')
         .leftJoin(
           'message_read_receipts',
@@ -317,7 +312,7 @@ export class MessagePaginationService {
    * 기본 쿼리 빌더 생성
    */
   private createBaseQueryBuilder(): SelectQueryBuilder<Message> {
-    return this.messageRepository
+    return Message
       .createQueryBuilder('message')
       .leftJoinAndSelect('message.sender', 'sender')
       .leftJoinAndSelect('message.planet', 'planet')

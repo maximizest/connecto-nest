@@ -5,8 +5,6 @@ import {
   NotFoundException,
   UseGuards,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { Planet } from '../../planet.entity';
@@ -37,29 +35,18 @@ import { User } from '../../../user/user.entity';
 @Controller({ path: 'planets', version: '1' })
 @Crud({
   entity: Planet,
-
-  // 허용할 CRUD 액션 (사용자는 조회만 가능, 삭제 불가)
   only: ['index', 'show'],
-
-  // 필터링 허용 필드 (보안)
   allowedFilters: ['travelId', 'type', 'isActive', 'name', 'createdAt'],
-
-  // 관계 포함 허용 필드
   allowedIncludes: [
     'travel',
-    'partner', // Direct Planet의 상대방
+    'partner',
     'planetUsers',
     'planetUsers.user',
   ],
-
-  // 라우트별 개별 설정
   routes: {
-    // 목록 조회: Travel 범위로 제한 (travelId 필터 필수)
-    // 클라이언트는 반드시 ?filter[travelId_eq]=123 형태로 요청해야 함
-    // 해당 여행에 참여한 유저만 조회 가능 (서비스 레벨에서 권한 확인)
     index: {
       allowedFilters: [
-        'travelId', // 필수 필터 - 반드시 포함되어야 함
+        'travelId',
         'type',
         'isActive',
         'name',
@@ -67,8 +54,6 @@ import { User } from '../../../user/user.entity';
       ],
       allowedIncludes: ['travel'],
     },
-
-    // 단일 조회: 상세 정보 포함
     show: {
       allowedIncludes: ['travel', 'partner', 'planetUsers', 'planetUsers.user'],
     },
@@ -78,10 +63,6 @@ import { User } from '../../../user/user.entity';
 export class PlanetController {
   constructor(
     public readonly crudService: PlanetService,
-    @InjectRepository(TravelUser)
-    private readonly travelUserRepository: Repository<TravelUser>,
-    @InjectRepository(Planet)
-    private readonly planetRepository: Repository<Planet>,
   ) {}
 
   /**
@@ -92,8 +73,8 @@ export class PlanetController {
     const user: User = context.request?.user;
     const planetId = parseInt(params.id, 10);
 
-    // 조회하려는 Planet 정보 가져오기
-    const planet = await this.planetRepository.findOne({
+    // 조회하려는 Planet 정보 가져오기 - Active Record 패턴 사용
+    const planet = await Planet.findOne({
       where: { id: planetId },
       relations: ['travel'],
     });
@@ -102,8 +83,8 @@ export class PlanetController {
       throw new NotFoundException('행성을 찾을 수 없습니다.');
     }
 
-    // 현재 유저가 해당 여행에 참여했는지 확인
-    const userTravelMembership = await this.travelUserRepository.findOne({
+    // 현재 유저가 해당 여행에 참여했는지 확인 - Active Record 패턴 사용
+    const userTravelMembership = await TravelUser.findOne({
       where: {
         travelId: planet.travelId,
         userId: user.id,

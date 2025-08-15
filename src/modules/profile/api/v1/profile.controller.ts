@@ -1,107 +1,182 @@
-import { BeforeCreate, BeforeUpdate, Crud } from '@foryourdev/nestjs-crud';
-import { Controller } from '@nestjs/common';
-import { getCurrentUserIdFromContext } from '../../../../common/helpers/current-user.helper';
+import {
+  BeforeCreate,
+  BeforeUpdate,
+  BeforeShow,
+  Crud,
+} from '@foryourdev/nestjs-crud';
+import {
+  Controller,
+  UseGuards,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { AuthGuard } from '../../../../guards/auth.guard';
 import { Profile } from '../../profile.entity';
 import { ProfileService } from '../../profile.service';
+import { User } from '../../../user/user.entity';
+import { CurrentUserData } from '../../../../common/decorators/current-user.decorator';
 
 /**
  * Profile API 컨트롤러 (v1)
  *
- * @foryourdev/nestjs-crud를 사용하여 자동 CRUD API 생성
- * 사용자용 API만 제공 (관리자 기능 제외)
+ * 사용자 프로필 관리 API
+ * @foryourdev/nestjs-crud를 활용하여 표준 RESTful API를 제공합니다.
+ *
+ * 권한 규칙:
+ * - 모든 작업에 인증 필요 (AuthGuard)
+ * - 본인의 프로필만 생성/수정 가능
+ * - 프로필 조회는 제한 없음 (공개 프로필)
  */
 @Controller({ path: 'profiles', version: '1' })
 @Crud({
   entity: Profile,
-  // 🔒 보안 설정 - 허용하지 않은 필드는 자동 차단
-  allowedFilters: [
-    'nickname',
-    'name',
-    'gender',
-    'age',
-    'occupation',
-    'user.id',
-  ],
-  allowedParams: [
-    'nickname',
-    'name',
-    'gender',
-    'age',
-    'occupation',
-    'bio',
-    'profileImageUrl',
-    'settings',
-  ],
-  allowedIncludes: [
-    'user', // User 정보 포함 가능
-  ],
-  // 사용자용 API이므로 기본 CRUD 액션만 허용
   only: ['index', 'show', 'create', 'update'],
-  // 라우트별 개별 설정
+  allowedFilters: ['userId', 'bio', 'birthday', 'createdAt'],
+  allowedParams: [
+    'bio',
+    'profileImage',
+    'coverImage',
+    'birthday',
+    'gender',
+    'hobbies',
+    'interests',
+    'website',
+    'socialLinks',
+    'education',
+    'work',
+    'skills',
+  ],
+  allowedIncludes: ['user'],
   routes: {
     index: {
-      allowedFilters: ['nickname', 'gender', 'age', 'occupation'],
-      allowedIncludes: [], // 목록에서는 User 정보 제외
+      allowedFilters: ['userId', 'createdAt'],
+      allowedIncludes: ['user'],
     },
     show: {
-      allowedIncludes: ['user'], // 상세 조회에서만 User 정보 포함 가능
+      allowedIncludes: ['user'],
     },
     create: {
       allowedParams: [
-        'nickname',
-        'name',
-        'gender',
-        'age',
-        'occupation',
         'bio',
-        'profileImageUrl',
-        'settings',
+        'profileImage',
+        'coverImage',
+        'birthday',
+        'gender',
+        'hobbies',
+        'interests',
+        'website',
+        'socialLinks',
+        'education',
+        'work',
+        'skills',
       ],
     },
     update: {
       allowedParams: [
-        'nickname',
-        'name',
-        'gender',
-        'age',
-        'occupation',
         'bio',
-        'profileImageUrl',
-        'settings',
+        'profileImage',
+        'coverImage',
+        'birthday',
+        'gender',
+        'hobbies',
+        'interests',
+        'website',
+        'socialLinks',
+        'education',
+        'work',
+        'skills',
       ],
     },
   },
 })
+@UseGuards(AuthGuard)
 export class ProfileController {
   constructor(public readonly crudService: ProfileService) {}
 
   /**
-   * 프로필 생성 전 사용자 ID 설정 (나머지는 Profile 엔티티에서 자동 처리)
+   * 프로필 생성 전 검증
    */
   @BeforeCreate()
-  async preprocessCreate(body: any, context: any) {
-    // 헬퍼 함수를 사용하여 현재 사용자 ID 추출
-    const userId = getCurrentUserIdFromContext(context);
-    body.userId = userId;
+  async beforeCreate(body: any, context: any): Promise<any> {
+    const currentUser: CurrentUserData = context.request?.user;
 
-    // 기본값 설정, 닉네임/나이 검증은 Profile 엔티티에서 자동 처리됨
+    // 현재 사용자의 프로필이 이미 존재하는지 확인
+    const existingProfile = await Profile.findOne({
+      where: { userId: currentUser.id },
+    });
+
+    if (existingProfile) {
+      throw new BadRequestException('프로필이 이미 존재합니다.');
+    }
+
+    // 현재 로그인한 사용자의 프로필로 설정
+    body.userId = currentUser.id;
+
+    // 빈 배열 초기화
+    if (!body.hobbies) body.hobbies = [];
+    if (!body.interests) body.interests = [];
+    if (!body.socialLinks) body.socialLinks = {};
+    if (!body.education) body.education = [];
+    if (!body.work) body.work = [];
+    if (!body.skills) body.skills = [];
+
     return body;
   }
 
   /**
-   * 프로필 수정 전 설정 값 병합 (나머지는 Profile 엔티티에서 자동 처리)
+   * 프로필 수정 전 권한 확인
    */
   @BeforeUpdate()
-  async preprocessUpdate(entity: Profile, context: any) {
-    // 설정 값 병합 (기존 설정 유지) - 엔티티에서 처리하기 어려운 로직
-    if (entity.settings && context.currentEntity?.settings) {
-      entity.settings = {
-        ...context.currentEntity.settings,
-        ...entity.settings,
-      };
+  async beforeUpdate(entity: Profile, context: any): Promise<Profile> {
+    const currentUser: CurrentUserData = context.request?.user;
+
+    // 본인의 프로필만 수정 가능
+    if (entity.userId !== currentUser.id) {
+      throw new ForbiddenException('본인의 프로필만 수정할 수 있습니다.');
     }
 
-    // 닉네임/나이 검증은 Profile 엔티티에서 자동 처리됨
+    // 사용자가 차단된 경우 수정 불가
+    const user = await User.findOne({
+      where: { id: currentUser.id },
+    });
+
+    if (user?.isBanned) {
+      throw new ForbiddenException('차단된 계정은 프로필을 수정할 수 없습니다.');
+    }
+
     return entity;
+  }
+
+  /**
+   * 프로필 조회 전 처리
+   */
+  @BeforeShow()
+  async beforeShow(params: any, context: any): Promise<any> {
+    const profileId = parseInt(params.id, 10);
+
+    // 프로필 존재 여부 확인
+    const profile = await Profile.findOne({
+      where: { id: profileId },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('프로필을 찾을 수 없습니다.');
+    }
+
+    // 차단된 사용자의 프로필 조회 제한 (옵션)
+    const user = await User.findOne({
+      where: { id: profile.userId },
+    });
+
+    if (user?.isBanned) {
+      // 관리자가 아닌 경우 차단된 사용자 프로필 조회 제한
+      const currentUser: CurrentUserData = context.request?.user;
+      if (currentUser.id !== profile.userId) {
+        throw new ForbiddenException('차단된 사용자의 프로필입니다.');
+      }
+    }
+
+    return params;
   }
 }

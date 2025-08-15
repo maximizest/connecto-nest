@@ -8,7 +8,6 @@ import {
   BeforeShow,
   BeforeUpdate,
   Crud,
-  crudResponse,
 } from '@foryourdev/nestjs-crud';
 import {
   Body,
@@ -23,8 +22,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { CursorPaginationResponseDto } from '../../../../common/dto/pagination.dto';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import {
@@ -58,27 +55,21 @@ import { MessagePaginationService } from '../../services/message-pagination.serv
 @Controller({ path: 'messages', version: '1' })
 @Crud({
   entity: Message,
-
-  // 허용할 CRUD 액션 (destroy 추가)
   only: ['index', 'show', 'create', 'update', 'destroy'],
-
-  // 필터링 허용 필드 (보안) - 고급 필터링 지원
   allowedFilters: [
-    'planetId', // Planet 필터: planetId_eq=123
-    'senderId', // 발신자 필터: senderId_in=1,2,3
-    'type', // 메시지 타입: type_eq=text
-    'status', // 상태: status_ne=deleted
-    'isEdited', // 편집 여부: isEdited_eq=true
-    'replyToMessageId', // 답장: replyToMessageId_not_null
-    'createdAt', // 생성일: createdAt_gte=2024-01-01, createdAt_between=2024-01-01,2024-12-31
-    'updatedAt', // 수정일: updatedAt_lte=2024-12-31
-    'searchableText', // 검색: searchableText_ilike=%검색어%
-    'content', // 내용 검색: content_ilike=%내용%
-    'readCount', // 읽음 수: readCount_gte=10
-    'replyCount', // 답장 수: replyCount_gt=0
+    'planetId',
+    'senderId',
+    'type',
+    'status',
+    'isEdited',
+    'replyToMessageId',
+    'createdAt',
+    'updatedAt',
+    'searchableText',
+    'content',
+    'readCount',
+    'replyCount',
   ],
-
-  // Body에서 허용할 파라미터 (생성/수정 시)
   allowedParams: [
     'type',
     'planetId',
@@ -87,26 +78,16 @@ import { MessagePaginationService } from '../../services/message-pagination.serv
     'systemMetadata',
     'replyToMessageId',
     'metadata',
-    'searchableText', // 업데이트용
+    'searchableText',
   ],
-
-  // 관계 포함 허용 필드
   allowedIncludes: ['sender', 'planet', 'replyToMessage'],
-
-  // 라우트별 개별 설정 - 단순화
   routes: {
-    // 목록 조회: planetId 필터 필수, 본인이 속한 행성의 메시지만 조회
-    // 클라이언트는 반드시 ?filter[planetId_eq]=123 형태로 요청해야 함
     index: {
       allowedIncludes: ['sender', 'planet', 'replyToMessage'],
     },
-
-    // 단일 조회: 모든 관계 정보 포함
     show: {
       allowedIncludes: ['sender', 'planet', 'replyToMessage'],
     },
-
-    // 생성: 기본 필드만 허용
     create: {
       allowedParams: [
         'type',
@@ -118,8 +99,6 @@ import { MessagePaginationService } from '../../services/message-pagination.serv
         'metadata',
       ],
     },
-
-    // 수정: content 편집만 허용
     update: {
       allowedParams: [
         'content',
@@ -129,10 +108,8 @@ import { MessagePaginationService } from '../../services/message-pagination.serv
         'searchableText',
       ],
     },
-
-    // 삭제: Soft Delete 활성화
     destroy: {
-      softDelete: true, // ✅ Message는 Soft Delete 사용
+      softDelete: true,
     },
   },
 })
@@ -143,16 +120,6 @@ export class MessageController {
   constructor(
     public readonly crudService: MessageService,
     private readonly messagePaginationService: MessagePaginationService,
-    @InjectRepository(Message)
-    private readonly messageRepository: Repository<Message>,
-    @InjectRepository(Planet)
-    private readonly planetRepository: Repository<Planet>,
-    @InjectRepository(Travel)
-    private readonly travelRepository: Repository<Travel>,
-    @InjectRepository(TravelUser)
-    private readonly travelUserRepository: Repository<TravelUser>,
-    @InjectRepository(PlanetUser)
-    private readonly planetUserRepository: Repository<PlanetUser>,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -164,8 +131,8 @@ export class MessageController {
     const user: User = context.request?.user;
     const messageId = parseInt(params.id, 10);
 
-    // 조회하려는 메시지 정보 가져오기
-    const message = await this.messageRepository.findOne({
+    // 조회하려는 메시지 정보 가져오기 - Active Record 패턴 사용
+    const message = await Message.findOne({
       where: { id: messageId },
       relations: ['planet'],
     });
@@ -206,10 +173,8 @@ export class MessageController {
       await this.validateReplyMessage(body.replyToMessageId, body.planetId);
     }
 
-    // 검색용 텍스트 생성 (복잡한 로직이므로 컨트롤러에서 유지)
+    // 검색용 텍스트 생성
     body.searchableText = this.generateSearchableText(body);
-
-    // 기본 상태 설정은 Message 엔티티에서 자동 처리됨
 
     // 메타데이터 설정
     if (!body.metadata) body.metadata = {};
@@ -231,13 +196,15 @@ export class MessageController {
    */
   @AfterCreate()
   async afterCreate(entity: Message): Promise<Message> {
-    // 답장인 경우 원본 메시지의 답장 수 증가
+    // 답장인 경우 원본 메시지의 답장 수 증가 - Active Record 패턴 사용
     if (entity.replyToMessageId) {
-      await this.messageRepository.increment(
-        { id: entity.replyToMessageId },
-        'replyCount',
-        1,
-      );
+      const replyToMessage = await Message.findOne({
+        where: { id: entity.replyToMessageId },
+      });
+      if (replyToMessage) {
+        replyToMessage.replyCount = (replyToMessage.replyCount || 0) + 1;
+        await replyToMessage.save();
+      }
     }
 
     this.logger.log(`Message created: id=${entity.id}, type=${entity.type}`);
@@ -383,7 +350,7 @@ export class MessageController {
     planetId: number,
     userId: number,
   ): Promise<Planet> {
-    const planet = await this.planetRepository.findOne({
+    const planet = await Planet.findOne({
       where: { id: planetId },
       relations: ['travel'],
     });
@@ -403,7 +370,7 @@ export class MessageController {
 
     // Planet 타입별 권한 확인
     if (planet.type === PlanetType.GROUP) {
-      const travelUser = await this.travelUserRepository.findOne({
+      const travelUser = await TravelUser.findOne({
         where: {
           userId,
           travelId: planet.travelId,
@@ -415,7 +382,7 @@ export class MessageController {
         throw new ForbiddenException('Travel 멤버만 접근할 수 있습니다.');
       }
     } else if (planet.type === PlanetType.DIRECT) {
-      const planetUser = await this.planetUserRepository.findOne({
+      const planetUser = await PlanetUser.findOne({
         where: { userId, planetId: planet.id, status: PlanetUserStatus.ACTIVE },
       });
 
@@ -465,7 +432,7 @@ export class MessageController {
     replyMessageId: number,
     planetId: number,
   ): Promise<void> {
-    const replyMessage = await this.messageRepository.findOne({
+    const replyMessage = await Message.findOne({
       where: { id: replyMessageId },
     });
 
@@ -528,7 +495,7 @@ export class MessageController {
       );
 
       // 메시지 정보 조회하여 planetId 확인
-      const message = await this.messageRepository.findOne({
+      const message = await Message.findOne({
         where: { id: messageId },
         relations: ['planet'],
       });

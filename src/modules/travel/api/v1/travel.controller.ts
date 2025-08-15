@@ -22,29 +22,18 @@ import { TravelService } from '../../travel.service';
 @Controller({ path: 'travels', version: '1' })
 @Crud({
   entity: Travel,
-
-  // 허용할 CRUD 액션 (사용자는 조회만 가능, 생성/수정/삭제는 관리자만)
   only: ['index', 'show'],
-
-  // 필터링 허용 필드 (보안)
   allowedFilters: ['status', 'name', 'visibility', 'endDate', 'createdAt'],
-
-  // 관계 포함 허용 필드
   allowedIncludes: [
     'travelUsers',
-    'travelUsers.user', // TravelUser -> User
+    'travelUsers.user',
     'planets',
   ],
-
-  // 라우트별 개별 설정
   routes: {
-    // 목록 조회: 사용자가 참여한 Travel만 조회
     index: {
       allowedFilters: ['name', 'status', 'visibility', 'endDate', 'createdAt'],
       allowedIncludes: ['travelUsers'],
     },
-
-    // 단일 조회: 상세 정보 포함
     show: {
       allowedIncludes: ['travelUsers', 'travelUsers.user', 'planets'],
     },
