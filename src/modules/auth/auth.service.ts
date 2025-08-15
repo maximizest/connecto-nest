@@ -8,24 +8,9 @@ import {
   SECURITY_CONSTANTS,
 } from 'src/common/constants/app.constants';
 import { SocialProvider } from '../user/user.entity';
-
-export interface JwtPayload {
-  id: number;
-  email: string;
-  iat?: number;
-  exp?: number;
-}
-
-export interface TokenPair {
-  accessToken: string;
-  refreshToken: string;
-}
-
-export interface SocialUserInfo {
-  socialId: string;
-  email: string;
-  name: string;
-}
+import { JwtPayload } from './types/jwt-payload.interface';
+import { SocialUserInfo } from './types/social-user-info.interface';
+import { TokenPair } from './types/token-pair.interface';
 
 @Injectable()
 export class AuthService {

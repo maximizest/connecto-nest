@@ -13,15 +13,7 @@ import {
   TravelUserStatus,
 } from '../travel-user/travel-user.entity';
 import { MessageReadReceipt } from './read-receipt.entity';
-
-export interface PlanetReadStatus {
-  planetId: number;
-  planetName: string;
-  lastReadMessageId: number | null;
-  lastReadAt: Date | null;
-  unreadCount: number;
-  totalMessages: number;
-}
+import { PlanetReadStatus } from './types/planet-read-status.interface';
 
 @Injectable()
 export class ReadReceiptService extends CrudService<MessageReadReceipt> {

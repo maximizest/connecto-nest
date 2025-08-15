@@ -14,46 +14,8 @@ import {
   NotificationStatus,
   NotificationType,
 } from './notification.entity';
-
-/**
- * 알림 생성 옵션
- */
-export interface CreateNotificationOptions {
-  type: NotificationType;
-  title: string;
-  content: string;
-  userId: number;
-  priority?: NotificationPriority;
-  channels?: NotificationChannel[];
-  travelId?: number;
-  planetId?: number;
-  messageId?: number;
-  triggeredBy?: number;
-  scheduledAt?: Date;
-  expiresAt?: Date;
-  data?: any;
-  metadata?: any;
-}
-
-/**
- * 대량 알림 생성 옵션
- */
-export interface BulkNotificationOptions {
-  type: NotificationType;
-  title: string;
-  content: string;
-  userIds: number[];
-  priority?: NotificationPriority;
-  channels?: NotificationChannel[];
-  travelId?: number;
-  planetId?: number;
-  messageId?: number;
-  triggeredBy?: number;
-  scheduledAt?: Date;
-  expiresAt?: Date;
-  data?: any;
-  metadata?: any;
-}
+import { BulkNotificationOptions } from './types/bulk-notification-options.interface';
+import { CreateNotificationOptions } from './types/create-notification-options.interface';
 
 @Injectable()
 export class NotificationService extends CrudService<Notification> {

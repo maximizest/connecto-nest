@@ -13,22 +13,9 @@ import {
   TravelUserStatus,
 } from '../../travel-user/travel-user.entity';
 import { Travel, TravelStatus } from '../../travel/travel.entity';
-import { AuthenticatedSocket } from '../guards/websocket-auth.guard';
-
-export interface RoomInfo {
-  id: string;
-  type: 'travel' | 'planet';
-  entityId: number;
-  name: string;
-  memberCount: number;
-  onlineCount: number;
-}
-
-export interface UserRoom {
-  userId: number;
-  rooms: Set<string>;
-  socket: AuthenticatedSocket;
-}
+import { AuthenticatedSocket } from '../types/authenticated-socket.interface';
+import { RoomInfo } from '../types/room-info.interface';
+import { UserRoom } from '../types/user-room.interface';
 
 @Injectable()
 export class WebSocketRoomService {

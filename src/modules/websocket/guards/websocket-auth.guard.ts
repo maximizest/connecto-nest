@@ -11,12 +11,7 @@ import { Socket } from 'socket.io';
 import { Repository } from 'typeorm';
 
 import { User } from '../../user/user.entity';
-
-export interface AuthenticatedSocket extends Socket {
-  user: User;
-  userId: number;
-  authenticated: boolean;
-}
+import { AuthenticatedSocket } from '../types/authenticated-socket.interface';
 
 @Injectable()
 export class WebSocketAuthGuard implements CanActivate {

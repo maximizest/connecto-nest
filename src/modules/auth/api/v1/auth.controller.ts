@@ -17,7 +17,8 @@ import {
 import { Profile } from '../../../profile/profile.entity';
 import { User } from '../../../user/user.entity';
 import { PushNotificationService } from '../../../notification/services/push-notification.service';
-import { AuthService, JwtPayload } from '../../auth.service';
+import { AuthService } from '../../auth.service';
+import { JwtPayload } from '../../types/jwt-payload.interface';
 import { SocialSigninDto } from '../../dto/social-signin.dto';
 
 @Controller({

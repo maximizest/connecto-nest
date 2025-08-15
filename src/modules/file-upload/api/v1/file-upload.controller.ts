@@ -43,19 +43,8 @@ import {
   FileUploadType,
 } from '../../file-upload.entity';
 import { FileUploadService } from '../../file-upload.service';
-
-interface PresignedUrlRequestDto {
-  fileName: string;
-  fileSize: number;
-  mimeType: string;
-  folder?: keyof typeof STORAGE_SETTINGS.folders;
-  metadata?: Record<string, string>;
-}
-
-interface CompleteUploadDto {
-  uploadId: number;
-  storageKey: string;
-}
+import { CompleteUploadDto } from '../../dto/complete-upload.dto';
+import { PresignedUrlRequestDto } from '../../dto/presigned-url-request.dto';
 
 /**
  * File Upload API Controller (v1)

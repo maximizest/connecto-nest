@@ -12,20 +12,7 @@ import {
   VideoProcessing,
   VideoProcessingStatus,
 } from '../video-processing/video-processing.entity';
-
-/**
- * 스케줄링 작업 통계
- */
-interface SchedulerStats {
-  taskName: string;
-  lastRunAt: Date;
-  nextRunAt?: Date;
-  status: 'success' | 'failed' | 'running';
-  processedItems: number;
-  duration: number; // milliseconds
-  errorMessage?: string;
-  metrics: Record<string, any>;
-}
+import { SchedulerStats } from './types/scheduler-stats.interface';
 
 @Injectable()
 export class SchedulerService {

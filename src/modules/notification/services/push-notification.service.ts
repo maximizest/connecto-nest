@@ -5,48 +5,9 @@ import { Repository } from 'typeorm';
 import { RedisService } from '../../cache/redis.service';
 import { User } from '../../user/user.entity';
 import { Notification } from '../notification.entity';
-
-/**
- * 푸시 토큰 정보
- */
-interface PushToken {
-  userId: number;
-  token: string;
-  platform: 'ios' | 'android' | 'web';
-  deviceId: string;
-  appVersion?: string;
-  createdAt: Date;
-  lastUsedAt: Date;
-  isActive: boolean;
-}
-
-/**
- * 푸시 알림 페이로드
- */
-interface PushPayload {
-  title: string;
-  body: string;
-  badge?: number;
-  sound?: string;
-  icon?: string;
-  image?: string;
-  data?: Record<string, any>;
-  category?: string;
-  collapseId?: string; // 중복 알림 방지
-  priority?: 'high' | 'normal';
-  ttl?: number; // Time to Live (seconds)
-}
-
-/**
- * 푸시 전송 결과
- */
-interface PushResult {
-  success: boolean;
-  messageId?: string;
-  error?: string;
-  retryAfter?: number;
-  invalidTokens?: string[];
-}
+import { PushPayload } from '../types/push-payload.interface';
+import { PushResult } from '../types/push-result.interface';
+import { PushToken } from '../types/push-token.interface';
 
 @Injectable()
 export class PushNotificationService {

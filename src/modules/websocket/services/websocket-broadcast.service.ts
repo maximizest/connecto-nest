@@ -1,26 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Server } from 'socket.io';
-
-export interface BroadcastMessageData {
-  messageId: number;
-  type: string;
-  content?: string;
-  senderId: number;
-  senderName: string;
-  planetId: number;
-  travelId?: number;
-  fileUrl?: string;
-  fileName?: string;
-  fileSize?: number;
-  createdAt: Date;
-}
-
-export interface TypingData {
-  userId: number;
-  userName: string;
-  planetId: number;
-  isTyping: boolean;
-}
+import { BroadcastMessageData } from '../types/broadcast-message-data.interface';
+import { TypingData } from '../types/typing-data.interface';
 
 /**
  * 간소화된 WebSocket 브로드캐스트 서비스

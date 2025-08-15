@@ -34,75 +34,23 @@ import {
   TypingRateLimit,
   WebSocketRateLimitGuard,
 } from './guards/rate-limit.guard';
-import {
-  AuthenticatedSocket,
-  WebSocketAuthGuard,
-} from './guards/websocket-auth.guard';
+import { WebSocketAuthGuard } from './guards/websocket-auth.guard';
+import { AuthenticatedSocket } from './types/authenticated-socket.interface';
 import { RateLimitService } from './services/rate-limit.service';
 import { TypingIndicatorService } from './services/typing-indicator.service';
 import { WebSocketBroadcastService } from './services/websocket-broadcast.service';
 import { WebSocketRoomService } from './services/websocket-room.service';
-
-// DTO 인터페이스들
-interface SendMessageDto {
-  planetId: number;
-  type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'FILE';
-  content?: string;
-  fileUrl?: string;
-  fileName?: string;
-  fileSize?: number;
-}
-
-interface JoinRoomDto {
-  roomId: string;
-}
-
-interface LeaveRoomDto {
-  roomId: string;
-}
-
-interface ReadMessageDto {
-  planetId: number;
-  messageId: number;
-}
-
-interface UpdateLocationDto {
-  travelId?: number;
-  planetId?: number;
-}
-
-interface EditMessageDto {
-  messageId: number;
-  content: string;
-}
-
-interface DeleteMessageDto {
-  messageId: number;
-}
-
-interface RestoreMessageDto {
-  messageId: number;
-}
-
-interface MarkMessageReadDto {
-  messageId: number;
-  deviceType?: string;
-  readSource?: 'auto' | 'manual' | 'scroll';
-  sessionId?: string;
-}
-
-interface MarkMultipleReadDto {
-  messageIds: number[];
-  deviceType?: string;
-  readSource?: 'auto' | 'manual' | 'scroll';
-  sessionId?: string;
-}
-
-interface MarkAllReadDto {
-  planetId: number;
-  deviceType?: string;
-  sessionId?: string;
-}
+import { DeleteMessageDto } from './dto/delete-message.dto';
+import { EditMessageDto } from './dto/edit-message.dto';
+import { JoinRoomDto } from './dto/join-room.dto';
+import { LeaveRoomDto } from './dto/leave-room.dto';
+import { MarkAllReadDto } from './dto/mark-all-read.dto';
+import { MarkMessageReadDto } from './dto/mark-message-read.dto';
+import { MarkMultipleReadDto } from './dto/mark-multiple-read.dto';
+import { ReadMessageDto } from './dto/read-message.dto';
+import { RestoreMessageDto } from './dto/restore-message.dto';
+import { SendMessageDto } from './dto/send-message.dto';
+import { UpdateLocationDto } from './dto/update-location.dto';
 
 // WebSocket 예외 필터
 @Injectable()

@@ -8,19 +8,9 @@ import {
 import { Reflector } from '@nestjs/core';
 import { WsException } from '@nestjs/websockets';
 import { RateLimitService } from '../services/rate-limit.service';
+import { AuthenticatedSocket } from '../types/authenticated-socket.interface';
+import { RateLimitMetadata } from '../types/rate-limit-metadata.interface';
 import { RateLimitAction, RateLimitScope } from '../types/rate-limit.types';
-import { AuthenticatedSocket } from './websocket-auth.guard';
-
-/**
- * Rate Limit 메타데이터 인터페이스
- */
-export interface RateLimitMetadata {
-  scope: RateLimitScope;
-  action: RateLimitAction;
-  extractEntityId?: (context: ExecutionContext) => number | undefined;
-  extractMessageType?: (context: ExecutionContext) => string | undefined;
-  skipIf?: (context: ExecutionContext) => boolean;
-}
 
 /**
  * WebSocket Rate Limiting Guard

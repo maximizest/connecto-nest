@@ -21,21 +21,8 @@ import {
   isValidFileSize,
   isValidFileType,
 } from '../../config/storage.config';
-
-interface UploadResult {
-  key: string;
-  url: string;
-  size: number;
-  contentType: string;
-  etag?: string;
-}
-
-interface PresignedUploadUrl {
-  uploadUrl: string;
-  key: string;
-  publicUrl: string;
-  expiresAt: Date;
-}
+import { PresignedUploadUrl } from './types/presigned-upload-url.interface';
+import { UploadResult } from './types/upload-result.interface';
 
 @Injectable()
 export class StorageService {

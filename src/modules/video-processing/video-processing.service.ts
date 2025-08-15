@@ -17,27 +17,8 @@ import {
   VideoProcessingType,
   VideoQualityProfile,
 } from './video-processing.entity';
-
-interface VideoProcessingJob {
-  id: number;
-  inputPath: string;
-  outputDir: string;
-  type: VideoProcessingType;
-  quality?: VideoQualityProfile;
-  userId: number;
-}
-
-interface VideoMetadata {
-  duration: number;
-  width: number;
-  height: number;
-  fps: number;
-  bitrate: number;
-  codec: string;
-  audioChannels?: number;
-  audioSampleRate?: number;
-  audioCodec?: string;
-}
+import { VideoMetadata } from './types/video-metadata.interface';
+import { VideoProcessingJob } from './types/video-processing-job.interface';
 
 @Injectable()
 export class VideoProcessingService {

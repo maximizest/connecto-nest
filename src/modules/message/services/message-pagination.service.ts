@@ -10,15 +10,7 @@ import {
 import { RedisService } from '../../cache/redis.service';
 import { Planet } from '../../planet/planet.entity';
 import { Message, MessageType } from '../message.entity';
-
-/**
- * 커서 정보
- */
-interface CursorData {
-  id: number;
-  createdAt: Date;
-  score?: number; // 검색 점수 (검색 시 사용)
-}
+import { CursorData } from '../types/cursor-data.interface';
 
 /**
  * 메시지 최적화 페이지네이션 서비스
