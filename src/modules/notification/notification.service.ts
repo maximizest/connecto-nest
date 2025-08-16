@@ -434,7 +434,6 @@ export class NotificationService extends CrudService<Notification> {
         {
           isRead: true,
           readAt: new Date(),
-          status: NotificationStatus.READ,
         },
       );
 
@@ -471,7 +470,6 @@ export class NotificationService extends CrudService<Notification> {
         {
           isRead: true,
           readAt: new Date(),
-          status: NotificationStatus.READ,
         },
       );
 

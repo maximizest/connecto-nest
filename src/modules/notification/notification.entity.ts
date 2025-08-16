@@ -44,15 +44,13 @@ export enum NotificationPriority {
 }
 
 /**
- * 알림 상태
+ * 알림 상태 - 자동 업데이트만
  */
 export enum NotificationStatus {
   PENDING = 'pending', // 대기 중
   SENT = 'sent', // 전송됨
   DELIVERED = 'delivered', // 배달됨
-  READ = 'read', // 읽음
   FAILED = 'failed', // 실패
-  CANCELLED = 'cancelled', // 취소됨
 }
 
 /**
@@ -347,7 +345,7 @@ export class Notification extends BaseEntity {
   markAsRead(): void {
     this.isRead = true;
     this.readAt = new Date();
-    this.status = NotificationStatus.READ;
+    // status는 자동 전송 상태만 관리하므로 변경하지 않음
   }
 
   /**
@@ -410,8 +408,8 @@ export class Notification extends BaseEntity {
    */
   canBeSent(): boolean {
     if (this.isExpired()) return false;
-    if (this.status === NotificationStatus.CANCELLED) return false;
     if (this.status === NotificationStatus.DELIVERED) return false;
+    if (this.status === NotificationStatus.FAILED) return false;
     if (this.scheduledAt && new Date() < this.scheduledAt) return false;
     return true;
   }
