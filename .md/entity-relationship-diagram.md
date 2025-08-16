@@ -311,22 +311,86 @@ graph TB
 | 필드명 | 타입 | 설명 | 제약조건 |
 |--------|------|------|----------|
 | id | int | Primary Key | PK, Auto Increment |
-| recipientId | int | 수신자 ID | FK → User.id, Not Null |
-| type | enum | 알림 타입 | Not Null |
-| title | string | 제목 | Not Null |
-| body | string | 내용 | Not Null |
-| data | json | 추가 데이터 | |
-| isRead | boolean | 읽음 여부 | Default: false |
+| userId | int | 알림 받을 사용자 ID | FK → User.id, Not Null, Index |
+| type | enum | 알림 타입 | NotificationType enum, Not Null, Index |
+| title | string | 알림 제목 | Not Null, Max Length: 100 |
+| content | text | 알림 내용 | Not Null |
+| priority | enum | 알림 우선순위 | NotificationPriority enum, Default: 'NORMAL', Index |
+| status | enum | 알림 상태 | NotificationStatus enum, Default: 'PENDING', Index |
+| isRead | boolean | 읽음 여부 | Default: false, Index |
 | readAt | timestamp | 읽은 시간 | |
-| sentAt | timestamp | 발송 시간 | Not Null |
-| createdAt | timestamp | 생성일시 | Not Null |
-| updatedAt | timestamp | 수정일시 | Not Null |
+| travelId | int | 관련 Travel ID | FK → Travel.id, Index |
+| planetId | int | 관련 Planet ID | FK → Planet.id, Index |
+| messageId | int | 관련 메시지 ID | |
+| triggeredBy | int | 알림 발생시킨 사용자 ID | FK → User.id |
+| channels | json | 전송할 채널 목록 | NotificationChannel[] |
+| deliveryResults | json | 채널별 전송 결과 | Record<NotificationChannel, DeliveryResult> |
+| scheduledAt | timestamp | 예약 전송 시간 | Index |
+| expiresAt | timestamp | 알림 만료 시간 | |
+| data | json | 알림 관련 추가 데이터 | 메시지, Travel, Planet, 액션, 푸시 알림 관련 데이터 |
+| metadata | json | 알림 메타데이터 | 디바이스 타입, 앱 버전, 언어/지역, 시간대, 재시도 횟수 등 |
+| createdAt | timestamp | 알림 생성 시간 | Not Null, Index |
+| updatedAt | timestamp | 알림 정보 수정 시간 | Not Null |
 
-**알림 타입**:
-- MESSAGE, MESSAGE_REPLY, TRAVEL_INVITATION
-- TRAVEL_UPDATE, PLANET_UPDATE
-- USER_JOINED, USER_LEFT
-- MENTION, ANNOUNCEMENT, SYSTEM
+**복합 인덱스**:
+- (userId, isRead): 사용자별 읽지 않은 알림
+- (userId, status): 사용자별 상태 필터링
+- (userId, type, createdAt): 사용자별 타입별 시간순
+- (status, scheduledAt): 예약된 대기 알림
+- (travelId, type): Travel별 알림 타입
+- (planetId, type): Planet별 알림 타입
+
+**NotificationType (알림 타입)**:
+- **메시지 관련**: MESSAGE_RECEIVED, MESSAGE_MENTION, MESSAGE_REPLY, MESSAGE_EDITED, MESSAGE_DELETED
+- **Travel 관련**: TRAVEL_INVITATION, TRAVEL_JOIN_REQUEST, TRAVEL_MEMBER_JOINED, TRAVEL_MEMBER_LEFT, TRAVEL_EXPIRY_WARNING, TRAVEL_EXPIRED, TRAVEL_UPDATED, TRAVEL_DELETED
+- **Planet 관련**: PLANET_CREATED, PLANET_INVITATION, PLANET_MEMBER_JOINED, PLANET_MEMBER_LEFT, PLANET_UPDATED, PLANET_DELETED
+- **사용자 관련**: USER_BANNED, USER_UNBANNED, USER_ROLE_CHANGED
+- **시스템 관련**: SYSTEM_ANNOUNCEMENT, SYSTEM_MAINTENANCE, SYSTEM_UPDATE
+
+**NotificationPriority (알림 우선순위)**:
+- LOW: 낮음
+- NORMAL: 보통 (기본값)
+- HIGH: 높음
+- URGENT: 긴급
+
+**NotificationStatus (알림 상태)**:
+- PENDING: 대기 중 (기본값)
+- SENT: 전송됨
+- DELIVERED: 배달됨
+- READ: 읽음
+- FAILED: 실패
+- CANCELLED: 취소됨
+
+**NotificationChannel (알림 채널)**:
+- IN_APP: 인앱 알림
+- PUSH: 푸시 알림
+- EMAIL: 이메일
+- SMS: SMS (미래 확장)
+- WEBSOCKET: WebSocket 실시간 알림
+
+**DeliveryResult 구조**:
+- status: 'success' | 'failed' | 'pending'
+- sentAt: Date (선택사항)
+- deliveredAt: Date (선택사항)
+- errorMessage: string (선택사항)
+- attempts: number
+
+**data JSON 필드 구조**:
+- **메시지 관련**: messageContent, messageType, senderName, senderAvatar
+- **Travel 관련**: travelName, travelDescription, endDate
+- **Planet 관련**: planetName, planetType
+- **액션 관련**: actionUrl, actionText, actionData
+- **푸시 알림 관련**: badge, sound, category, icon, image
+- **사용자 정의**: customData
+
+**metadata JSON 필드 구조**:
+- deviceType: 대상 디바이스 타입
+- appVersion: 앱 버전
+- locale: 언어/지역
+- timezone: 시간대
+- retryCount: 재시도 횟수
+- batchId: 배치 ID (대량 전송시)
+- tags: 분류 태그
 
 ### FileUpload (파일 업로드)
 | 필드명 | 타입 | 설명 | 제약조건 |
@@ -443,7 +507,9 @@ graph TB
 - Message의 `metadata`, `fileMetadata`, `systemMetadata`, `reactions`
 - FileUpload의 `metadata`
 - Admin의 `permissions`
-- Notification의 `data`
+- Notification의 `data` (메시지, Travel, Planet, 액션, 푸시 알림 관련 데이터)
+- Notification의 `metadata` (디바이스 타입, 앱 버전, 언어/지역, 시간대, 재시도 횟수 등)
+- Notification의 `deliveryResults` (채널별 전송 결과)
 - MessageReadReceipt의 `metadata` (읽음 처리 방식, 위치 정보 등)
 - VideoProcessing의 `inputMetadata`, `outputMetadata`, `thumbnails`, `processingLogs`
 - User의 `socialMetadata`
@@ -480,6 +546,12 @@ graph TB
 - Message: `(planetId, createdAt)` - 메시지 목록 조회 최적화
 - VideoProcessing: `(userId, status)` - 사용자별 상태 조회
 - VideoProcessing: `(status, createdAt)` - 상태별 시간순 조회
+- Notification: `(userId, isRead)` - 사용자별 읽지 않은 알림
+- Notification: `(userId, status)` - 사용자별 상태 필터링
+- Notification: `(userId, type, createdAt)` - 사용자별 타입별 시간순
+- Notification: `(status, scheduledAt)` - 예약된 대기 알림
+- Notification: `(travelId, type)` - Travel별 알림 타입
+- Notification: `(planetId, type)` - Planet별 알림 타입
 
 ### 일반 인덱스
 - Travel: `status`, `endDate`, `visibility`, `inviteCode`
@@ -488,7 +560,7 @@ graph TB
 - PlanetUser: `planetId`, `userId`, `status`, `joinedAt`, `isDeletedUser`
 - Message: `senderId`, `replyToMessageId`, `searchableText`
 - MessageReadReceipt: `messageId`, `userId`, `planetId`, `isRead`, `readAt`
-- Notification: `recipientId`, `isRead`, `type`
+- Notification: `userId`, `type`, `priority`, `status`, `isRead`, `travelId`, `planetId`, `scheduledAt`, `createdAt`
 - FileUpload: `uploaderId`, `status`
 - All entities: `createdAt`, `deletedAt`
 
