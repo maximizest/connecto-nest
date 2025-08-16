@@ -317,8 +317,6 @@ graph TB
 | content | text | 알림 내용 | Not Null |
 | priority | enum | 알림 우선순위 | NotificationPriority enum, Default: 'NORMAL', Index |
 | status | enum | 알림 상태 | NotificationStatus enum, Default: 'PENDING', Index |
-| isRead | boolean | 읽음 여부 | Default: false, Index |
-| readAt | timestamp | 읽은 시간 | |
 | travelId | int | 관련 Travel ID | FK → Travel.id, Index |
 | planetId | int | 관련 Planet ID | FK → Planet.id, Index |
 | messageId | int | 관련 메시지 ID | |
@@ -332,7 +330,6 @@ graph TB
 | updatedAt | timestamp | 알림 정보 수정 시간 | Not Null |
 
 **복합 인덱스**:
-- (userId, isRead): 사용자별 읽지 않은 알림
 - (userId, status): 사용자별 상태 필터링
 - (userId, type, createdAt): 사용자별 타입별 시간순
 - (status, scheduledAt): 예약된 대기 알림
@@ -536,7 +533,6 @@ graph TB
 - Message: `(planetId, createdAt)` - 메시지 목록 조회 최적화
 - VideoProcessing: `(userId, status)` - 사용자별 상태 조회
 - VideoProcessing: `(status, createdAt)` - 상태별 시간순 조회
-- Notification: `(userId, isRead)` - 사용자별 읽지 않은 알림
 - Notification: `(userId, status)` - 사용자별 상태 필터링
 - Notification: `(userId, type, createdAt)` - 사용자별 타입별 시간순
 - Notification: `(status, scheduledAt)` - 예약된 대기 알림
@@ -550,7 +546,7 @@ graph TB
 - PlanetUser: `planetId`, `userId`, `status`, `joinedAt`, `isDeletedUser`
 - Message: `senderId`, `replyToMessageId`, `searchableText`
 - MessageReadReceipt: `messageId`, `userId`, `planetId`, `isRead`, `readAt`
-- Notification: `userId`, `type`, `priority`, `status`, `isRead`, `travelId`, `planetId`, `scheduledAt`, `createdAt`
+- Notification: `userId`, `type`, `priority`, `status`, `travelId`, `planetId`, `scheduledAt`, `createdAt`
 - FileUpload: `uploaderId`, `status`
 - All entities: `createdAt`, `deletedAt`
 

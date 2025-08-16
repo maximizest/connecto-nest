@@ -6,32 +6,34 @@ export class RemovePlanetUserColumns1755322182662
   name = 'RemovePlanetUserColumns1755322182662';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // 제약조건 안전하게 삭제
     await queryRunner.query(
-      `ALTER TABLE "planet_users" DROP CONSTRAINT "FK_5103d0c0e7e3c1ebcc2bbff514b"`,
+      `ALTER TABLE "planet_users" DROP CONSTRAINT IF EXISTS "FK_5103d0c0e7e3c1ebcc2bbff514b"`,
     );
     await queryRunner.query(
-      `ALTER TABLE "travel_users" DROP CONSTRAINT "FK_e36689e9fa9ee4a76542e12017e"`,
+      `ALTER TABLE "travel_users" DROP CONSTRAINT IF EXISTS "FK_e36689e9fa9ee4a76542e12017e"`,
+    );
+    // 인덱스 안전하게 삭제
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "public"."IDX_75f9c367325d72ee720fb6959f"`,
     );
     await queryRunner.query(
-      `DROP INDEX "public"."IDX_75f9c367325d72ee720fb6959f"`,
+      `DROP INDEX IF EXISTS "public"."IDX_33d45514d19073da22af67c3ac"`,
     );
     await queryRunner.query(
-      `DROP INDEX "public"."IDX_33d45514d19073da22af67c3ac"`,
+      `DROP INDEX IF EXISTS "public"."IDX_a1e52a4cae3da00380d2665d4b"`,
     );
     await queryRunner.query(
-      `DROP INDEX "public"."IDX_a1e52a4cae3da00380d2665d4b"`,
+      `DROP INDEX IF EXISTS "public"."IDX_3fb2c7d8802c2ca54b53020e04"`,
     );
     await queryRunner.query(
-      `DROP INDEX "public"."IDX_3fb2c7d8802c2ca54b53020e04"`,
+      `DROP INDEX IF EXISTS "public"."IDX_e36689e9fa9ee4a76542e12017"`,
     );
     await queryRunner.query(
-      `DROP INDEX "public"."IDX_e36689e9fa9ee4a76542e12017"`,
+      `DROP INDEX IF EXISTS "public"."IDX_c302178e0f3483a9fc535bd21b"`,
     );
     await queryRunner.query(
-      `DROP INDEX "public"."IDX_c302178e0f3483a9fc535bd21b"`,
-    );
-    await queryRunner.query(
-      `DROP INDEX "public"."IDX_fff342734de957d485093cdc63"`,
+      `DROP INDEX IF EXISTS "public"."IDX_fff342734de957d485093cdc63"`,
     );
     await queryRunner.query(`ALTER TABLE "planet_users" DROP COLUMN "role"`);
     await queryRunner.query(`DROP TYPE "public"."planet_users_role_enum"`);
@@ -82,6 +84,9 @@ export class RemovePlanetUserColumns1755322182662
     await queryRunner.query(
       `ALTER TABLE "planet_users" DROP COLUMN "metadata"`,
     );
+    // travel_users 컬럼들은 이미 이전 마이그레이션에서 삭제되었으므로 주석 처리
+    // 이 컬럼들은 1755315055343-RemoveTravelUserColumns.ts에서 이미 처리됨
+    /*
     await queryRunner.query(
       `ALTER TABLE "travel_users" DROP COLUMN "lastSeenAt"`,
     );
@@ -119,8 +124,9 @@ export class RemovePlanetUserColumns1755322182662
     await queryRunner.query(
       `ALTER TABLE "travel_users" DROP COLUMN "isDeletedUser"`,
     );
+    */
     await queryRunner.query(
-      `DROP INDEX "public"."IDX_b695cd6a2251661385019f2ee4"`,
+      `DROP INDEX IF EXISTS "public"."IDX_b695cd6a2251661385019f2ee4"`,
     );
     await queryRunner.query(
       `ALTER TYPE "public"."planet_users_status_enum" RENAME TO "planet_users_status_enum_old"`,
@@ -140,6 +146,8 @@ export class RemovePlanetUserColumns1755322182662
     await queryRunner.query(
       `DROP TYPE "public"."planet_users_status_enum_old"`,
     );
+    // travel_users 제약조건과 인덱스는 이미 이전 마이그레이션에서 처리되었으므로 주석 처리
+    /*
     await queryRunner.query(
       `ALTER TABLE "travel_users" DROP CONSTRAINT "FK_5e444d7fbe7d18cc67c3b4bcf44"`,
     );
@@ -164,6 +172,9 @@ export class RemovePlanetUserColumns1755322182662
     await queryRunner.query(
       `ALTER TABLE "travel_users" DROP CONSTRAINT "UQ_cb3fb6e2f9ba7cbfaa55243691d"`,
     );
+    */
+    // travel_users enum 타입 변경은 이미 이전 마이그레이션에서 처리되었으므로 주석 처리
+    /*
     await queryRunner.query(
       `ALTER TABLE "travel_users" ALTER COLUMN "userId" SET NOT NULL`,
     );
@@ -201,9 +212,12 @@ export class RemovePlanetUserColumns1755322182662
     await queryRunner.query(
       `DROP TYPE "public"."travel_users_status_enum_old"`,
     );
+    */
     await queryRunner.query(
       `CREATE INDEX "IDX_b695cd6a2251661385019f2ee4" ON "planet_users" ("planetId", "status") `,
     );
+    // travel_users 인덱스와 제약조건은 이미 이전 마이그레이션에서 생성되었으므로 주석 처리
+    /*
     await queryRunner.query(
       `CREATE INDEX "IDX_4b7423cc1117c15104daec4346" ON "travel_users" ("userId", "joinedAt") `,
     );
@@ -228,6 +242,7 @@ export class RemovePlanetUserColumns1755322182662
     await queryRunner.query(
       `ALTER TABLE "travel_users" ADD CONSTRAINT "FK_5e444d7fbe7d18cc67c3b4bcf44" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
     );
+    */
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -256,7 +271,7 @@ export class RemovePlanetUserColumns1755322182662
       `DROP INDEX "public"."IDX_4b7423cc1117c15104daec4346"`,
     );
     await queryRunner.query(
-      `DROP INDEX "public"."IDX_b695cd6a2251661385019f2ee4"`,
+      `DROP INDEX IF EXISTS "public"."IDX_b695cd6a2251661385019f2ee4"`,
     );
     await queryRunner.query(
       `CREATE TYPE "public"."travel_users_status_enum_old" AS ENUM('pending', 'active', 'left', 'banned', 'invited')`,

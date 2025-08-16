@@ -28,6 +28,7 @@ import {
   Notification,
   NotificationChannel,
   NotificationPriority,
+  NotificationStatus,
   NotificationType,
 } from '../../notification.entity';
 import { NotificationService } from '../../notification.service';
@@ -51,12 +52,12 @@ import { PushNotificationService } from '../../services/push-notification.servic
   allowedFilters: [
     'type',
     'priority',
-    'isRead',
+    'status',
     'travelId',
     'planetId',
     'createdAt',
   ],
-  allowedParams: ['isRead', 'readAt'],
+  allowedParams: ['status'],
   allowedIncludes: ['triggerUser', 'travel', 'planet'],
   only: ['index', 'show', 'update'],
   routes: {
@@ -65,7 +66,7 @@ import { PushNotificationService } from '../../services/push-notification.servic
         'userId', // 보안을 위해 userId 필터 허용
         'type',
         'priority',
-        'isRead',
+        'status',
         'travelId',
         'planetId',
         'createdAt',
@@ -112,180 +113,26 @@ export class NotificationController {
       throw new Error('알림 수정 권한이 없습니다.');
     }
 
-    // 읽음 처리 요청인 경우 (isRead 필드만 수정 허용)
-    if (body.isRead === true && !entity.isRead) {
-      body.readAt = new Date();
-      context.isReadOperation = true;
-    }
-
     return body;
   }
 
   @AfterUpdate()
   async afterUpdate(entity: Notification, context: any): Promise<void> {
-    if (context.isReadOperation) {
-      this.logger.log(
-        `Notification marked as read: id=${entity.id}, userId=${entity.userId}`,
-      );
-    }
+    this.logger.log(
+      `Notification updated: id=${entity.id}, userId=${entity.userId}`,
+    );
   }
 
   // 내 알림 목록 조회는 @Crud index 라우트를 사용합니다.
-  // GET /api/v1/notifications?filter[userId_eq]={currentUserId}&filter[type_in]=MESSAGE,TRAVEL&filter[isRead_eq]=false
+  // GET /api/v1/notifications?filter[userId_eq]={currentUserId}&filter[type_in]=MESSAGE,TRAVEL&filter[status_eq]=DELIVERED
   // @BeforeCreate/@BeforeUpdate 훅에서 userId 필터링을 자동으로 처리합니다.
 
-  /**
-   * 읽지 않은 알림 개수 조회 API
-   * GET /api/v1/notifications/unread-count
-   */
-  @Get('unread-count')
-  async getUnreadCount(@CurrentUser() currentUser: CurrentUserData) {
-    const user: User = currentUser as User;
-
-    try {
-      const unreadCount = await this.crudService.getUnreadNotificationCount(
-        user.id,
-      );
-
-      // Create virtual Notification entity with unread count stats
-      const unreadStatsEntity = Object.assign(new Notification(), {
-        id: 0,
-        type: NotificationType.SYSTEM,
-        title: '읽지 않은 알림 개수',
-        content: `읽지 않은 알림 ${unreadCount}개`,
-        userId: user.id,
-        priority: NotificationPriority.NORMAL,
-        channels: [NotificationChannel.IN_APP],
-        isRead: true,
-        data: {
-          unreadCount: unreadCount,
-          checkedAt: new Date(),
-        },
-      });
-
-      return crudResponse(unreadStatsEntity);
-    } catch (error) {
-      this.logger.error(
-        `Get unread count failed: userId=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
-  }
 
   // 알림 상세 조회는 @Crud show 라우트를 사용합니다.
   // GET /api/v1/notifications/:id?include=triggerUser,travel,planet
   // @BeforeCreate/@BeforeUpdate 훅에서 userId 권한 확인을 자동으로 처리합니다.
 
-  /**
-   * 여러 알림 일괄 읽음 처리 API
-   * PATCH /api/v1/notifications/read-multiple
-   */
-  @Patch('read-multiple')
-  async markMultipleAsRead(
-    @Body() body: { notificationIds: number[] },
-    @CurrentUser() currentUser: CurrentUserData,
-  ) {
-    const user: User = currentUser as User;
 
-    try {
-      const { notificationIds } = body;
-
-      if (
-        !notificationIds ||
-        !Array.isArray(notificationIds) ||
-        notificationIds.length === 0
-      ) {
-        throw new Error('알림 ID 목록이 필요합니다.');
-      }
-
-      const affectedCount = await this.crudService.markMultipleAsRead(
-        notificationIds,
-        user.id,
-      );
-
-      // Create virtual Notification entity with batch read info
-      const batchReadEntity = Object.assign(new Notification(), {
-        id: 0,
-        type: NotificationType.SYSTEM,
-        title: `알림 읽음 처리`,
-        content: `${affectedCount}개 알림 읽음 완료`,
-        userId: user.id,
-        priority: NotificationPriority.NORMAL,
-        channels: [NotificationChannel.IN_APP],
-        isRead: true,
-        data: {
-          affectedCount,
-          requestedIds: notificationIds,
-          readBy: user.id,
-          readAt: new Date(),
-        },
-      });
-
-      return crudResponse(batchReadEntity);
-    } catch (error) {
-      this.logger.error(
-        `Mark multiple as read failed: userId=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * 모든 알림 읽음 처리 API (커스텀 엔드포인트)
-   * PATCH /api/v1/notifications/read-all
-   *
-   * 벼크 업데이트로 처리
-   */
-  @Patch('read-all')
-  async markAllAsRead(@CurrentUser() currentUser: CurrentUserData) {
-    const user: User = currentUser as User;
-
-    try {
-      // 사용자의 모든 읽지 않은 알림 조회
-      const unreadNotifications = await this.crudService.repository.find({
-        where: { userId: user.id, isRead: false },
-      });
-
-      // 각 알림에 BeforeUpdate 적용
-      const results: Notification[] = [];
-      for (const notification of unreadNotifications) {
-        await this.beforeUpdate(
-          notification,
-          { markAsRead: true },
-          { request: { user } },
-        );
-        notification.isRead = true;
-        notification.readAt = new Date();
-        const updated = await this.crudService.repository.save(notification);
-        await this.afterUpdate(updated, { isReadOperation: true });
-        results.push(updated);
-      }
-
-      // Create virtual Notification entity with read all info
-      const readAllEntity = Object.assign(new Notification(), {
-        id: 0,
-        type: NotificationType.SYSTEM,
-        title: '모든 알림 읽음 처리',
-        content: `모든 알림 ${results.length}개 읽음 완료`,
-        userId: user.id,
-        priority: NotificationPriority.NORMAL,
-        channels: [NotificationChannel.IN_APP],
-        isRead: true,
-        data: {
-          affectedCount: results.length,
-          readBy: user.id,
-          readAt: new Date(),
-        },
-      });
-
-      return crudResponse(readAllEntity);
-    } catch (error) {
-      this.logger.error(
-        `Mark all as read failed: userId=${user.id}, error=${error.message}`,
-      );
-      throw error;
-    }
-  }
 
   /**
    * 푸시 토큰 등록 API
@@ -328,7 +175,7 @@ export class NotificationController {
         userId: user.id,
         priority: NotificationPriority.NORMAL,
         channels: [NotificationChannel.IN_APP],
-        isRead: true,
+        status: NotificationStatus.DELIVERED,
         data: {
           platform,
           deviceId,
@@ -374,7 +221,7 @@ export class NotificationController {
         userId: user.id,
         priority: NotificationPriority.NORMAL,
         channels: [NotificationChannel.IN_APP],
-        isRead: true,
+        status: NotificationStatus.DELIVERED,
         data: {
           deviceId,
           unregisteredAt: new Date(),
@@ -412,7 +259,7 @@ export class NotificationController {
         userId: user.id,
         priority: NotificationPriority.NORMAL,
         channels: [NotificationChannel.IN_APP],
-        isRead: true,
+        status: NotificationStatus.DELIVERED,
         data: {
           tokens: pushTokens.map((token) => ({
             deviceId: token.deviceId,

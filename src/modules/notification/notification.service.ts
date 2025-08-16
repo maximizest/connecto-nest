@@ -334,21 +334,18 @@ export class NotificationService extends CrudService<Notification> {
     options: {
       page?: number;
       limit?: number;
-      unreadOnly?: boolean;
       types?: NotificationType[];
       priorities?: NotificationPriority[];
     } = {},
   ): Promise<{
     notifications: Notification[];
     total: number;
-    unreadCount: number;
     hasMore: boolean;
   }> {
     try {
       const {
         page = 1,
         limit = 20,
-        unreadOnly = false,
         types,
         priorities,
       } = options;
@@ -361,11 +358,6 @@ export class NotificationService extends CrudService<Notification> {
         .leftJoinAndSelect('notification.planet', 'planet')
         .orderBy('notification.createdAt', 'DESC');
 
-      if (unreadOnly) {
-        queryBuilder.andWhere('notification.isRead = :isRead', {
-          isRead: false,
-        });
-      }
 
       if (types && types.length > 0) {
         queryBuilder.andWhere('notification.type IN (:...types)', { types });
@@ -384,14 +376,9 @@ export class NotificationService extends CrudService<Notification> {
         .take(limit)
         .getMany();
 
-      const unreadCount = await this.repository.count({
-        where: { userId, isRead: false },
-      });
-
       return {
         notifications,
         total,
-        unreadCount,
         hasMore: total > page * limit,
       };
     } catch (error) {
@@ -400,138 +387,9 @@ export class NotificationService extends CrudService<Notification> {
     }
   }
 
-  /**
-   * 알림 읽음 처리
-   */
-  async markAsRead(
-    notificationId: number,
-    userId: number,
-  ): Promise<Notification> {
-    try {
-      const notification = await this.repository.findOne({
-        where: { id: notificationId, userId },
-      });
 
-      if (!notification) {
-        throw new Error('Notification not found');
-      }
 
-      if (!notification.isRead) {
-        notification.markAsRead();
-        await this.repository.save(notification);
 
-        // 읽음 처리 이벤트 발행
-        this.eventEmitter.emit('notification.read', {
-          notification,
-          userId,
-          readAt: notification.readAt,
-        });
-      }
-
-      return notification;
-    } catch (error) {
-      this.logger.error(
-        `Failed to mark notification as read: ${error.message}`,
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * 여러 알림 일괄 읽음 처리
-   */
-  async markMultipleAsRead(
-    notificationIds: number[],
-    userId: number,
-  ): Promise<number> {
-    try {
-      const result = await this.repository.update(
-        {
-          id: notificationIds.length > 0 ? (notificationIds as any) : undefined,
-          userId,
-          isRead: false,
-        },
-        {
-          isRead: true,
-          readAt: new Date(),
-        },
-      );
-
-      const affectedCount = result.affected || 0;
-
-      // 일괄 읽음 처리 이벤트 발행
-      this.eventEmitter.emit('notifications.bulk_read', {
-        notificationIds,
-        userId,
-        affectedCount,
-        readAt: new Date(),
-      });
-
-      this.logger.log(
-        `Marked ${affectedCount} notifications as read for user ${userId}`,
-      );
-
-      return affectedCount;
-    } catch (error) {
-      this.logger.error(
-        `Failed to mark multiple notifications as read: ${error.message}`,
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * 모든 알림 읽음 처리
-   */
-  async markAllAsRead(userId: number): Promise<number> {
-    try {
-      const result = await this.repository.update(
-        { userId, isRead: false },
-        {
-          isRead: true,
-          readAt: new Date(),
-        },
-      );
-
-      const affectedCount = result.affected || 0;
-
-      // 전체 읽음 처리 이벤트 발행
-      this.eventEmitter.emit('notifications.all_read', {
-        userId,
-        affectedCount,
-        readAt: new Date(),
-      });
-
-      this.logger.log(
-        `Marked all ${affectedCount} notifications as read for user ${userId}`,
-      );
-
-      return affectedCount;
-    } catch (error) {
-      this.logger.error(
-        `Failed to mark all notifications as read: ${error.message}`,
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * 사용자 읽지 않은 알림 개수 조회
-   */
-  async getUnreadNotificationCount(userId: number): Promise<number> {
-    try {
-      const unreadCount = await this.repository.count({
-        where: { userId, isRead: false },
-      });
-
-      return unreadCount;
-    } catch (error) {
-      this.logger.error(
-        `Failed to get unread notification count: userId=${userId}, error=${error.message}`,
-      );
-      return 0;
-    }
-  }
 
   /**
    * 만료된 알림 정리

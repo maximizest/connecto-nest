@@ -66,7 +66,6 @@ export enum NotificationChannel {
 
 @Entity('notifications')
 // 복합 인덱스
-@Index(['userId', 'isRead']) // 사용자별 읽지 않은 알림
 @Index(['userId', 'status']) // 사용자별 상태 필터링
 @Index(['userId', 'type', 'createdAt']) // 사용자별 타입별 시간순
 @Index(['status', 'scheduledAt']) // 예약된 대기 알림
@@ -135,26 +134,6 @@ export class Notification extends BaseEntity {
   @Index() // 상태별 필터링
   status: NotificationStatus;
 
-  /**
-   * 읽음 상태
-   */
-  @Column({
-    type: 'boolean',
-    default: false,
-    comment: '읽음 여부',
-  })
-  @IsBoolean()
-  @Index() // 읽음 상태 필터링
-  isRead: boolean;
-
-  @Column({
-    type: 'timestamp',
-    nullable: true,
-    comment: '읽은 시간',
-  })
-  @IsOptional()
-  @IsDateString()
-  readAt?: Date;
 
   /**
    * 관련 엔티티 참조
@@ -321,14 +300,6 @@ export class Notification extends BaseEntity {
    * 비즈니스 로직 메서드
    */
 
-  /**
-   * 알림 읽음 처리
-   */
-  markAsRead(): void {
-    this.isRead = true;
-    this.readAt = new Date();
-    // status는 자동 전송 상태만 관리하므로 변경하지 않음
-  }
 
   /**
    * 알림 전송 완료 처리
@@ -389,7 +360,7 @@ export class Notification extends BaseEntity {
     type: string;
     title: string;
     priority: string;
-    isRead: boolean;
+    status: string;
     createdAt: Date;
     hasActions: boolean;
   } {
@@ -398,7 +369,7 @@ export class Notification extends BaseEntity {
       type: this.type,
       title: this.title,
       priority: this.priority,
-      isRead: this.isRead,
+      status: this.status,
       createdAt: this.createdAt,
       hasActions: !!(this.data?.actionUrl || this.data?.actionText),
     };
