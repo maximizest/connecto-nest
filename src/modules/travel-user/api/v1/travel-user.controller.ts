@@ -20,7 +20,7 @@ import {
   PlanetUserRole,
   PlanetUserStatus,
 } from '../../../planet-user/planet-user.entity';
-import { Planet, PlanetType } from '../../../planet/planet.entity';
+import { Planet, PlanetType, PlanetStatus } from '../../../planet/planet.entity';
 import { Travel, TravelStatus } from '../../../travel/travel.entity';
 import { User } from '../../../user/user.entity';
 import {
@@ -324,7 +324,7 @@ export class TravelUserController {
           where: {
             travelId: entity.travelId,
             type: PlanetType.GROUP,
-            isActive: true,
+            status: PlanetStatus.ACTIVE,
           },
         });
 

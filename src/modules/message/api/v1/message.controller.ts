@@ -28,7 +28,7 @@ import {
   PlanetUser,
   PlanetUserStatus,
 } from '../../../planet-user/planet-user.entity';
-import { Planet, PlanetType } from '../../../planet/planet.entity';
+import { Planet, PlanetType, PlanetStatus } from '../../../planet/planet.entity';
 import {
   TravelUser,
   TravelUserStatus,
@@ -359,9 +359,7 @@ export class MessageController {
       throw new NotFoundException('Planet을 찾을 수 없습니다.');
     }
 
-    if (!planet.isActive) {
-      throw new ForbiddenException('비활성화된 Planet입니다.');
-    }
+    // INACTIVE 상태에서도 메시지 조회는 가능 (메시지 전송은 isChatAllowed()에서 차단됨)
 
     // Travel 만료 확인
     if (planet.travel.isExpired()) {

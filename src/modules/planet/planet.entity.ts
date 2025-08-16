@@ -1,9 +1,7 @@
 import {
-  IsBoolean,
   IsDateString,
   IsEnum,
   IsJSON,
-  IsNumber,
   IsOptional,
   IsString,
 } from 'class-validator';
@@ -19,9 +17,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { TRAVEL_CONSTANTS } from '../../common/constants/app.constants';
 import { Travel } from '../travel/travel.entity';
-import { User } from '../user/user.entity';
 
 /**
  * Planet 타입 (채팅방 유형)
@@ -70,11 +66,7 @@ interface TimeRestriction {
 @Entity('planets')
 // 복합 인덱스 - 성능 향상
 @Index(['travelId', 'type']) // Travel 내 타입별 조회
-@Index(['travelId', 'isActive']) // Travel 내 활성 Planet 조회
 @Index(['travelId', 'status']) // Travel 내 상태별 조회
-@Index(['type', 'isActive']) // 타입별 활성 Planet 조회
-@Index(['isActive', 'lastMessageAt']) // 활성 Planet의 최근 메시지순
-@Index(['travelId', 'isActive', 'lastMessageAt']) // Travel 내 활성 Planet 최근 메시지순
 export class Planet extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
@@ -121,7 +113,6 @@ export class Planet extends BaseEntity {
   type: PlanetType;
 
   @Column({ comment: '소속 Travel ID' })
-  @IsNumber()
   @Index() // Travel별 조회 최적화
   travelId: number;
 
@@ -142,14 +133,6 @@ export class Planet extends BaseEntity {
   @Index() // 상태별 필터링
   status: PlanetStatus;
 
-  @Column({
-    type: 'boolean',
-    default: true,
-    comment: '활성 상태',
-  })
-  @IsBoolean()
-  @Index() // 활성 상태 필터링
-  isActive: boolean;
 
   /**
    * 시간 제한 설정
@@ -163,115 +146,10 @@ export class Planet extends BaseEntity {
   @IsJSON()
   timeRestriction?: TimeRestriction;
 
-  /**
-   * 멤버 관리
-   */
-  @Column({
-    type: 'int',
-    default: 0,
-    comment: '현재 멤버 수',
-  })
-  @IsNumber()
-  @Index() // 멤버 수 정렬 최적화
-  memberCount: number;
 
-  @Column({
-    type: 'int',
-    default: TRAVEL_CONSTANTS.MAX_GROUP_PLANET_MEMBERS, // 기본값으로 그룹 Planet 최대값 설정
-    comment: '최대 멤버 수',
-  })
-  @IsNumber()
-  maxMembers: number;
 
-  /**
-   * 메시지 통계
-   */
-  @Column({
-    type: 'int',
-    default: 0,
-    comment: '총 메시지 수',
-  })
-  @IsNumber()
-  @Index() // 메시지 수 정렬 최적화
-  messageCount: number;
 
-  @Column({
-    type: 'timestamp',
-    nullable: true,
-    comment: '마지막 메시지 시간',
-  })
-  @IsOptional()
-  @IsDateString()
-  @Index() // 최근 메시지 정렬
-  lastMessageAt?: Date;
 
-  @Column({
-    type: 'varchar',
-    length: 200,
-    nullable: true,
-    comment: '마지막 메시지 내용 (미리보기용)',
-  })
-  @IsOptional()
-  @IsString()
-  lastMessagePreview?: string;
-
-  @Column({
-    type: 'int',
-    nullable: true,
-    comment: '마지막 메시지 보낸 사용자 ID',
-  })
-  @IsOptional()
-  @IsNumber()
-  lastMessageUserId?: number;
-
-  /**
-   * Planet 설정
-   */
-  @Column({
-    type: 'json',
-    nullable: true,
-    comment: 'Planet 세부 설정 (JSON)',
-  })
-  @IsOptional()
-  settings?: {
-    allowFileUpload?: boolean; // 파일 업로드 허용
-    allowedFileTypes?: string[]; // 허용된 파일 형식
-    maxFileSize?: number; // 최대 파일 크기
-    messageRetentionDays?: number; // 메시지 보관 기간
-    readReceiptsEnabled?: boolean; // 읽음 상태 표시
-    typingIndicatorsEnabled?: boolean; // 타이핑 상태 표시
-    notificationsEnabled?: boolean; // 알림 허용
-    muteUntil?: Date; // 음소거 해제 시간
-    customSettings?: Record<string, any>; // 사용자 정의 설정
-  };
-
-  /**
-   * 1:1 채팅 전용 필드
-   */
-  @Column({
-    type: 'int',
-    nullable: true,
-    comment: '1:1 채팅 상대방 ID (DIRECT 타입 전용)',
-  })
-  @IsOptional()
-  @IsNumber()
-  @Index() // 1:1 채팅 파트너 조회 최적화
-  partnerId?: number;
-
-  @ManyToOne(() => User, { eager: false })
-  @JoinColumn({ name: 'partnerId' })
-  partner?: User;
-
-  /**
-   * 메타데이터
-   */
-  @Column({
-    type: 'json',
-    nullable: true,
-    comment: '추가 메타데이터 (JSON)',
-  })
-  @IsOptional()
-  metadata?: Record<string, any>;
 
   /**
    * 생성/수정 시간
@@ -317,44 +195,12 @@ export class Planet extends BaseEntity {
     return this.type === PlanetType.ANNOUNCEMENT;
   }
 
-  /**
-   * 1:1 Planet 기본 검증
-   * 1:1 Planet은 정확히 2명의 멤버만 가질 수 있음
-   */
-  isValidDirectPlanet(): boolean {
-    return (
-      this.isDirectPlanet() && this.maxMembers === 2 && this.partnerId != null
-    );
-  }
-
-  /**
-   * 1:1 Planet의 파트너인지 확인 (관리자가 생성하므로 partnerId만 확인)
-   */
-  isDirectPlanetParticipant(userId: number): boolean {
-    if (!this.isDirectPlanet()) {
-      return false;
-    }
-    // 관리자가 생성하므로 partnerId만 확인
-    return this.partnerId === userId;
-  }
-
-  /**
-   * 1:1 Planet에서 상대방 ID 조회 (관리자 생성이므로 partnerId 반환)
-   */
-  getDirectPlanetPartner(userId: number): number | null {
-    if (!this.isDirectPlanet() || !this.partnerId) {
-      return null;
-    }
-
-    // 관리자가 생성하므로 partnerId가 상대방
-    return this.partnerId;
-  }
 
   /**
    * 현재 시간에 채팅 가능한지 확인
    */
   isChatAllowed(): boolean {
-    if (!this.isActive || this.status !== PlanetStatus.ACTIVE) {
+    if (this.status !== PlanetStatus.ACTIVE) {
       return false;
     }
 
@@ -591,46 +437,9 @@ export class Planet extends BaseEntity {
   }
 
   /**
-   * 새 멤버 가입 가능 여부
-   */
-  canAddMember(): boolean {
-    return this.memberCount < this.maxMembers && this.isActive;
-  }
-
-  /**
-   * 멤버 수 증가
-   */
-  incrementMemberCount(): void {
-    if (this.canAddMember()) {
-      this.memberCount += 1;
-    }
-  }
-
-  /**
-   * 멤버 수 감소
-   */
-  decrementMemberCount(): void {
-    if (this.memberCount > 0) {
-      this.memberCount -= 1;
-    }
-  }
-
-  /**
-   * 메시지 수 증가 및 마지막 메시지 정보 업데이트
-   */
-  updateLastMessage(content: string, userId: number): void {
-    this.messageCount += 1;
-    this.lastMessageAt = new Date();
-    this.lastMessagePreview =
-      content.length > 200 ? content.substring(0, 200) + '...' : content;
-    this.lastMessageUserId = userId;
-  }
-
-  /**
    * Planet 비활성화
    */
   deactivate(): void {
-    this.isActive = false;
     this.status = PlanetStatus.INACTIVE;
   }
 
@@ -638,7 +447,6 @@ export class Planet extends BaseEntity {
    * Planet 활성화
    */
   activate(): void {
-    this.isActive = true;
     this.status = PlanetStatus.ACTIVE;
   }
 }

@@ -23,7 +23,6 @@ erDiagram
     Planet ||--o{ PlanetUser : "has members"
     Planet ||--o{ Message : "contains"
     Planet ||--o{ MessageReadReceipt : "tracks"
-    Planet ||--o| User : "partner (DIRECT)"
     
     PlanetUser }o--|| User : "member"
     PlanetUser }o--|| Planet : "belongs to"
@@ -210,17 +209,7 @@ graph TB
 | imageUrl | text | 이미지 URL | |
 | type | enum | 타입 (GROUP/DIRECT/ANNOUNCEMENT) | Not Null |
 | status | enum | 상태 (ACTIVE/INACTIVE) | Default: 'ACTIVE' |
-| isActive | boolean | 활성 상태 | Default: true |
-| partnerId | int | 파트너 ID (DIRECT인 경우) | FK → User.id |
-| memberCount | int | 현재 멤버 수 | Default: 0 |
-| maxMembers | int | 최대 멤버 수 | Default: 100 |
-| messageCount | int | 총 메시지 수 | Default: 0 |
-| lastMessageAt | timestamp | 마지막 메시지 시간 | |
-| lastMessagePreview | string | 마지막 메시지 미리보기 | Max Length: 200 |
-| lastMessageUserId | int | 마지막 메시지 보낸 사용자 ID | |
 | timeRestriction | json | 시간 제한 설정 | |
-| settings | json | Planet 세부 설정 | |
-| metadata | json | 메타데이터 | |
 | createdAt | timestamp | 생성일시 | Not Null |
 | updatedAt | timestamp | 수정일시 | Not Null |
 
@@ -417,7 +406,7 @@ graph TB
 - **Message 편집**: 생성 후 15분 이내만 가능
 
 ### 4. 메타데이터 지원 (JSON 필드)
-- Planet의 `timeRestriction`, `settings`, `metadata`
+- Planet의 `timeRestriction`
 - Message, FileUpload의 `metadata`
 - Admin의 `permissions`
 - Notification의 `data`
@@ -439,11 +428,7 @@ graph TB
 - Travel: `(status, endDate)` - 상태별 만료일 조회
 - Travel: `(visibility, status)` - 공개 설정별 상태 조회
 - Planet: `(travelId, type)` - Travel 내 타입별 조회
-- Planet: `(travelId, isActive)` - Travel 내 활성 Planet 조회
 - Planet: `(travelId, status)` - Travel 내 상태별 조회
-- Planet: `(type, isActive)` - 타입별 활성 Planet 조회
-- Planet: `(isActive, lastMessageAt)` - 활성 Planet의 최근 메시지순
-- Planet: `(travelId, isActive, lastMessageAt)` - Travel 내 활성 Planet 최근 메시지순
 - TravelUser: `(travelId, userId)` - 중복 방지
 - PlanetUser: `(planetId, userId)` - 중복 방지
 - MessageReadReceipt: `(messageId, userId)` - 중복 읽음 방지
@@ -454,7 +439,7 @@ graph TB
 
 ### 일반 인덱스
 - Travel: `status`, `endDate`, `visibility`, `inviteCode`
-- Planet: `type`, `travelId`, `status`, `isActive`, `memberCount`, `messageCount`, `lastMessageAt`, `partnerId`
+- Planet: `type`, `travelId`, `status`
 - Message: `senderId`, `replyToMessageId`, `searchableText`
 - Notification: `recipientId`, `isRead`, `type`
 - FileUpload: `uploaderId`, `status`
@@ -469,7 +454,6 @@ graph TB
 - Message 삭제 시 → MessageReadReceipt 유지 (읽음 기록 보존)
 
 ### 제약 조건
-- Planet.type이 `DIRECT`인 경우 → partnerId 필수
 - Message.type이 `SYSTEM`인 경우 → systemMetadata 필수
 - TravelUser는 Travel당 User당 하나만 존재
 - PlanetUser는 Planet당 User당 하나만 존재
@@ -490,8 +474,6 @@ graph TB
 ### 3. Count 필드 비정규화
 - Message.readCount: 읽은 사용자 수 (캐싱)
 - Message.replyCount: 답장 수 (캐싱)
-- Planet.memberCount: 현재 멤버 수
-- Planet.messageCount: 총 메시지 수
 
 ### 4. 검색 최적화
 - Message.searchableText: Full-text search 인덱스

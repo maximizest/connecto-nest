@@ -23,7 +23,7 @@ import { Repository } from 'typeorm';
 
 import { Message } from '../message/message.entity';
 import { NotificationService } from '../notification/notification.service';
-import { Planet } from '../planet/planet.entity';
+import { Planet, PlanetStatus } from '../planet/planet.entity';
 import { MessageReadReceipt } from '../read-receipt/read-receipt.entity';
 import { ReadReceiptService } from '../read-receipt/read-receipt.service';
 import { User } from '../user/user.entity';
@@ -200,8 +200,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         relations: ['travel'],
       });
 
-      if (!planet || !planet.isActive) {
-        throw new Error('Planet을 찾을 수 없거나 비활성 상태입니다.');
+      if (!planet) {
+        throw new Error('Planet을 찾을 수 없습니다.');
       }
 
       if (planet.travel && planet.travel.isExpired()) {

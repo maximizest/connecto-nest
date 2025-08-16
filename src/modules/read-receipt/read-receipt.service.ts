@@ -7,7 +7,7 @@ import {
   PlanetUser,
   PlanetUserStatus,
 } from '../planet-user/planet-user.entity';
-import { Planet, PlanetType } from '../planet/planet.entity';
+import { Planet, PlanetType, PlanetStatus } from '../planet/planet.entity';
 import {
   TravelUser,
   TravelUserStatus,
@@ -376,7 +376,7 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
         'travel.id = travelUser.travelId',
       )
       .where('planet.type = :groupType', { groupType: PlanetType.GROUP })
-      .andWhere('planet.isActive = :isActive', { isActive: true })
+      .andWhere('planet.status = :status', { status: PlanetStatus.ACTIVE })
       .andWhere('travelUser.userId = :userId', { userId })
       .andWhere('travelUser.status = :status', {
         status: TravelUserStatus.ACTIVE,
@@ -394,7 +394,7 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
         'planet.id = planetUser.planetId',
       )
       .where('planet.type = :directType', { directType: PlanetType.DIRECT })
-      .andWhere('planet.isActive = :isActive', { isActive: true })
+      .andWhere('planet.status = :status', { status: PlanetStatus.ACTIVE })
       .andWhere('planetUser.userId = :userId', { userId })
       .andWhere('planetUser.status = :status', {
         status: PlanetUserStatus.ACTIVE,
