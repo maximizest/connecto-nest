@@ -205,17 +205,24 @@ graph TB
 |--------|------|------|----------|
 | id | int | Primary Key | PK, Auto Increment |
 | travelId | int | 여행 ID | FK → Travel.id, Not Null |
-| name | string | 채팅방 이름 | Not Null |
-| description | string | 채팅방 설명 | |
-| imageUrl | string | 이미지 URL | |
+| name | string | 채팅방 이름 | Not Null, Max Length: 100 |
+| description | text | 채팅방 설명 | |
+| imageUrl | text | 이미지 URL | |
 | type | enum | 타입 (GROUP/DIRECT) | Not Null |
+| status | enum | 상태 (ACTIVE/INACTIVE/ARCHIVED/BLOCKED) | Default: 'ACTIVE' |
+| isActive | boolean | 활성 상태 | Default: true |
 | partnerId | int | 파트너 ID (DIRECT인 경우) | FK → User.id |
-| isActive | boolean | 활성화 여부 | Default: true |
+| memberCount | int | 현재 멤버 수 | Default: 0 |
+| maxMembers | int | 최대 멤버 수 | Default: 100 |
+| messageCount | int | 총 메시지 수 | Default: 0 |
+| lastMessageAt | timestamp | 마지막 메시지 시간 | |
+| lastMessagePreview | string | 마지막 메시지 미리보기 | Max Length: 200 |
+| lastMessageUserId | int | 마지막 메시지 보낸 사용자 ID | |
 | timeRestriction | json | 시간 제한 설정 | |
+| settings | json | Planet 세부 설정 | |
 | metadata | json | 메타데이터 | |
 | createdAt | timestamp | 생성일시 | Not Null |
 | updatedAt | timestamp | 수정일시 | Not Null |
-| deletedAt | timestamp | 삭제일시 (Soft Delete) | |
 
 ### Message (메시지)
 | 필드명 | 타입 | 설명 | 제약조건 |
@@ -388,9 +395,10 @@ graph TB
 ## 주요 특징
 
 ### 1. Soft Delete 지원 엔티티
-- User, Travel, Planet, Message, FileUpload
+- User, Message, FileUpload
 - `deletedAt` 필드로 관리
 - 데이터 보존 및 복구 가능
+- Travel, Planet은 Soft Delete 미지원 (status로 관리)
 - VideoProcessing은 하드 삭제 (익명화 처리만 지원)
 
 ### 2. 시간 기반 제한
@@ -400,7 +408,8 @@ graph TB
 - **Message 편집**: 생성 후 15분 이내만 가능
 
 ### 3. 메타데이터 지원 (JSON 필드)
-- Planet, Message, FileUpload의 `metadata`
+- Planet의 `timeRestriction`, `settings`, `metadata`
+- Message, FileUpload의 `metadata`
 - Admin의 `permissions`
 - Notification의 `data`
 - MessageReadReceipt의 `metadata` (읽음 처리 방식, 위치 정보 등)
@@ -420,6 +429,12 @@ graph TB
 - User: `(socialId, provider)` - 소셜 로그인 조회
 - Travel: `(status, endDate)` - 상태별 만료일 조회
 - Travel: `(visibility, status)` - 공개 설정별 상태 조회
+- Planet: `(travelId, type)` - Travel 내 타입별 조회
+- Planet: `(travelId, isActive)` - Travel 내 활성 Planet 조회
+- Planet: `(travelId, status)` - Travel 내 상태별 조회
+- Planet: `(type, isActive)` - 타입별 활성 Planet 조회
+- Planet: `(isActive, lastMessageAt)` - 활성 Planet의 최근 메시지순
+- Planet: `(travelId, isActive, lastMessageAt)` - Travel 내 활성 Planet 최근 메시지순
 - TravelUser: `(travelId, userId)` - 중복 방지
 - PlanetUser: `(planetId, userId)` - 중복 방지
 - MessageReadReceipt: `(messageId, userId)` - 중복 읽음 방지
@@ -430,6 +445,7 @@ graph TB
 
 ### 일반 인덱스
 - Travel: `status`, `endDate`, `visibility`, `inviteCode`
+- Planet: `type`, `travelId`, `status`, `isActive`, `memberCount`, `messageCount`, `lastMessageAt`, `partnerId`
 - Message: `senderId`, `replyToMessageId`, `searchableText`
 - Notification: `recipientId`, `isRead`, `type`
 - FileUpload: `uploaderId`, `status`
@@ -465,7 +481,8 @@ graph TB
 ### 3. Count 필드 비정규화
 - Message.readCount: 읽은 사용자 수 (캐싱)
 - Message.replyCount: 답장 수 (캐싱)
-- Planet.memberCount: 멤버 수 (캐싱 고려)
+- Planet.memberCount: 현재 멤버 수
+- Planet.messageCount: 총 메시지 수
 
 ### 4. 검색 최적화
 - Message.searchableText: Full-text search 인덱스
