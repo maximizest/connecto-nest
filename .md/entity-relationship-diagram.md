@@ -39,11 +39,18 @@ erDiagram
     FileUpload }o--|| User : "uploader"
     
     Admin ||--|| Admin : "self-reference"
+```
 
+## 엔티티 상세 구조
+
+### User (사용자)
+```mermaid
+erDiagram
     User {
         int id PK
         string email UK
         string socialId UK
+        string socialProvider
         string name
         string phone
         string language
@@ -58,7 +65,11 @@ erDiagram
         int deletedBy FK
         string deletionReason
     }
-    
+```
+
+### Profile (프로필)
+```mermaid
+erDiagram
     Profile {
         int id PK
         int userId FK_UK
@@ -77,15 +88,19 @@ erDiagram
         timestamp createdAt
         timestamp updatedAt
     }
-    
+```
+
+### Travel (여행 그룹)
+```mermaid
+erDiagram
     Travel {
         int id PK
         string name
         string description
         string coverImage
         string invitationCode UK
-        enum status
-        enum visibility
+        string status
+        string visibility
         timestamp startDate
         timestamp endDate
         json metadata
@@ -93,27 +108,18 @@ erDiagram
         timestamp updatedAt
         timestamp deletedAt
     }
-    
-    TravelUser {
-        int id PK
-        int travelId FK
-        int userId FK
-        enum role
-        enum status
-        timestamp bannedUntil
-        timestamp joinedAt
-        timestamp leftAt
-        timestamp createdAt
-        timestamp updatedAt
-    }
-    
+```
+
+### Planet (채팅방)
+```mermaid
+erDiagram
     Planet {
         int id PK
         int travelId FK
         string name
         string description
         string imageUrl
-        enum type
+        string type
         int partnerId FK
         boolean isActive
         json timeRestriction
@@ -122,25 +128,16 @@ erDiagram
         timestamp updatedAt
         timestamp deletedAt
     }
-    
-    PlanetUser {
-        int id PK
-        int planetId FK
-        int userId FK
-        enum status
-        timestamp mutedUntil
-        int lastReadMessageId FK
-        timestamp joinedAt
-        timestamp leftAt
-        timestamp createdAt
-        timestamp updatedAt
-    }
-    
+```
+
+### Message (메시지)
+```mermaid
+erDiagram
     Message {
         int id PK
         int planetId FK
         int senderId FK
-        enum type
+        string type
         string content
         json fileMetadata
         json systemMetadata
@@ -152,68 +149,12 @@ erDiagram
         string originalContent
         string searchableText
         json metadata
-        enum status
+        string status
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt
         int deletedBy FK
         string deletionReason
-    }
-    
-    MessageReadReceipt {
-        int id PK
-        int messageId FK
-        int userId FK
-        int planetId FK
-        timestamp readAt
-        timestamp createdAt
-    }
-    
-    Notification {
-        int id PK
-        int recipientId FK
-        enum type
-        string title
-        string body
-        json data
-        boolean isRead
-        timestamp readAt
-        timestamp sentAt
-        timestamp createdAt
-        timestamp updatedAt
-    }
-    
-    FileUpload {
-        int id PK
-        int uploaderId FK
-        string fileName
-        string originalName
-        string mimeType
-        int fileSize
-        string storageKey
-        string storageUrl
-        string thumbnailUrl
-        json metadata
-        enum status
-        timestamp uploadStartedAt
-        timestamp uploadCompletedAt
-        timestamp createdAt
-        timestamp updatedAt
-        timestamp deletedAt
-    }
-    
-    Admin {
-        int id PK
-        string email UK
-        string password
-        string name
-        enum role
-        boolean isActive
-        timestamp lastLoginAt
-        json permissions
-        int createdBy FK
-        timestamp createdAt
-        timestamp updatedAt
     }
 ```
 
@@ -305,6 +246,154 @@ graph TB
     style FileUpload fill:#99f,stroke:#333,stroke-width:2px
 ```
 
+## 멤버십 엔티티 상세
+
+### TravelUser (여행 멤버십)
+```mermaid
+erDiagram
+    TravelUser {
+        int id PK
+        int travelId FK
+        int userId FK
+        string role
+        string status
+        timestamp bannedUntil
+        timestamp joinedAt
+        timestamp leftAt
+        timestamp createdAt
+        timestamp updatedAt
+    }
+```
+
+**역할 (Role)**
+- `HOST`: 여행 관리자
+- `PARTICIPANT`: 일반 참여자
+
+**상태 (Status)**
+- `ACTIVE`: 활성 멤버
+- `BANNED`: 차단됨
+- `LEFT`: 자진 탈퇴
+
+### PlanetUser (채팅방 멤버십)
+```mermaid
+erDiagram
+    PlanetUser {
+        int id PK
+        int planetId FK
+        int userId FK
+        string status
+        timestamp mutedUntil
+        int lastReadMessageId FK
+        timestamp joinedAt
+        timestamp leftAt
+        timestamp createdAt
+        timestamp updatedAt
+    }
+```
+
+**상태 (Status)**
+- `ACTIVE`: 활성 멤버
+- `MUTED`: 음소거 상태
+
+## 읽음 확인 및 알림 엔티티
+
+### MessageReadReceipt (메시지 읽음 확인)
+```mermaid
+erDiagram
+    MessageReadReceipt {
+        int id PK
+        int messageId FK
+        int userId FK
+        int planetId FK
+        timestamp readAt
+        timestamp createdAt
+    }
+```
+
+### Notification (알림)
+```mermaid
+erDiagram
+    Notification {
+        int id PK
+        int recipientId FK
+        string type
+        string title
+        string body
+        json data
+        boolean isRead
+        timestamp readAt
+        timestamp sentAt
+        timestamp createdAt
+        timestamp updatedAt
+    }
+```
+
+**알림 타입 (Type)**
+- `MESSAGE`: 새 메시지
+- `MESSAGE_REPLY`: 답장
+- `TRAVEL_INVITATION`: 여행 초대
+- `TRAVEL_UPDATE`: 여행 업데이트
+- `PLANET_UPDATE`: 채팅방 업데이트
+- `USER_JOINED`: 사용자 참여
+- `USER_LEFT`: 사용자 탈퇴
+- `MENTION`: 멘션
+- `ANNOUNCEMENT`: 공지사항
+- `SYSTEM`: 시스템 알림
+
+## 파일 및 관리자 엔티티
+
+### FileUpload (파일 업로드)
+```mermaid
+erDiagram
+    FileUpload {
+        int id PK
+        int uploaderId FK
+        string fileName
+        string originalName
+        string mimeType
+        int fileSize
+        string storageKey
+        string storageUrl
+        string thumbnailUrl
+        json metadata
+        string status
+        timestamp uploadStartedAt
+        timestamp uploadCompletedAt
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt
+    }
+```
+
+**상태 (Status)**
+- `PENDING`: 대기 중
+- `UPLOADING`: 업로드 중
+- `COMPLETED`: 완료
+- `FAILED`: 실패
+
+### Admin (관리자)
+```mermaid
+erDiagram
+    Admin {
+        int id PK
+        string email UK
+        string password
+        string name
+        string role
+        boolean isActive
+        timestamp lastLoginAt
+        json permissions
+        int createdBy FK
+        timestamp createdAt
+        timestamp updatedAt
+    }
+```
+
+**역할 (Role)**
+- `SUPER_ADMIN`: 최고 관리자
+- `ADMIN`: 일반 관리자
+- `MODERATOR`: 중재자
+
 ## 주요 특징
 
 ### 1. Soft Delete 지원 엔티티
@@ -312,25 +401,17 @@ graph TB
 - `deletedAt` 필드로 관리
 - 데이터 보존 및 복구 가능
 
-### 2. 상태 관리 (Status Management)
-- **TravelUser**: ACTIVE, BANNED, LEFT
-- **PlanetUser**: ACTIVE, MUTED
-- **Message**: ACTIVE, DELETED, HIDDEN
-- **FileUpload**: PENDING, UPLOADING, COMPLETED, FAILED
-
-### 3. 역할 기반 접근 제어 (RBAC)
-- **TravelUser.role**: HOST, PARTICIPANT
-- **Admin.role**: SUPER_ADMIN, ADMIN, MODERATOR
-
-### 4. 시간 기반 제한
+### 2. 시간 기반 제한
 - **TravelUser.bannedUntil**: 차단 만료 시간
 - **PlanetUser.mutedUntil**: 음소거 만료 시간
 - **Planet.timeRestriction**: 채팅 가능 시간대
+- **Message 편집**: 생성 후 15분 이내만 가능
 
-### 5. 메타데이터 지원 (JSON 필드)
+### 3. 메타데이터 지원 (JSON 필드)
 - Travel, Planet, Message, FileUpload의 `metadata`
-- Profile의 `hobbies`, `interests`, `socialLinks` 등
+- Profile의 `hobbies`, `interests`, `socialLinks`, `education`, `work`, `skills`
 - Admin의 `permissions`
+- Notification의 `data`
 
 ## 데이터베이스 인덱스 전략
 
@@ -341,15 +422,16 @@ graph TB
 - Profile: `userId` (1:1 관계)
 
 ### 복합 인덱스
-- TravelUser: `(travelId, userId)`
-- PlanetUser: `(planetId, userId)`
-- MessageReadReceipt: `(messageId, userId)`
+- TravelUser: `(travelId, userId)` - 중복 방지
+- PlanetUser: `(planetId, userId)` - 중복 방지
+- MessageReadReceipt: `(messageId, userId)` - 중복 읽음 방지
 - Message: `(planetId, createdAt)` - 메시지 목록 조회 최적화
 
 ### 일반 인덱스
 - Message: `senderId`, `replyToMessageId`, `searchableText`
 - Notification: `recipientId`, `isRead`, `type`
 - FileUpload: `uploaderId`, `status`
+- All entities: `createdAt`, `deletedAt`
 
 ## 관계 제약 조건
 
@@ -360,26 +442,36 @@ graph TB
 - Message 삭제 시 → MessageReadReceipt 유지 (읽음 기록 보존)
 
 ### 제약 조건
-- Planet.type이 DIRECT인 경우 → partnerId 필수
-- Message.type이 SYSTEM인 경우 → systemMetadata 필수
-- Message 편집 시 → 15분 이내만 가능 (비즈니스 로직)
+- Planet.type이 `DIRECT`인 경우 → partnerId 필수
+- Message.type이 `SYSTEM`인 경우 → systemMetadata 필수
 - TravelUser는 Travel당 User당 하나만 존재
+- PlanetUser는 Planet당 User당 하나만 존재
+- MessageReadReceipt는 Message당 User당 하나만 존재
 
 ## 성능 최적화 고려사항
 
-1. **Eager Loading 관계**
-   - User → Profile (자주 함께 조회)
-   - Message → Sender (메시지 목록 표시 시)
+### 1. Eager Loading 관계
+- User → Profile (자주 함께 조회)
+- Message → Sender (메시지 목록 표시 시)
+- TravelUser → User (멤버 목록 표시 시)
 
-2. **Lazy Loading 관계**
-   - Travel → Planets (필요시에만 로드)
-   - Planet → Messages (페이지네이션 적용)
+### 2. Lazy Loading 관계
+- Travel → Planets (필요시에만 로드)
+- Planet → Messages (페이지네이션 적용)
+- User → Notifications (페이지네이션 적용)
 
-3. **Count 필드 비정규화**
-   - Message.readCount: 읽은 사용자 수
-   - Message.replyCount: 답장 수
-   - 실시간 업데이트를 위한 캐싱 전략 필요
+### 3. Count 필드 비정규화
+- Message.readCount: 읽은 사용자 수 (캐싱)
+- Message.replyCount: 답장 수 (캐싱)
+- Travel.memberCount: 멤버 수 (캐싱 고려)
+- Planet.memberCount: 멤버 수 (캐싱 고려)
 
-4. **검색 최적화**
-   - Message.searchableText: Full-text search 인덱스
-   - PostgreSQL의 GIN 인덱스 활용 권장
+### 4. 검색 최적화
+- Message.searchableText: Full-text search 인덱스
+- PostgreSQL의 GIN 인덱스 활용
+- 검색 가능 필드: content, fileMetadata.originalName, systemMetadata.reason
+
+### 5. 실시간 기능 최적화
+- Redis를 활용한 온라인 상태 관리
+- WebSocket을 통한 실시간 메시지 전송
+- 읽음 확인 일괄 처리 (batch processing)
