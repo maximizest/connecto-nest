@@ -218,9 +218,9 @@ graph TB
 |--------|------|------|----------|
 | id | int | Primary Key | PK, Auto Increment |
 | planetId | int | 채팅방 ID | FK → Planet.id, Not Null |
-| senderId | int | 발신자 ID | FK → User.id, Not Null |
+| senderId | int | 발신자 ID | FK → User.id, Nullable |
 | type | enum | 타입 (TEXT/IMAGE/VIDEO/FILE/SYSTEM) | Not Null |
-| content | string | 메시지 내용 | |
+| content | text | 메시지 내용 | Max Length: 10000 |
 | fileMetadata | json | 파일 메타데이터 | |
 | systemMetadata | json | 시스템 메타데이터 | |
 | replyToMessageId | int | 답장 대상 메시지 ID | FK → Message.id |
@@ -228,15 +228,19 @@ graph TB
 | replyCount | int | 답장 수 | Default: 0 |
 | isEdited | boolean | 편집 여부 | Default: false |
 | editedAt | timestamp | 편집일시 | |
-| originalContent | string | 원본 내용 | |
-| searchableText | string | 검색용 텍스트 | |
+| originalContent | text | 원본 내용 | |
+| searchableText | text | 검색용 텍스트 | |
+| reactions | json | 메시지 반응 정보 | |
+| firstReadAt | timestamp | 첫 읽음 시간 | |
+| isFromDeletedUser | boolean | 탈퇴한 사용자 메시지 여부 | Default: false |
+| deletedUserType | string | 탈퇴한 사용자 타입 (user/admin) | Max Length: 20 |
 | metadata | json | 메타데이터 | |
-| status | enum | 상태 (ACTIVE/DELETED/HIDDEN) | Default: 'ACTIVE' |
+| status | enum | 상태 (SENT/DELIVERED/READ/FAILED/DELETED) | Default: 'SENT' |
 | createdAt | timestamp | 생성일시 | Not Null |
 | updatedAt | timestamp | 수정일시 | Not Null |
 | deletedAt | timestamp | 삭제일시 (Soft Delete) | |
 | deletedBy | int | 삭제자 ID | FK → User.id |
-| deletionReason | string | 삭제 사유 | |
+| deletionReason | string | 삭제 사유 | Max Length: 255 |
 
 ### TravelUser (여행 멤버십)
 | 필드명 | 타입 | 설명 | 제약조건 |
@@ -399,15 +403,30 @@ graph TB
   - **ACTIVE**: 활성 상태 (정상 사용 가능)
   - **INACTIVE**: 비활성 상태 (일시 중지)
 
-### 3. 시간 기반 제한
+### 3. Message 타입 및 상태
+- **타입 (type)**:
+  - **TEXT**: 텍스트 메시지
+  - **IMAGE**: 이미지 파일
+  - **VIDEO**: 비디오 파일
+  - **FILE**: 일반 파일
+  - **SYSTEM**: 시스템 메시지 (자동 생성)
+- **상태 (status)**:
+  - **SENT**: 전송됨
+  - **DELIVERED**: 전달됨
+  - **READ**: 읽음
+  - **FAILED**: 전송 실패
+  - **DELETED**: 삭제됨
+
+### 4. 시간 기반 제한
 - **TravelUser.bannedUntil**: 차단 만료 시간
 - **PlanetUser.mutedUntil**: 음소거 만료 시간
 - **Planet.timeRestriction**: 채팅 가능 시간대
 - **Message 편집**: 생성 후 15분 이내만 가능
 
-### 4. 메타데이터 지원 (JSON 필드)
+### 5. 메타데이터 지원 (JSON 필드)
 - Planet의 `timeRestriction`
-- Message, FileUpload의 `metadata`
+- Message의 `metadata`, `fileMetadata`, `systemMetadata`, `reactions`
+- FileUpload의 `metadata`
 - Admin의 `permissions`
 - Notification의 `data`
 - MessageReadReceipt의 `metadata` (읽음 처리 방식, 위치 정보 등)
