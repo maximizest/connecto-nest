@@ -197,15 +197,6 @@ graph TB
 | endDate | timestamp | 여행 종료 예정 날짜 (채팅 만료) | Not Null |
 | visibility | enum | 공개 설정 (PUBLIC/INVITE_ONLY) | Default: 'PUBLIC' |
 | inviteCode | string | 초대 코드 | Unique, Max Length: 20 |
-| inviteCodeEnabled | boolean | 초대 코드 활성화 여부 | Default: true |
-| maxPlanets | int | 최대 Planet 개수 | Default: 10, Min: 1, Max: 50 |
-| maxGroupMembers | int | 그룹 Planet 최대 멤버 수 | Default: 50, Min: 2, Max: 500 |
-| memberCount | int | 현재 멤버 수 | Default: 0 |
-| planetCount | int | 현재 Planet 수 | Default: 0 |
-| totalMessages | int | 총 메시지 수 | Default: 0 |
-| lastActivityAt | timestamp | 마지막 활동 시간 | |
-| settings | json | Travel 세부 설정 | |
-| metadata | json | 추가 메타데이터 | |
 | createdAt | timestamp | 생성일시 | Not Null |
 | updatedAt | timestamp | 수정일시 | Not Null |
 
@@ -409,7 +400,7 @@ graph TB
 - **Message 편집**: 생성 후 15분 이내만 가능
 
 ### 3. 메타데이터 지원 (JSON 필드)
-- Travel, Planet, Message, FileUpload의 `metadata`
+- Planet, Message, FileUpload의 `metadata`
 - Admin의 `permissions`
 - Notification의 `data`
 - MessageReadReceipt의 `metadata` (읽음 처리 방식, 위치 정보 등)
@@ -438,7 +429,7 @@ graph TB
 - VideoProcessing: `(status, createdAt)` - 상태별 시간순 조회
 
 ### 일반 인덱스
-- Travel: `status`, `endDate`, `visibility`, `inviteCode`, `lastActivityAt`
+- Travel: `status`, `endDate`, `visibility`, `inviteCode`
 - Message: `senderId`, `replyToMessageId`, `searchableText`
 - Notification: `recipientId`, `isRead`, `type`
 - FileUpload: `uploaderId`, `status`
@@ -474,7 +465,6 @@ graph TB
 ### 3. Count 필드 비정규화
 - Message.readCount: 읽은 사용자 수 (캐싱)
 - Message.replyCount: 답장 수 (캐싱)
-- Travel.memberCount: 멤버 수 (캐싱 고려)
 - Planet.memberCount: 멤버 수 (캐싱 고려)
 
 ### 4. 검색 최적화

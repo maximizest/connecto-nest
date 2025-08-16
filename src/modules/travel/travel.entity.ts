@@ -1,12 +1,8 @@
 import {
-  IsBoolean,
   IsDateString,
   IsEnum,
-  IsNumber,
   IsOptional,
   IsString,
-  Max,
-  Min,
 } from 'class-validator';
 import {
   BaseEntity,
@@ -18,7 +14,6 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { TRAVEL_CONSTANTS } from '../../common/constants/app.constants';
 
 /**
  * Travel 상태
@@ -132,105 +127,9 @@ export class Travel extends BaseEntity {
   @Index() // 초대 코드 검색 최적화
   inviteCode?: string;
 
-  @Column({
-    type: 'boolean',
-    default: true,
-    comment: '초대 코드 활성화 여부',
-  })
-  @IsBoolean()
-  inviteCodeEnabled: boolean;
 
-  /**
-   * 제한 설정
-   */
-  @Column({
-    type: 'int',
-    default: TRAVEL_CONSTANTS.DEFAULT_MAX_PLANETS_PER_TRAVEL,
-    comment: '최대 Planet 개수',
-  })
-  @IsNumber()
-  @Min(1)
-  @Max(50)
-  maxPlanets: number;
 
-  @Column({
-    type: 'int',
-    default: TRAVEL_CONSTANTS.MAX_GROUP_PLANET_MEMBERS,
-    comment: '그룹 Planet 최대 멤버 수',
-  })
-  @IsNumber()
-  @Min(2)
-  @Max(500)
-  maxGroupMembers: number;
 
-  /**
-   * 통계 정보
-   */
-  @Column({
-    type: 'int',
-    default: 0,
-    comment: '현재 멤버 수',
-  })
-  @IsNumber()
-  memberCount: number;
-
-  @Column({
-    type: 'int',
-    default: 0,
-    comment: '현재 Planet 수',
-  })
-  @IsNumber()
-  planetCount: number;
-
-  @Column({
-    type: 'int',
-    default: 0,
-    comment: '총 메시지 수',
-  })
-  @IsNumber()
-  totalMessages: number;
-
-  @Column({
-    type: 'timestamp',
-    nullable: true,
-    comment: '마지막 활동 시간',
-  })
-  @IsOptional()
-  @IsDateString()
-  @Index() // 활동 시간 정렬 최적화
-  lastActivityAt?: Date;
-
-  /**
-   * 설정 (JSON)
-   */
-  @Column({
-    type: 'json',
-    nullable: true,
-    comment: 'Travel 세부 설정 (JSON)',
-  })
-  @IsOptional()
-  settings?: {
-    allowDirectPlanets?: boolean; // 1:1 Planet 생성 허용
-    autoCreateGroupPlanet?: boolean; // 자동 그룹 Planet 생성
-    requireApproval?: boolean; // 가입 승인 필요
-    maxDailyMessages?: number; // 일일 메시지 제한
-    allowFileUpload?: boolean; // 파일 업로드 허용
-    allowedFileTypes?: string[]; // 허용된 파일 형식
-    timezone?: string; // 시간대
-    language?: string; // 언어
-    customRules?: string; // 사용자 정의 규칙
-  };
-
-  /**
-   * 메타데이터
-   */
-  @Column({
-    type: 'json',
-    nullable: true,
-    comment: '추가 메타데이터 (JSON)',
-  })
-  @IsOptional()
-  metadata?: Record<string, any>;
 
   /**
    * 생성/수정 시간
@@ -292,12 +191,6 @@ export class Travel extends BaseEntity {
     return result;
   }
 
-  /**
-   * 초대 코드 비활성화
-   */
-  disableInviteCode(): void {
-    this.inviteCodeEnabled = false;
-  }
 
   /**
    * Travel 시작
@@ -314,55 +207,8 @@ export class Travel extends BaseEntity {
    */
   deactivate(): void {
     this.status = TravelStatus.INACTIVE;
-    this.lastActivityAt = new Date();
   }
 
-  /**
-   * 멤버 수 증가
-   */
-  incrementMemberCount(): void {
-    this.memberCount += 1;
-  }
-
-  /**
-   * 멤버 수 감소
-   */
-  decrementMemberCount(): void {
-    if (this.memberCount > 0) {
-      this.memberCount -= 1;
-    }
-  }
-
-  /**
-   * Planet 수 증가
-   */
-  incrementPlanetCount(): void {
-    this.planetCount += 1;
-  }
-
-  /**
-   * Planet 수 감소
-   */
-  decrementPlanetCount(): void {
-    if (this.planetCount > 0) {
-      this.planetCount -= 1;
-    }
-  }
-
-  /**
-   * 메시지 수 증가
-   */
-  incrementMessageCount(): void {
-    this.totalMessages += 1;
-    this.lastActivityAt = new Date();
-  }
-
-  /**
-   * 새 Planet 생성 가능 여부
-   */
-  canCreatePlanet(): boolean {
-    return this.planetCount < this.maxPlanets && this.isOngoing();
-  }
 
   /**
    * 진행률 계산 (시작일 ~ 종료일 기준)
@@ -407,12 +253,10 @@ export class Travel extends BaseEntity {
   /**
    * Travel 만료 처리
    * - 상태를 비활성으로 변경
-   * - lastActivityAt 업데이트
    * - 만료 여부는 endDate로 판단
    */
   expire(): void {
     this.status = TravelStatus.INACTIVE;
-    this.lastActivityAt = new Date();
   }
 
   /**
@@ -422,7 +266,6 @@ export class Travel extends BaseEntity {
   reactivateFromExpiry(): void {
     if (!this.isExpired()) {
       this.status = TravelStatus.ACTIVE;
-      this.lastActivityAt = new Date();
     }
   }
 

@@ -83,7 +83,7 @@ User (사용자)
   - gender (성별)
   - age (나이)
   - occupation (직업)
-- **Travel**: 여행 그룹 컨테이너 (상태: INACTIVE/ACTIVE)
+- **Travel**: 간소화된 여행 그룹 - 필수 필드만 유지 (상태: INACTIVE/ACTIVE)
 - **Planet**: 채팅방 (타입: GROUP/DIRECT)
 - **Message**: 채팅 메시지 (다양한 미디어 타입 지원)
 
@@ -191,9 +191,10 @@ yarn format             # Prettier 포맷팅
    - 제거된 필드: `bio`, `profileImage`, `coverImage`, `birthday`, `hobbies`, `interests`, `website`, `socialLinks`, `education`, `work`, `skills`, `profileImageUrl`, `settings`
    - 마이그레이션: `SimplifyProfileEntity`
 
-3. **Travel 엔티티 문서 동기화**
-   - ERD 문서와 실제 구현 일치
-   - 인덱스 정보 업데이트
+3. **Travel 엔티티 대폭 간소화**
+   - 유지된 필드: `name`, `description`, `imageUrl`, `status`, `startDate`, `endDate`, `visibility`, `inviteCode`
+   - 제거된 필드: `inviteCodeEnabled`, `maxPlanets`, `maxGroupMembers`, `memberCount`, `planetCount`, `totalMessages`, `lastActivityAt`, `settings`, `metadata`
+   - 마이그레이션: `SimplifyTravelEntity`
 
 ## 📈 성능 최적화
 
