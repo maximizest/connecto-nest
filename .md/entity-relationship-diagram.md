@@ -340,12 +340,42 @@ graph TB
 - (travelId, type): Travel별 알림 타입
 - (planetId, type): Planet별 알림 타입
 
-**NotificationType (알림 타입)**:
-- **메시지 관련**: MESSAGE_RECEIVED, MESSAGE_MENTION, MESSAGE_REPLY, MESSAGE_EDITED, MESSAGE_DELETED
-- **Travel 관련**: TRAVEL_INVITATION, TRAVEL_JOIN_REQUEST, TRAVEL_MEMBER_JOINED, TRAVEL_MEMBER_LEFT, TRAVEL_EXPIRY_WARNING, TRAVEL_EXPIRED, TRAVEL_UPDATED, TRAVEL_DELETED
-- **Planet 관련**: PLANET_CREATED, PLANET_INVITATION, PLANET_MEMBER_JOINED, PLANET_MEMBER_LEFT, PLANET_UPDATED, PLANET_DELETED
-- **사용자 관련**: USER_BANNED, USER_UNBANNED, USER_ROLE_CHANGED
-- **시스템 관련**: SYSTEM_ANNOUNCEMENT, SYSTEM_MAINTENANCE, SYSTEM_UPDATE
+**NotificationType (알림 타입) 상세 설명**:
+
+**메시지 관련 알림**:
+- `MESSAGE_RECEIVED`: 새로운 메시지를 받았을 때 (일반 채팅 메시지)
+- `MESSAGE_MENTION`: 메시지에서 @멘션을 받았을 때 (높은 우선순위)
+- `MESSAGE_REPLY`: 자신의 메시지에 답글이 달렸을 때
+- `MESSAGE_EDITED`: 중요한 메시지가 편집되었을 때 (선택적 알림)
+- `MESSAGE_DELETED`: 중요한 메시지가 삭제되었을 때 (관리자/모더레이터 액션)
+
+**Travel 관련 알림**:
+- `TRAVEL_INVITATION`: Travel에 초대받았을 때 (액션 필요: 수락/거절)
+- `TRAVEL_JOIN_REQUEST`: 누군가 Travel 가입을 요청했을 때 (HOST에게만)
+- `TRAVEL_MEMBER_JOINED`: 새로운 멤버가 Travel에 가입했을 때
+- `TRAVEL_MEMBER_LEFT`: 멤버가 Travel을 떠났을 때
+- `TRAVEL_EXPIRY_WARNING`: Travel 만료 임박 알림 (7일, 3일, 1일 전)
+- `TRAVEL_EXPIRED`: Travel이 만료되었을 때 (채팅 비활성화)
+- `TRAVEL_UPDATED`: Travel 정보가 업데이트되었을 때 (이름, 설명, 이미지 등)
+- `TRAVEL_DELETED`: Travel이 삭제되었을 때 (HOST 액션)
+
+**Planet 관련 알림**:
+- `PLANET_CREATED`: Travel 내에 새로운 Planet이 생성되었을 때
+- `PLANET_INVITATION`: Planet에 초대받았을 때 (DIRECT Planet 주로)
+- `PLANET_MEMBER_JOINED`: 새로운 멤버가 Planet에 가입했을 때
+- `PLANET_MEMBER_LEFT`: 멤버가 Planet을 떠났을 때
+- `PLANET_UPDATED`: Planet 정보가 업데이트되었을 때 (이름, 설명 등)
+- `PLANET_DELETED`: Planet이 삭제되었을 때
+
+**사용자 관련 알림**:
+- `USER_BANNED`: 사용자가 차단되었을 때 (관리자 액션, 본인에게)
+- `USER_UNBANNED`: 사용자 차단이 해제되었을 때 (본인에게)
+- `USER_ROLE_CHANGED`: 사용자의 역할이 변경되었을 때 (HOST ↔ PARTICIPANT)
+
+**시스템 관련 알림**:
+- `SYSTEM_ANNOUNCEMENT`: 시스템 공지사항 (업데이트, 정책 변경 등)
+- `SYSTEM_MAINTENANCE`: 시스템 점검 안내 (예정된 점검 시간)
+- `SYSTEM_UPDATE`: 시스템 업데이트 완료 알림 (새 기능 소개)
 
 **NotificationPriority (알림 우선순위)**:
 - LOW: 낮음
