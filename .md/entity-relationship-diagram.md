@@ -208,7 +208,7 @@ graph TB
 | name | string | 채팅방 이름 | Not Null, Max Length: 100 |
 | description | text | 채팅방 설명 | |
 | imageUrl | text | 이미지 URL | |
-| type | enum | 타입 (GROUP/DIRECT) | Not Null |
+| type | enum | 타입 (GROUP/DIRECT/ANNOUNCEMENT) | Not Null |
 | status | enum | 상태 (ACTIVE/INACTIVE/ARCHIVED/BLOCKED) | Default: 'ACTIVE' |
 | isActive | boolean | 활성 상태 | Default: true |
 | partnerId | int | 파트너 ID (DIRECT인 경우) | FK → User.id |
@@ -401,13 +401,18 @@ graph TB
 - Travel, Planet은 Soft Delete 미지원 (status로 관리)
 - VideoProcessing은 하드 삭제 (익명화 처리만 지원)
 
-### 2. 시간 기반 제한
+### 2. Planet 타입
+- **GROUP**: 단체 채팅방 (그룹 멤버들간 대화)
+- **DIRECT**: 1:1 채팅방 (두 사용자간 개인 대화)
+- **ANNOUNCEMENT**: 공지사항 채팅방 (관리자만 메시지 작성 가능)
+
+### 3. 시간 기반 제한
 - **TravelUser.bannedUntil**: 차단 만료 시간
 - **PlanetUser.mutedUntil**: 음소거 만료 시간
 - **Planet.timeRestriction**: 채팅 가능 시간대
 - **Message 편집**: 생성 후 15분 이내만 가능
 
-### 3. 메타데이터 지원 (JSON 필드)
+### 4. 메타데이터 지원 (JSON 필드)
 - Planet의 `timeRestriction`, `settings`, `metadata`
 - Message, FileUpload의 `metadata`
 - Admin의 `permissions`

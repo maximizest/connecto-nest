@@ -29,6 +29,7 @@ import { User } from '../user/user.entity';
 export enum PlanetType {
   GROUP = 'group', // 단체 채팅
   DIRECT = 'direct', // 1:1 채팅
+  ANNOUNCEMENT = 'announcement', // 공지사항
 }
 
 /**
@@ -309,6 +310,13 @@ export class Planet extends BaseEntity {
    */
   isDirectPlanet(): boolean {
     return this.type === PlanetType.DIRECT;
+  }
+
+  /**
+   * 공지사항 Planet인지 확인
+   */
+  isAnnouncementPlanet(): boolean {
+    return this.type === PlanetType.ANNOUNCEMENT;
   }
 
   /**
