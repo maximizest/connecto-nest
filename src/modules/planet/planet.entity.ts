@@ -38,8 +38,6 @@ export enum PlanetType {
 export enum PlanetStatus {
   ACTIVE = 'active', // 활성
   INACTIVE = 'inactive', // 비활성
-  ARCHIVED = 'archived', // 보관됨
-  BLOCKED = 'blocked', // 차단됨
 }
 
 /**
@@ -138,7 +136,7 @@ export class Planet extends BaseEntity {
     type: 'enum',
     enum: PlanetStatus,
     default: PlanetStatus.ACTIVE,
-    comment: 'Planet 상태',
+    comment: 'Planet 상태 (ACTIVE/INACTIVE)',
   })
   @IsEnum(PlanetStatus)
   @Index() // 상태별 필터링
@@ -642,21 +640,5 @@ export class Planet extends BaseEntity {
   activate(): void {
     this.isActive = true;
     this.status = PlanetStatus.ACTIVE;
-  }
-
-  /**
-   * Planet 보관
-   */
-  archive(): void {
-    this.isActive = false;
-    this.status = PlanetStatus.ARCHIVED;
-  }
-
-  /**
-   * Planet 차단
-   */
-  block(): void {
-    this.isActive = false;
-    this.status = PlanetStatus.BLOCKED;
   }
 }
