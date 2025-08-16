@@ -50,7 +50,7 @@
 - Soft Delete로 데이터 보존
 
 ### 수정 가능 필드
-- `name`, `phone`, `language`, `timezone`
+- `name`, `phone`
 - `notificationsEnabled`, `advertisingConsentEnabled`
 
 ---

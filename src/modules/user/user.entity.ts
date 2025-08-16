@@ -101,26 +101,6 @@ export class User extends BaseEntity {
   @IsBoolean()
   advertisingConsentEnabled: boolean;
 
-  @Column({
-    type: 'varchar',
-    length: 10,
-    default: 'ko',
-    comment: '언어 설정',
-  })
-  @IsOptional()
-  @IsString()
-  language: string;
-
-  @Column({
-    type: 'varchar',
-    length: 50,
-    default: 'Asia/Seoul',
-    comment: '시간대 설정',
-  })
-  @IsOptional()
-  @IsString()
-  timezone: string;
-
   /**
    * 보안 정보 (소셜 로그인 전용이므로 패스워드 없음)
    */

@@ -37,12 +37,10 @@ import { CurrentUserData } from '../../../../common/decorators/current-user.deco
 @Crud({
   entity: User,
   only: ['show', 'update', 'destroy'],
-  allowedFilters: ['name', 'email', 'phone', 'language', 'timezone'],
+  allowedFilters: ['name', 'email', 'phone'],
   allowedParams: [
     'name',
     'phone',
-    'language',
-    'timezone',
     'notificationsEnabled',
     'advertisingConsentEnabled',
   ],
@@ -55,8 +53,6 @@ import { CurrentUserData } from '../../../../common/decorators/current-user.deco
       allowedParams: [
         'name',
         'phone',
-        'language',
-        'timezone',
         'notificationsEnabled',
         'advertisingConsentEnabled',
       ],

@@ -161,10 +161,9 @@ graph TB
 | phone | string | 전화번호 | |
 | notificationsEnabled | boolean | 알림 활성화 | Default: false |
 | advertisingConsentEnabled | boolean | 광고 동의 | Default: false |
-| language | string | 언어 설정 | Default: 'ko' |
-| timezone | string | 시간대 | Default: 'Asia/Seoul' |
 | isBanned | boolean | 차단 여부 | Default: false |
-| lastSeenAt | timestamp | 마지막 접속 시간 | |
+| refreshToken | string | Refresh Token | |
+| socialMetadata | json | 소셜 로그인 추가 정보 | |
 | createdAt | timestamp | 생성일시 | Not Null |
 | updatedAt | timestamp | 수정일시 | Not Null |
 | deletedAt | timestamp | 삭제일시 (Soft Delete) | |
