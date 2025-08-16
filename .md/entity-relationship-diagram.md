@@ -280,14 +280,32 @@ graph TB
 | userId | int | 사용자 ID | FK → User.id, Not Null |
 | planetId | int | 채팅방 ID | FK → Planet.id, Not Null |
 | isRead | boolean | 읽음 여부 | Default: true |
-| readAt | timestamp | 읽은 시간 | Not Null |
-| deviceType | string | 읽은 디바이스 타입 | |
-| userAgent | string | User Agent | |
+| readAt | timestamp | 읽은 시간 | Default: CURRENT_TIMESTAMP |
+| deviceType | string | 읽은 디바이스 타입 | Max Length: 50 |
+| userAgent | string | User Agent | Max Length: 500 |
 | metadata | json | 추가 읽음 메타데이터 | |
 | createdAt | timestamp | 생성일시 | Not Null |
 | updatedAt | timestamp | 수정일시 | Not Null |
 
 **복합 유니크 인덱스**: (messageId, userId)
+
+**추가 복합 인덱스**:
+- (planetId, userId): Planet 내 사용자별 읽음 상태
+- (planetId, isRead): Planet 내 읽음 상태별 조회
+- (messageId, isRead): 메시지별 읽음 상태
+- (userId, isRead): 사용자별 읽음 상태
+- (planetId, userId, readAt): Planet 내 사용자별 시간순 조회
+- (planetId, messageId, userId): 트리플 인덱스 (고성능 조회)
+
+**메타데이터 구조 (metadata JSON)**:
+- readSource: 읽음 처리 방식 (auto/manual/scroll)
+- readDuration: 읽는데 걸린 시간 (ms)
+- scrollPosition: 스크롤 위치
+- viewportSize: 뷰포트 크기 (width, height)
+- location: 위치 정보 (latitude, longitude, address)
+- sessionId: 세션 ID
+- clientMessageId: 클라이언트 메시지 ID
+- batchReadCount: 일괄 읽음 처리된 메시지 수
 
 ### Notification (알림)
 | 필드명 | 타입 | 설명 | 제약조건 |
@@ -417,7 +435,6 @@ graph TB
 
 ### 4. 시간 기반 제한
 - **TravelUser.bannedAt**: 정지 시작 시간 (isBanned 플래그와 함께 사용)
-- **PlanetUser.mutedUntil**: 음소거 만료 시간
 - **Planet.timeRestriction**: 채팅 가능 시간대
 - **Message 편집**: 생성 후 15분 이내만 가능
 
@@ -454,7 +471,12 @@ graph TB
 - PlanetUser: `(planetId, userId)` - 중복 방지
 - PlanetUser: `(planetId, status)` - Planet 내 활성 멤버 조회
 - MessageReadReceipt: `(messageId, userId)` - 중복 읽음 방지
+- MessageReadReceipt: `(planetId, userId)` - Planet 내 사용자별 읽음 상태
+- MessageReadReceipt: `(planetId, isRead)` - Planet 내 읽음 상태별 조회
+- MessageReadReceipt: `(messageId, isRead)` - 메시지별 읽음 상태
+- MessageReadReceipt: `(userId, isRead)` - 사용자별 읽음 상태
 - MessageReadReceipt: `(planetId, userId, readAt)` - Planet 내 사용자별 시간순
+- MessageReadReceipt: `(planetId, messageId, userId)` - 트리플 인덱스
 - Message: `(planetId, createdAt)` - 메시지 목록 조회 최적화
 - VideoProcessing: `(userId, status)` - 사용자별 상태 조회
 - VideoProcessing: `(status, createdAt)` - 상태별 시간순 조회
@@ -465,6 +487,7 @@ graph TB
 - TravelUser: `travelId`, `userId`, `role`, `status`, `joinedAt`
 - PlanetUser: `planetId`, `userId`, `status`, `joinedAt`, `isDeletedUser`
 - Message: `senderId`, `replyToMessageId`, `searchableText`
+- MessageReadReceipt: `messageId`, `userId`, `planetId`, `isRead`, `readAt`
 - Notification: `recipientId`, `isRead`, `type`
 - FileUpload: `uploaderId`, `status`
 - All entities: `createdAt`, `deletedAt`
