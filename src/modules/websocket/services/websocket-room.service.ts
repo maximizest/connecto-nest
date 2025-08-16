@@ -377,12 +377,20 @@ export class WebSocketRoomService {
         });
         if (!travel) return null;
 
+        // Travel의 실제 멤버 수 계산
+        const memberCount = await this.travelUserRepository.count({
+          where: { 
+            travelId: entityId,
+            status: TravelUserStatus.ACTIVE
+          },
+        });
+
         return {
           id: roomId,
           type: 'travel',
           entityId,
           name: travel.name,
-          memberCount: travel.memberCount,
+          memberCount,
           onlineCount,
         };
       } else if (type === 'planet') {

@@ -203,11 +203,11 @@ export class AuthController {
    */
   private async createDefaultProfile(userId: number): Promise<void> {
     try {
-      const profile = this.profileRepository.create({
-        userId,
-        bio: '',
-        occupation: '',
-      });
+      const profile = new Profile();
+      profile.userId = userId;
+      profile.nickname = '';
+      profile.name = '';
+      profile.occupation = '';
 
       await this.profileRepository.save(profile);
     } catch (error) {

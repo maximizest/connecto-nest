@@ -207,7 +207,6 @@ export class TravelUserController {
     const travel = await this.travelRepository.findOne({
       where: {
         inviteCode: body.inviteCode,
-        inviteCodeEnabled: true,
       },
     });
 
@@ -277,13 +276,8 @@ export class TravelUserController {
         throw new ForbiddenException('올바르지 않은 초대 코드입니다.');
       }
 
-      if (!travel.inviteCodeEnabled) {
-        throw new ForbiddenException('초대 코드가 비활성화되었습니다.');
-      }
-
-      body.status = travel.settings?.requireApproval
-        ? TravelUserStatus.PENDING
-        : TravelUserStatus.ACTIVE;
+      // 초대 코드가 있으면 활성 상태로 설정
+      body.status = TravelUserStatus.ACTIVE;
       body.role = TravelUserRole.MEMBER;
     }
 
@@ -295,7 +289,8 @@ export class TravelUserController {
       },
     });
 
-    const maxMembers = travel.maxGroupMembers || 50;
+    // 기본 최대 멤버 수 (100명)
+    const maxMembers = 100;
     if (currentMemberCount >= maxMembers) {
       throw new ForbiddenException(
         `Travel의 최대 멤버 수(${maxMembers}명)에 도달했습니다.`,
