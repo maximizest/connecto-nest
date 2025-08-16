@@ -133,7 +133,6 @@ export class Planet extends BaseEntity {
   @Index() // 상태별 필터링
   status: PlanetStatus;
 
-
   /**
    * 시간 제한 설정
    */
@@ -145,11 +144,6 @@ export class Planet extends BaseEntity {
   @IsOptional()
   @IsJSON()
   timeRestriction?: TimeRestriction;
-
-
-
-
-
 
   /**
    * 생성/수정 시간
@@ -194,7 +188,6 @@ export class Planet extends BaseEntity {
   isAnnouncementPlanet(): boolean {
     return this.type === PlanetType.ANNOUNCEMENT;
   }
-
 
   /**
    * 현재 시간에 채팅 가능한지 확인
