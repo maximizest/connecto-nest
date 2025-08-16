@@ -6,6 +6,9 @@ import {
 
 /**
  * 알림 생성 옵션
+ *
+ * @note channels 배열의 각 채널별로 개별 알림이 생성됩니다.
+ * 예: [IN_APP, PUSH] → 2개의 개별 알림 생성
  */
 export interface CreateNotificationOptions {
   type: NotificationType;
@@ -13,6 +16,7 @@ export interface CreateNotificationOptions {
   content: string;
   userId: number;
   priority?: NotificationPriority;
+  /** 각 채널별로 개별 알림이 생성됩니다 */
   channels?: NotificationChannel[];
   travelId?: number;
   planetId?: number;

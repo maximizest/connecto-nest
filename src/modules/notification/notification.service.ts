@@ -37,73 +37,25 @@ export class NotificationService extends CrudService<Notification> {
   }
 
   /**
-   * 단일 알림 생성
+   * 단일 알림 생성 - 채널별로 개별 생성
    */
   async createNotification(
     options: CreateNotificationOptions,
-  ): Promise<Notification> {
-    try {
-      const notification = this.repository.create({
-        type: options.type,
-        title: options.title,
-        content: options.content,
-        userId: options.userId,
-        priority: options.priority || NotificationPriority.NORMAL,
-        channels: options.channels || [NotificationChannel.IN_APP],
-        travelId: options.travelId,
-        planetId: options.planetId,
-        messageId: options.messageId,
-        triggeredBy: options.triggeredBy,
-        scheduledAt: options.scheduledAt,
-        expiresAt: options.expiresAt,
-        data: options.data,
-        metadata: {
-          ...options.metadata,
-          createdBy: 'system',
-          batchId: `single_${Date.now()}`,
-        },
-      });
-
-      const savedNotification = await this.repository.save(notification);
-
-      // 알림 생성 이벤트 발행
-      this.eventEmitter.emit('notification.created', {
-        notification: savedNotification,
-        options,
-      });
-
-      // 즉시 전송 또는 예약 처리
-      if (!options.scheduledAt || options.scheduledAt <= new Date()) {
-        await this.sendNotification(savedNotification);
-      }
-
-      this.logger.log(
-        `Notification created: id=${savedNotification.id}, type=${options.type}, userId=${options.userId}`,
-      );
-
-      return savedNotification;
-    } catch (error) {
-      this.logger.error(`Failed to create notification: ${error.message}`);
-      throw error;
-    }
-  }
-
-  /**
-   * 대량 알림 생성
-   */
-  async createBulkNotifications(
-    options: BulkNotificationOptions,
   ): Promise<Notification[]> {
     try {
-      const batchId = `bulk_${Date.now()}`;
-      const notifications: Partial<Notification>[] = options.userIds.map(
-        (userId) => ({
+      const channels = options.channels || [NotificationChannel.IN_APP];
+      const notifications: Notification[] = [];
+      const batchId = `single_${Date.now()}`;
+
+      // 각 채널별로 개별 알림 생성
+      for (const channel of channels) {
+        const notification = this.repository.create({
           type: options.type,
           title: options.title,
           content: options.content,
-          userId,
+          userId: options.userId,
           priority: options.priority || NotificationPriority.NORMAL,
-          channels: options.channels || [NotificationChannel.IN_APP],
+          channels: [channel], // 단일 채널만
           travelId: options.travelId,
           planetId: options.planetId,
           messageId: options.messageId,
@@ -115,9 +67,74 @@ export class NotificationService extends CrudService<Notification> {
             ...options.metadata,
             createdBy: 'system',
             batchId,
+            channel,
           },
-        }),
+        });
+
+        const savedNotification = await this.repository.save(notification);
+        notifications.push(savedNotification);
+
+        // 즉시 전송 또는 예약 처리
+        if (!options.scheduledAt || options.scheduledAt <= new Date()) {
+          await this.sendNotification(savedNotification);
+        }
+      }
+
+      // 알림 생성 이벤트 발행
+      this.eventEmitter.emit('notification.created', {
+        notifications,
+        options,
+        batchId,
+      });
+
+      this.logger.log(
+        `Notifications created: count=${notifications.length}, type=${options.type}, userId=${options.userId}, batchId=${batchId}`,
       );
+
+      return notifications;
+    } catch (error) {
+      this.logger.error(`Failed to create notification: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 대량 알림 생성 - 채널별로 개별 생성
+   */
+  async createBulkNotifications(
+    options: BulkNotificationOptions,
+  ): Promise<Notification[]> {
+    try {
+      const batchId = `bulk_${Date.now()}`;
+      const channels = options.channels || [NotificationChannel.IN_APP];
+      const notifications: Partial<Notification>[] = [];
+
+      // 각 사용자별, 채널별로 개별 알림 생성
+      for (const userId of options.userIds) {
+        for (const channel of channels) {
+          notifications.push({
+            type: options.type,
+            title: options.title,
+            content: options.content,
+            userId,
+            priority: options.priority || NotificationPriority.NORMAL,
+            channels: [channel], // 단일 채널만
+            travelId: options.travelId,
+            planetId: options.planetId,
+            messageId: options.messageId,
+            triggeredBy: options.triggeredBy,
+            scheduledAt: options.scheduledAt,
+            expiresAt: options.expiresAt,
+            data: options.data,
+            metadata: {
+              ...options.metadata,
+              createdBy: 'system',
+              batchId,
+              channel,
+            },
+          });
+        }
+      }
 
       const savedNotifications = await this.repository.save(notifications);
 
@@ -151,7 +168,7 @@ export class NotificationService extends CrudService<Notification> {
   }
 
   /**
-   * 알림 전송
+   * 알림 전송 - 단일 채널만 처리
    */
   async sendNotification(notification: Notification): Promise<void> {
     try {
@@ -160,17 +177,21 @@ export class NotificationService extends CrudService<Notification> {
         return;
       }
 
-      // 각 채널별로 전송
-      for (const channel of notification.channels) {
-        try {
-          await this.sendToChannel(notification, channel);
-          notification.markAsDelivered(channel);
-        } catch (error) {
-          this.logger.error(
-            `Failed to send to channel ${channel}: ${error.message}`,
-          );
-          notification.markAsFailed(channel, error.message);
-        }
+      const channel = notification.channels[0]; // 단일 채널만 존재
+
+      try {
+        notification.status = NotificationStatus.SENT;
+        await this.sendToChannel(notification, channel);
+        notification.markAsDelivered();
+
+        this.logger.debug(
+          `Notification ${notification.id} sent successfully to ${channel}`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to send to channel ${channel}: ${error.message}`,
+        );
+        notification.markAsFailed(error.message);
       }
 
       // 전송 결과 저장
@@ -179,10 +200,9 @@ export class NotificationService extends CrudService<Notification> {
       // 전송 완료 이벤트 발행
       this.eventEmitter.emit('notification.sent', {
         notification,
+        channel,
         timestamp: new Date(),
       });
-
-      this.logger.debug(`Notification ${notification.id} sent successfully`);
     } catch (error) {
       this.logger.error(
         `Failed to send notification ${notification.id}: ${error.message}`,

@@ -471,7 +471,7 @@ export class NotificationController {
         channels = [NotificationChannel.IN_APP, NotificationChannel.PUSH],
       } = body;
 
-      const notification = await this.crudService.createNotification({
+      const notifications = await this.crudService.createNotification({
         type,
         title,
         content,
@@ -486,7 +486,7 @@ export class NotificationController {
         },
       });
 
-      return crudResponse(notification);
+      return crudResponse(notifications);
     } catch (error) {
       this.logger.error(
         `Send test notification failed: userId=${user.id}, error=${error.message}`,

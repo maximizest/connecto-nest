@@ -219,24 +219,6 @@ export class Notification extends BaseEntity {
   @IsJSON()
   channels: NotificationChannel[];
 
-  @Column({
-    type: 'json',
-    nullable: true,
-    comment: '채널별 전송 결과',
-  })
-  @IsOptional()
-  @IsJSON()
-  deliveryResults?: Record<
-    NotificationChannel,
-    {
-      status: 'success' | 'failed' | 'pending';
-      sentAt?: Date;
-      deliveredAt?: Date;
-      errorMessage?: string;
-      attempts: number;
-    }
-  >;
-
   /**
    * 예약 및 만료
    */
@@ -351,47 +333,14 @@ export class Notification extends BaseEntity {
   /**
    * 알림 전송 완료 처리
    */
-  markAsDelivered(channel: NotificationChannel): void {
-    if (!this.deliveryResults) {
-      this.deliveryResults = {} as any;
-    }
-
-    const currentAttempts = this.deliveryResults?.[channel]?.attempts || 0;
-
-    this.deliveryResults![channel] = {
-      status: 'success',
-      sentAt: new Date(),
-      deliveredAt: new Date(),
-      attempts: currentAttempts + 1,
-    };
-
-    // 모든 채널 전송 완료 시 상태 업데이트
-    const allChannelsDelivered = this.channels.every(
-      (ch) => this.deliveryResults![ch]?.status === 'success',
-    );
-
-    if (allChannelsDelivered) {
-      this.status = NotificationStatus.DELIVERED;
-    }
+  markAsDelivered(): void {
+    this.status = NotificationStatus.DELIVERED;
   }
 
   /**
    * 알림 전송 실패 처리
    */
-  markAsFailed(channel: NotificationChannel, error: string): void {
-    if (!this.deliveryResults) {
-      this.deliveryResults = {} as any;
-    }
-
-    const currentAttempts = this.deliveryResults?.[channel]?.attempts || 0;
-
-    this.deliveryResults![channel] = {
-      status: 'failed',
-      sentAt: new Date(),
-      errorMessage: error,
-      attempts: currentAttempts + 1,
-    };
-
+  markAsFailed(error?: string): void {
     this.status = NotificationStatus.FAILED;
   }
 

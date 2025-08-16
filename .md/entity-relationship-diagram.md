@@ -324,7 +324,6 @@ graph TB
 | messageId | int | 관련 메시지 ID | |
 | triggeredBy | int | 알림 발생시킨 사용자 ID | FK → User.id |
 | channels | json | 전송할 채널 목록 | NotificationChannel[] |
-| deliveryResults | json | 채널별 전송 결과 | Record<NotificationChannel, DeliveryResult> |
 | scheduledAt | timestamp | 예약 전송 시간 | Index |
 | expiresAt | timestamp | 알림 만료 시간 | |
 | data | json | 알림 관련 추가 데이터 | 메시지, Travel, Planet, 액션, 푸시 알림 관련 데이터 |
@@ -510,7 +509,6 @@ graph TB
 - Admin의 `permissions`
 - Notification의 `data` (메시지, Travel, Planet, 액션, 푸시 알림 관련 데이터)
 - Notification의 `metadata` (디바이스 타입, 앱 버전, 언어/지역, 시간대, 재시도 횟수 등)
-- Notification의 `deliveryResults` (채널별 전송 결과)
 - MessageReadReceipt의 `metadata` (읽음 처리 방식, 위치 정보 등)
 - VideoProcessing의 `inputMetadata`, `outputMetadata`, `thumbnails`, `processingLogs`
 - User의 `socialMetadata`
