@@ -136,7 +136,8 @@ export class WebSocketRoomService {
 
       // Planet 룸들에 가입
       for (const planetUser of planetUsers) {
-        if (planetUser.planet) {  // INACTIVE 상태에서도 룸 가입은 가능 (메시지 조회를 위해)
+        if (planetUser.planet) {
+          // INACTIVE 상태에서도 룸 가입은 가능 (메시지 조회를 위해)
           const planetRoomId = `planet:${planetUser.planet.id}`;
           await this.joinRoom(socket, planetRoomId, server);
         }
@@ -294,7 +295,10 @@ export class WebSocketRoomService {
           relations: ['planet'],
         });
 
-        if (!planetUser?.planet || planetUser.planet.status !== PlanetStatus.ACTIVE) {
+        if (
+          !planetUser?.planet ||
+          planetUser.planet.status !== PlanetStatus.ACTIVE
+        ) {
           return false;
         }
 
@@ -379,9 +383,9 @@ export class WebSocketRoomService {
 
         // Travel의 실제 멤버 수 계산
         const memberCount = await this.travelUserRepository.count({
-          where: { 
+          where: {
             travelId: entityId,
-            status: TravelUserStatus.ACTIVE
+            status: TravelUserStatus.ACTIVE,
           },
         });
 
@@ -401,12 +405,12 @@ export class WebSocketRoomService {
 
         // Planet의 멤버 수 실시간 계산
         const planetMemberCount = await this.planetUserRepository.count({
-          where: { 
+          where: {
             planetId: entityId,
-            status: PlanetUserStatus.ACTIVE
+            status: PlanetUserStatus.ACTIVE,
           },
         });
-        
+
         return {
           id: roomId,
           type: 'planet',

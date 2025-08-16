@@ -29,7 +29,11 @@ import {
   PlanetUser,
   PlanetUserStatus,
 } from '../../../planet-user/planet-user.entity';
-import { Planet, PlanetType, PlanetStatus } from '../../../planet/planet.entity';
+import {
+  Planet,
+  PlanetType,
+  PlanetStatus,
+} from '../../../planet/planet.entity';
 import {
   TravelUser,
   TravelUserStatus,
@@ -79,13 +83,31 @@ import { MessagePaginationService } from '../../services/message-pagination.serv
     'metadata',
     'searchableText',
   ],
-  allowedIncludes: ['sender', 'planet', 'replyToMessage', 'readReceipts', 'replies'],
+  allowedIncludes: [
+    'sender',
+    'planet',
+    'replyToMessage',
+    'readReceipts',
+    'replies',
+  ],
   routes: {
     index: {
-      allowedIncludes: ['sender', 'planet', 'replyToMessage', 'readReceipts', 'replies'],
+      allowedIncludes: [
+        'sender',
+        'planet',
+        'replyToMessage',
+        'readReceipts',
+        'replies',
+      ],
     },
     show: {
-      allowedIncludes: ['sender', 'planet', 'replyToMessage', 'readReceipts', 'replies'],
+      allowedIncludes: [
+        'sender',
+        'planet',
+        'replyToMessage',
+        'readReceipts',
+        'replies',
+      ],
     },
     create: {
       allowedParams: [
@@ -507,7 +529,6 @@ export class MessageController {
       throw error;
     }
   }
-
 
   /**
    * 단일 메시지 조회 후 count 필드 계산

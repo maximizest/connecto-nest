@@ -37,21 +37,10 @@ import { User } from '../../../user/user.entity';
   entity: Planet,
   only: ['index', 'show'],
   allowedFilters: ['travelId', 'type', 'isActive', 'name', 'createdAt'],
-  allowedIncludes: [
-    'travel',
-    'partner',
-    'planetUsers',
-    'planetUsers.user',
-  ],
+  allowedIncludes: ['travel', 'partner', 'planetUsers', 'planetUsers.user'],
   routes: {
     index: {
-      allowedFilters: [
-        'travelId',
-        'type',
-        'isActive',
-        'name',
-        'createdAt',
-      ],
+      allowedFilters: ['travelId', 'type', 'isActive', 'name', 'createdAt'],
       allowedIncludes: ['travel'],
     },
     show: {
@@ -61,9 +50,7 @@ import { User } from '../../../user/user.entity';
 })
 @UseGuards(AuthGuard)
 export class PlanetController {
-  constructor(
-    public readonly crudService: PlanetService,
-  ) {}
+  constructor(public readonly crudService: PlanetService) {}
 
   /**
    * Planet 조회 전 권한 확인 (본인이 참여한 여행 하위 행성만 조회 가능)

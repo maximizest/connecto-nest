@@ -20,7 +20,11 @@ import {
   PlanetUserRole,
   PlanetUserStatus,
 } from '../../../planet-user/planet-user.entity';
-import { Planet, PlanetType, PlanetStatus } from '../../../planet/planet.entity';
+import {
+  Planet,
+  PlanetType,
+  PlanetStatus,
+} from '../../../planet/planet.entity';
 import { Travel, TravelStatus } from '../../../travel/travel.entity';
 import { User } from '../../../user/user.entity';
 import {
@@ -66,15 +70,10 @@ import { TravelUserService } from '../../travel-user.service';
     'inviteCode', // Travel 참여용 초대코드 (필수)
     'bio', // 멤버 소개
     'nickname', // 멤버 닉네임
-    'settings', // 개인 설정
   ],
 
   // 관계 포함 허용 필드
-  allowedIncludes: [
-    'user',
-    'travel',
-    'inviter', // 초대한 사용자
-  ],
+  allowedIncludes: ['user', 'travel'],
 
   // 라우트별 개별 설정
   routes: {
@@ -88,12 +87,12 @@ import { TravelUserService } from '../../travel-user.service';
         'role',
         'joinedAt',
       ],
-      allowedIncludes: ['user', 'inviter'],
+      allowedIncludes: ['user'],
     },
 
     // 단일 조회: 상세 정보 포함
     show: {
-      allowedIncludes: ['user', 'travel', 'inviter'],
+      allowedIncludes: ['user', 'travel'],
     },
 
     // 가입: 초대 코드 필수
@@ -105,7 +104,7 @@ import { TravelUserService } from '../../travel-user.service';
 
     // 수정: 본인 정보만 수정 가능
     update: {
-      allowedParams: ['bio', 'nickname', 'settings'],
+      allowedParams: ['bio', 'nickname'],
     },
   },
 })
@@ -184,7 +183,6 @@ export class TravelUserController {
     delete body.role;
     delete body.status;
     delete body.joinedAt;
-    delete body.invitedBy;
 
     return body;
   }
@@ -218,7 +216,6 @@ export class TravelUserController {
     body.userId = user.id;
     body.travelId = travel.id; // 초대코드로 찾은 Travel ID 설정
     body.joinedAt = new Date();
-    body.invitedBy = user.id; // 셀프 초대로 설정 (초대 코드 사용)
 
     if (travel.status !== TravelStatus.ACTIVE) {
       throw new ForbiddenException('비활성화된 Travel입니다.');
@@ -248,7 +245,7 @@ export class TravelUserController {
       } else if (existingMember.status === TravelUserStatus.LEFT) {
         // 기존 탈퇴 기록을 재활성화
         body.status = TravelUserStatus.ACTIVE;
-        body.role = TravelUserRole.MEMBER;
+        body.role = TravelUserRole.PARTICIPANT;
         body.joinedAt = new Date();
 
         await this.travelUserRepository.update(existingMember.id, body);
@@ -265,7 +262,7 @@ export class TravelUserController {
     if (travel.visibility === 'public') {
       // 공개 Travel: 누구나 가입 가능
       body.status = TravelUserStatus.ACTIVE;
-      body.role = TravelUserRole.MEMBER;
+      body.role = TravelUserRole.PARTICIPANT;
     } else {
       // 비공개 Travel: 초대 코드 필요
       if (!body.inviteCode) {
@@ -278,7 +275,7 @@ export class TravelUserController {
 
       // 초대 코드가 있으면 활성 상태로 설정
       body.status = TravelUserStatus.ACTIVE;
-      body.role = TravelUserRole.MEMBER;
+      body.role = TravelUserRole.PARTICIPANT;
     }
 
     // 최대 멤버 수 확인
@@ -336,7 +333,7 @@ export class TravelUserController {
             status: PlanetUserStatus.ACTIVE,
             role: PlanetUserRole.PARTICIPANT,
             joinedAt: new Date(),
-            invitedBy: entity.invitedBy || entity.userId,
+            invitedBy: entity.userId,
           });
 
           await this.planetUserRepository.save(planetUser);

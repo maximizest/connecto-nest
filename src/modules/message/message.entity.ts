@@ -51,7 +51,6 @@ export enum MessageStatus {
   DELETED = 'deleted', // 삭제됨
 }
 
-
 @Entity('messages')
 // 복합 인덱스 - 성능 향상
 @Index(['planetId', 'createdAt']) // Planet 내 시간순 조회

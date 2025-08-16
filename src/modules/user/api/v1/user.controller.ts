@@ -75,7 +75,7 @@ export class UserController {
   async beforeShow(params: any, context: any): Promise<any> {
     const currentUser: CurrentUserData = context.request?.user;
     const targetUserId = parseInt(params.id, 10);
-    
+
     // 본인의 정보만 조회 가능
     if (currentUser.id !== targetUserId) {
       throw new ForbiddenException('본인의 정보만 조회할 수 있습니다.');
@@ -90,7 +90,7 @@ export class UserController {
   @BeforeUpdate()
   async beforeUpdate(entity: User, context: any): Promise<User> {
     const currentUser: CurrentUserData = context.request?.user;
-    
+
     // 본인의 정보만 수정 가능
     if (currentUser.id !== entity.id) {
       throw new ForbiddenException('본인의 정보만 수정할 수 있습니다.');
@@ -102,7 +102,7 @@ export class UserController {
     }
 
     this.logger.log(`User profile updating: userId=${entity.id}`);
-    
+
     return entity;
   }
 
@@ -112,7 +112,7 @@ export class UserController {
   @BeforeDestroy()
   async beforeDestroy(entity: User, context: any): Promise<User> {
     const currentUser: CurrentUserData = context.request?.user;
-    
+
     // 본인의 계정만 삭제 가능
     if (currentUser.id !== entity.id) {
       throw new ForbiddenException('본인의 계정만 삭제할 수 있습니다.');
@@ -120,8 +120,9 @@ export class UserController {
 
     // 삭제 메타데이터 설정
     entity.deletedBy = currentUser.id;
-    entity.deletionReason = context.request?.body?.reason || 'User requested account deletion';
-    
+    entity.deletionReason =
+      context.request?.body?.reason || 'User requested account deletion';
+
     this.logger.log(
       `User soft-delete initiated: userId=${entity.id}, deletedBy=${entity.deletedBy}`,
     );

@@ -1,9 +1,4 @@
-import {
-  IsDateString,
-  IsEnum,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
 import {
   BaseEntity,
   Column,
@@ -127,10 +122,6 @@ export class Travel extends BaseEntity {
   @Index() // 초대 코드 검색 최적화
   inviteCode?: string;
 
-
-
-
-
   /**
    * 생성/수정 시간
    */
@@ -191,7 +182,6 @@ export class Travel extends BaseEntity {
     return result;
   }
 
-
   /**
    * Travel 시작
    */
@@ -208,7 +198,6 @@ export class Travel extends BaseEntity {
   deactivate(): void {
     this.status = TravelStatus.INACTIVE;
   }
-
 
   /**
    * 진행률 계산 (시작일 ~ 종료일 기준)

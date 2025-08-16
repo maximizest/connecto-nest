@@ -24,11 +24,7 @@ import { TravelService } from '../../travel.service';
   entity: Travel,
   only: ['index', 'show'],
   allowedFilters: ['status', 'name', 'visibility', 'endDate', 'createdAt'],
-  allowedIncludes: [
-    'travelUsers',
-    'travelUsers.user',
-    'planets',
-  ],
+  allowedIncludes: ['travelUsers', 'travelUsers.user', 'planets'],
   routes: {
     index: {
       allowedFilters: ['name', 'status', 'visibility', 'endDate', 'createdAt'],

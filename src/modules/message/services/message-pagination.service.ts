@@ -26,9 +26,7 @@ export class MessagePaginationService {
   private readonly CACHE_PREFIX = 'message_pagination';
   private readonly CACHE_TTL = 5 * 60; // 5분
 
-  constructor(
-    private readonly redisService: RedisService,
-  ) {}
+  constructor(private readonly redisService: RedisService) {}
 
   /**
    * Planet 메시지 목록 조회 (커서 기반)
@@ -256,8 +254,7 @@ export class MessagePaginationService {
       }
 
       // 통계 쿼리
-      const stats = await Message
-        .createQueryBuilder('message')
+      const stats = await Message.createQueryBuilder('message')
         .select([
           'COUNT(*) as totalMessages',
           'MIN(message.createdAt) as oldestMessageDate',
@@ -269,8 +266,7 @@ export class MessagePaginationService {
         .getRawOne();
 
       // 읽지 않은 메시지 수 조회 (별도 쿼리)
-      const unreadCount = await Message
-        .createQueryBuilder('message')
+      const unreadCount = await Message.createQueryBuilder('message')
         .leftJoin(
           'message_read_receipts',
           'receipt',
@@ -312,8 +308,7 @@ export class MessagePaginationService {
    * 기본 쿼리 빌더 생성
    */
   private createBaseQueryBuilder(): SelectQueryBuilder<Message> {
-    return Message
-      .createQueryBuilder('message')
+    return Message.createQueryBuilder('message')
       .leftJoinAndSelect('message.sender', 'sender')
       .leftJoinAndSelect('message.planet', 'planet')
       .select([

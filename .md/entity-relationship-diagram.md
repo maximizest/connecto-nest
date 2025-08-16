@@ -88,7 +88,7 @@ graph LR
     User[User]
     Travel[Travel]
     Planet[Planet]
-    TravelUser[TravelUser<br/>역할: MEMBER/ADMIN/OWNER<br/>상태: PENDING/ACTIVE/LEFT/BANNED/INVITED]
+    TravelUser[TravelUser<br/>역할: HOST/PARTICIPANT<br/>상태: ACTIVE/LEFT/BANNED]
     PlanetUser[PlanetUser<br/>상태: ACTIVE/MUTED]
     
     User -->|참여| TravelUser
@@ -245,26 +245,13 @@ graph TB
 |--------|------|------|----------|
 | id | int | Primary Key | PK, Auto Increment |
 | travelId | int | 여행 ID | FK → Travel.id, Not Null |
-| userId | int | 사용자 ID | FK → User.id, Nullable |
-| isDeletedUser | boolean | 탈퇴한 사용자의 기록 여부 | Default: false |
-| role | enum | 역할 (MEMBER/ADMIN/OWNER) | Default: 'MEMBER' |
-| status | enum | 상태 (PENDING/ACTIVE/LEFT/BANNED/INVITED) | Default: 'ACTIVE' |
+| userId | int | 사용자 ID | FK → User.id, Not Null |
+| role | enum | 역할 (HOST/PARTICIPANT) | Default: 'PARTICIPANT' |
+| status | enum | 상태 (ACTIVE/LEFT/BANNED) | Default: 'ACTIVE' |
 | joinedAt | timestamp | 가입 날짜 | Default: CURRENT_TIMESTAMP |
-| lastSeenAt | timestamp | 마지막 접속 시간 | |
-| leftAt | timestamp | 탈퇴 날짜 | |
-| invitedBy | int | 초대한 사용자 ID | FK → User.id |
-| invitedAt | timestamp | 초대 날짜 | |
-| respondedAt | timestamp | 초대 응답 날짜 | |
 | isBanned | boolean | 정지 여부 | Default: false |
 | bannedAt | timestamp | 정지 시작 시간 | |
-| bannedBy | int | 정지 처리한 관리자 ID | |
 | banReason | text | 정지 사유 | |
-| permissions | json | 개별 권한 설정 | |
-| settings | json | 사용자별 설정 | |
-| messageCount | int | 전송한 메시지 수 | Default: 0 |
-| createdPlanetCount | int | 생성한 Planet 수 | Default: 0 |
-| inviteCount | int | 초대한 멤버 수 | Default: 0 |
-| metadata | json | 추가 메타데이터 | |
 | createdAt | timestamp | 레코드 생성 시간 | Not Null |
 | updatedAt | timestamp | 레코드 수정 시간 | Not Null |
 
@@ -466,7 +453,6 @@ graph TB
 - TravelUser: `(travelId, role)` - Travel 내 역할별 조회  
 - TravelUser: `(userId, status)` - 사용자별 활성 Travel 조회
 - TravelUser: `(status, joinedAt)` - 상태별 가입순 정렬
-- TravelUser: `(invitedBy, status)` - 초대자별 상태 조회
 - PlanetUser: `(planetId, userId)` - 중복 방지
 - MessageReadReceipt: `(messageId, userId)` - 중복 읽음 방지
 - MessageReadReceipt: `(planetId, userId, readAt)` - Planet 내 사용자별 시간순
@@ -477,7 +463,7 @@ graph TB
 ### 일반 인덱스
 - Travel: `status`, `endDate`, `visibility`, `inviteCode`
 - Planet: `type`, `travelId`, `status`
-- TravelUser: `travelId`, `userId`, `role`, `status`, `joinedAt`, `lastSeenAt`, `leftAt`, `invitedBy`, `isDeletedUser`
+- TravelUser: `travelId`, `userId`, `role`, `status`, `joinedAt`
 - Message: `senderId`, `replyToMessageId`, `searchableText`
 - Notification: `recipientId`, `isRead`, `type`
 - FileUpload: `uploaderId`, `status`

@@ -32,14 +32,16 @@ import { CurrentUserData } from '../../../../common/decorators/current-user.deco
 @Crud({
   entity: Profile,
   only: ['index', 'show', 'create', 'update'],
-  allowedFilters: ['userId', 'nickname', 'name', 'gender', 'age', 'occupation', 'createdAt'],
-  allowedParams: [
+  allowedFilters: [
+    'userId',
     'nickname',
     'name',
     'gender',
     'age',
     'occupation',
+    'createdAt',
   ],
+  allowedParams: ['nickname', 'name', 'gender', 'age', 'occupation'],
   allowedIncludes: ['user'],
   routes: {
     index: {
@@ -50,22 +52,10 @@ import { CurrentUserData } from '../../../../common/decorators/current-user.deco
       allowedIncludes: ['user'],
     },
     create: {
-      allowedParams: [
-        'nickname',
-        'name',
-        'gender',
-        'age',
-        'occupation',
-      ],
+      allowedParams: ['nickname', 'name', 'gender', 'age', 'occupation'],
     },
     update: {
-      allowedParams: [
-        'nickname',
-        'name',
-        'gender',
-        'age',
-        'occupation',
-      ],
+      allowedParams: ['nickname', 'name', 'gender', 'age', 'occupation'],
     },
   },
 })
@@ -113,7 +103,9 @@ export class ProfileController {
     });
 
     if (user?.isBanned) {
-      throw new ForbiddenException('차단된 계정은 프로필을 수정할 수 없습니다.');
+      throw new ForbiddenException(
+        '차단된 계정은 프로필을 수정할 수 없습니다.',
+      );
     }
 
     return entity;
