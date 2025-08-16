@@ -1,7 +1,9 @@
 import {
   AfterCreate,
   AfterDestroy,
+  AfterIndex,
   AfterRecover,
+  AfterShow,
   AfterUpdate,
   BeforeCreate,
   BeforeDestroy,
@@ -67,8 +69,6 @@ import { MessagePaginationService } from '../../services/message-pagination.serv
     'updatedAt',
     'searchableText',
     'content',
-    'readCount',
-    'replyCount',
   ],
   allowedParams: [
     'type',
@@ -80,13 +80,13 @@ import { MessagePaginationService } from '../../services/message-pagination.serv
     'metadata',
     'searchableText',
   ],
-  allowedIncludes: ['sender', 'planet', 'replyToMessage'],
+  allowedIncludes: ['sender', 'planet', 'replyToMessage', 'readReceipts', 'replies'],
   routes: {
     index: {
-      allowedIncludes: ['sender', 'planet', 'replyToMessage'],
+      allowedIncludes: ['sender', 'planet', 'replyToMessage', 'readReceipts', 'replies'],
     },
     show: {
-      allowedIncludes: ['sender', 'planet', 'replyToMessage'],
+      allowedIncludes: ['sender', 'planet', 'replyToMessage', 'readReceipts', 'replies'],
     },
     create: {
       allowedParams: [
@@ -196,16 +196,8 @@ export class MessageController {
    */
   @AfterCreate()
   async afterCreate(entity: Message): Promise<Message> {
-    // 답장인 경우 원본 메시지의 답장 수 증가 - Active Record 패턴 사용
-    if (entity.replyToMessageId) {
-      const replyToMessage = await Message.findOne({
-        where: { id: entity.replyToMessageId },
-      });
-      if (replyToMessage) {
-        replyToMessage.replyCount = (replyToMessage.replyCount || 0) + 1;
-        await replyToMessage.save();
-      }
-    }
+    // replyCount는 이제 관계에서 자동으로 계산되므로 업데이트 불필요
+    // 답장 관계는 TypeORM이 자동으로 처리
 
     this.logger.log(`Message created: id=${entity.id}, type=${entity.type}`);
 
@@ -515,5 +507,42 @@ export class MessageController {
       );
       throw error;
     }
+  }
+
+  /**
+   * 메시지 목록 조회 후 count 필드 계산
+   */
+  @AfterIndex()
+  async afterIndex(@Request() req: Request, @Body() messages: Message[]) {
+    // loadRelationCountAndMap를 사용하면 자동으로 계산되지만,
+    // include로 관계를 로드한 경우 직접 계산
+    if (req.query?.include?.includes('readReceipts') || 
+        req.query?.include?.includes('replies')) {
+      messages.forEach(message => {
+        if (message.readReceipts) {
+          message.readCount = message.readReceipts.length;
+        }
+        if (message.replies) {
+          message.replyCount = message.replies.length;
+        }
+      });
+    }
+    return messages;
+  }
+
+  /**
+   * 단일 메시지 조회 후 count 필드 계산
+   */
+  @AfterShow()
+  async afterShow(@Request() req: Request, @Body() message: Message) {
+    // loadRelationCountAndMap를 사용하면 자동으로 계산되지만,
+    // include로 관계를 로드한 경우 직접 계산
+    if (message.readReceipts) {
+      message.readCount = message.readReceipts.length;
+    }
+    if (message.replies) {
+      message.replyCount = message.replies.length;
+    }
+    return message;
   }
 }

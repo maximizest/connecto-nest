@@ -200,17 +200,7 @@ export class ReadReceiptController {
       isUpdate: context.isUpdate || false,
     });
 
-    // 메시지 readCount 업데이트 (새로 생성된 경우만)
-    if (!context.isUpdate) {
-      const message = await this.messageRepository.findOne({
-        where: { id: entity.messageId },
-      });
-
-      if (message) {
-        message.readCount = (message.readCount || 0) + 1;
-        await this.messageRepository.save(message);
-      }
-    }
+    // readCount는 이제 관계에서 자동으로 계산되므로 업데이트 불필요
 
     this.logger.log(
       `Read receipt ${context.isUpdate ? 'updated' : 'created'}: messageId=${entity.messageId}, userId=${user.id}`,

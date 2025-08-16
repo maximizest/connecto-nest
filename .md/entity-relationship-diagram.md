@@ -224,8 +224,6 @@ graph TB
 | fileMetadata | json | 파일 메타데이터 | |
 | systemMetadata | json | 시스템 메타데이터 | |
 | replyToMessageId | int | 답장 대상 메시지 ID | FK → Message.id |
-| readCount | int | 읽은 수 | Default: 0 |
-| replyCount | int | 답장 수 | Default: 0 |
 | isEdited | boolean | 편집 여부 | Default: false |
 | editedAt | timestamp | 편집일시 | |
 | originalContent | text | 원본 내용 | |
@@ -490,9 +488,9 @@ graph TB
 - Planet → Messages (페이지네이션 적용)
 - User → Notifications (페이지네이션 적용)
 
-### 3. Count 필드 비정규화
-- Message.readCount: 읽은 사용자 수 (캐싱)
-- Message.replyCount: 답장 수 (캐싱)
+### 3. Count 필드 동적 계산
+- Message.readCount: 읽은 사용자 수 (관계에서 동적 계산)
+- Message.replyCount: 답장 수 (관계에서 동적 계산)
 
 ### 4. 검색 최적화
 - Message.searchableText: Full-text search 인덱스

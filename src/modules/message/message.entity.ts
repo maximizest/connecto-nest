@@ -19,6 +19,7 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -239,28 +240,31 @@ export class Message extends BaseEntity {
   @Index() // 답장 메시지 조회
   replyToMessageId?: number;
 
-  @ManyToOne(() => Message, { eager: false })
+  @ManyToOne(() => Message, (message) => message.replies, { eager: false })
   @JoinColumn({ name: 'replyToMessageId' })
   replyToMessage?: Message;
 
-  @Column({
-    type: 'int',
-    default: 0,
-    comment: '답장 메시지 개수',
-  })
-  @IsNumber()
-  replyCount: number;
+  /**
+   * 답장 메시지들 (이 메시지에 대한 답장들)
+   */
+  @OneToMany(() => Message, (message) => message.replyToMessage)
+  replies?: Message[];
 
   /**
-   * 읽음 상태
+   * 읽음 확인 관계
    */
-  @Column({
-    type: 'int',
-    default: 0,
-    comment: '읽음 확인한 사용자 수',
-  })
-  @IsNumber()
-  readCount: number;
+  @OneToMany('MessageReadReceipt', 'message')
+  readReceipts?: any[];
+
+  /**
+   * Virtual: 읽은 수 (관계에서 계산)
+   */
+  readCount?: number;
+
+  /**
+   * Virtual: 답장 수 (관계에서 계산)
+   */
+  replyCount?: number;
 
   @Column({
     type: 'timestamp',
@@ -480,18 +484,24 @@ export class Message extends BaseEntity {
    * 읽음 상태 업데이트
    */
   markAsRead(): void {
-    if (this.readCount === 0) {
+    if (!this.firstReadAt) {
       this.firstReadAt = new Date();
     }
-    this.readCount += 1;
     this.status = MessageStatus.READ;
   }
 
   /**
-   * 답장 수 증가
+   * 읽은 수 가져오기 (readReceipts 관계가 로드되어 있을 때)
    */
-  incrementReplyCount(): void {
-    this.replyCount += 1;
+  getReadCount(): number {
+    return this.readReceipts?.length || this.readCount || 0;
+  }
+
+  /**
+   * 답장 수 가져오기 (replies 관계가 로드되어 있을 때)
+   */
+  getReplyCount(): number {
+    return this.replies?.length || this.replyCount || 0;
   }
 
   /**
@@ -604,8 +614,6 @@ export class Message extends BaseEntity {
     // 기본 상태 설정
     this.status = this.status || MessageStatus.SENT;
     this.isEdited = this.isEdited || false;
-    this.readCount = this.readCount || 0;
-    this.replyCount = this.replyCount || 0;
 
     // 검색용 텍스트 생성
     this.updateSearchableText();
