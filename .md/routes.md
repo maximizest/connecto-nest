@@ -79,9 +79,9 @@
 - 풍부한 프로필 정보 지원
 
 ### 프로필 필드
-- 기본: `bio`, `profileImage`, `coverImage`, `birthday`, `gender`
-- 배열: `hobbies`, `interests`, `education`, `work`, `skills`
-- 기타: `website`, `socialLinks`
+- 기본: `nickname`, `name`, `gender`, `age`, `occupation`
+- 성별 옵션: MALE, FEMALE, OTHER, PREFER_NOT_TO_SAY
+- 나이 제한: 1~150
 
 ---
 

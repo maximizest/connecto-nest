@@ -177,18 +177,11 @@ graph TB
 |--------|------|------|----------|
 | id | int | Primary Key | PK, Auto Increment |
 | userId | int | 사용자 ID | FK → User.id, Unique |
-| bio | string | 자기소개 | |
-| profileImage | string | 프로필 이미지 URL | |
-| coverImage | string | 커버 이미지 URL | |
-| birthday | date | 생년월일 | |
-| gender | string | 성별 | |
-| hobbies | json | 취미 목록 | |
-| interests | json | 관심사 목록 | |
-| website | string | 웹사이트 | |
-| socialLinks | json | 소셜 링크 | |
-| education | json | 학력 정보 | |
-| work | json | 경력 정보 | |
-| skills | json | 기술 목록 | |
+| nickname | string | 닉네임 | Not Null |
+| name | string | 실제 이름 | Not Null |
+| gender | enum | 성별 (MALE/FEMALE/OTHER/PREFER_NOT_TO_SAY) | |
+| age | int | 나이 | Min: 1, Max: 150 |
+| occupation | string | 직업 | |
 | createdAt | timestamp | 생성일시 | Not Null |
 | updatedAt | timestamp | 수정일시 | Not Null |
 
@@ -196,18 +189,25 @@ graph TB
 | 필드명 | 타입 | 설명 | 제약조건 |
 |--------|------|------|----------|
 | id | int | Primary Key | PK, Auto Increment |
-| name | string | 여행 이름 | Not Null |
-| description | string | 여행 설명 | |
-| coverImage | string | 커버 이미지 URL | |
-| invitationCode | string | 초대 코드 | Unique, Not Null |
-| status | enum | 상태 (PLANNING/ACTIVE/COMPLETED/CANCELLED) | Not Null |
-| visibility | enum | 공개 범위 (PUBLIC/PRIVATE/FRIENDS) | Default: 'PRIVATE' |
-| startDate | timestamp | 시작일 | |
-| endDate | timestamp | 종료일 | |
-| metadata | json | 메타데이터 | |
+| name | string | 여행 이름 | Not Null, Max Length: 100 |
+| description | text | 여행 설명 | |
+| imageUrl | text | 여행 이미지 URL | |
+| status | enum | 상태 (INACTIVE/ACTIVE) | Default: 'INACTIVE' |
+| startDate | timestamp | 여행 시작 예정 날짜 | |
+| endDate | timestamp | 여행 종료 예정 날짜 (채팅 만료) | Not Null |
+| visibility | enum | 공개 설정 (PUBLIC/INVITE_ONLY) | Default: 'PUBLIC' |
+| inviteCode | string | 초대 코드 | Unique, Max Length: 20 |
+| inviteCodeEnabled | boolean | 초대 코드 활성화 여부 | Default: true |
+| maxPlanets | int | 최대 Planet 개수 | Default: 10, Min: 1, Max: 50 |
+| maxGroupMembers | int | 그룹 Planet 최대 멤버 수 | Default: 50, Min: 2, Max: 500 |
+| memberCount | int | 현재 멤버 수 | Default: 0 |
+| planetCount | int | 현재 Planet 수 | Default: 0 |
+| totalMessages | int | 총 메시지 수 | Default: 0 |
+| lastActivityAt | timestamp | 마지막 활동 시간 | |
+| settings | json | Travel 세부 설정 | |
+| metadata | json | 추가 메타데이터 | |
 | createdAt | timestamp | 생성일시 | Not Null |
 | updatedAt | timestamp | 수정일시 | Not Null |
-| deletedAt | timestamp | 삭제일시 (Soft Delete) | |
 
 ### Planet (채팅방)
 | 필드명 | 타입 | 설명 | 제약조건 |
@@ -410,23 +410,25 @@ graph TB
 
 ### 3. 메타데이터 지원 (JSON 필드)
 - Travel, Planet, Message, FileUpload의 `metadata`
-- Profile의 `hobbies`, `interests`, `socialLinks`, `education`, `work`, `skills`
 - Admin의 `permissions`
 - Notification의 `data`
 - MessageReadReceipt의 `metadata` (읽음 처리 방식, 위치 정보 등)
 - VideoProcessing의 `inputMetadata`, `outputMetadata`, `thumbnails`, `processingLogs`
+- User의 `socialMetadata`
 
 ## 데이터베이스 인덱스 전략
 
 ### 유니크 인덱스
 - User: `email`, `(socialId, provider)` 복합 유니크
-- Travel: `invitationCode`
+- Travel: `inviteCode`
 - Admin: `email`
 - Profile: `userId` (1:1 관계)
 - FileUpload: `storageKey`
 
 ### 복합 인덱스
 - User: `(socialId, provider)` - 소셜 로그인 조회
+- Travel: `(status, endDate)` - 상태별 만료일 조회
+- Travel: `(visibility, status)` - 공개 설정별 상태 조회
 - TravelUser: `(travelId, userId)` - 중복 방지
 - PlanetUser: `(planetId, userId)` - 중복 방지
 - MessageReadReceipt: `(messageId, userId)` - 중복 읽음 방지
@@ -436,6 +438,7 @@ graph TB
 - VideoProcessing: `(status, createdAt)` - 상태별 시간순 조회
 
 ### 일반 인덱스
+- Travel: `status`, `endDate`, `visibility`, `inviteCode`, `lastActivityAt`
 - Message: `senderId`, `replyToMessageId`, `searchableText`
 - Notification: `recipientId`, `isRead`, `type`
 - FileUpload: `uploaderId`, `status`

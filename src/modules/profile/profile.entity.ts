@@ -113,44 +113,6 @@ export class Profile extends BaseEntity {
   occupation?: string;
 
   /**
-   * 추가 정보
-   */
-  @Column({
-    type: 'text',
-    nullable: true,
-    comment: '자기소개',
-  })
-  @IsOptional()
-  @IsString()
-  bio?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 500,
-    nullable: true,
-    comment: '프로필 이미지 URL',
-  })
-  @IsOptional()
-  @IsString()
-  profileImageUrl?: string;
-
-  @Column({
-    type: 'json',
-    nullable: true,
-    comment: '추가 프로필 설정 (JSON)',
-  })
-  @IsOptional()
-  settings?: {
-    showAge?: boolean; // 나이 공개 여부
-    showGender?: boolean; // 성별 공개 여부
-    showOccupation?: boolean; // 직업 공개 여부
-    allowDirectMessage?: boolean; // 1:1 메시지 허용 여부
-    language?: string; // 선호 언어
-    timezone?: string; // 시간대
-    theme?: 'light' | 'dark'; // 테마 설정
-  };
-
-  /**
    * 생성/수정 시간 (BaseEntity에서 상속)
    */
 
@@ -168,8 +130,6 @@ export class Profile extends BaseEntity {
       this.gender,
       this.age,
       this.occupation,
-      this.bio,
-      this.profileImageUrl,
     ];
 
     const completedFields = fields.filter(
@@ -195,48 +155,17 @@ export class Profile extends BaseEntity {
   }
 
   /**
-   * 공개 가능한 정보인지 확인
-   */
-  isPublicInfo(field: keyof Profile): boolean {
-    if (!this.settings) return true;
-
-    switch (field) {
-      case 'age':
-        return this.settings.showAge !== false;
-      case 'gender':
-        return this.settings.showGender !== false;
-      case 'occupation':
-        return this.settings.showOccupation !== false;
-      default:
-        return true;
-    }
-  }
-
-  /**
-   * 공개 프로필 정보만 반환
+   * 공개 프로필 정보 반환
    */
   getPublicProfile(): Partial<Profile> {
-    const publicProfile: Partial<Profile> = {
+    return {
       id: this.id,
       nickname: this.nickname,
       name: this.name,
-      bio: this.bio,
-      profileImageUrl: this.profileImageUrl,
+      gender: this.gender,
+      age: this.age,
+      occupation: this.occupation,
     };
-
-    if (this.isPublicInfo('age')) {
-      publicProfile.age = this.age;
-    }
-
-    if (this.isPublicInfo('gender')) {
-      publicProfile.gender = this.gender;
-    }
-
-    if (this.isPublicInfo('occupation')) {
-      publicProfile.occupation = this.occupation;
-    }
-
-    return publicProfile;
   }
 
   // =================================================================
@@ -246,7 +175,6 @@ export class Profile extends BaseEntity {
   /**
    * 프로필 생성 전 기본값 설정
    * - 닉네임이 없으면 이름 사용
-   * - 기본 설정 값 설정
    * - 나이 유효성 검사
    */
   @BeforeInsert()
@@ -254,19 +182,6 @@ export class Profile extends BaseEntity {
     // 닉네임이 없으면 이름을 사용
     if (!this.nickname && this.name) {
       this.nickname = this.name;
-    }
-
-    // 기본 설정 값 설정
-    if (!this.settings) {
-      this.settings = {
-        showAge: true,
-        showGender: true,
-        showOccupation: true,
-        allowDirectMessage: true,
-        language: 'ko',
-        timezone: 'Asia/Seoul',
-        theme: 'light',
-      };
     }
 
     // 나이 유효성 검사
@@ -277,8 +192,6 @@ export class Profile extends BaseEntity {
       }
       this.age = age;
     }
-
-    // Profile creation logged
   }
 
   /**
@@ -301,7 +214,5 @@ export class Profile extends BaseEntity {
       }
       this.age = age;
     }
-
-    // Profile update logged
   }
 }

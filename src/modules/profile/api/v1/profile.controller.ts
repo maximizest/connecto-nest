@@ -32,25 +32,18 @@ import { CurrentUserData } from '../../../../common/decorators/current-user.deco
 @Crud({
   entity: Profile,
   only: ['index', 'show', 'create', 'update'],
-  allowedFilters: ['userId', 'bio', 'birthday', 'createdAt'],
+  allowedFilters: ['userId', 'nickname', 'name', 'gender', 'age', 'occupation', 'createdAt'],
   allowedParams: [
-    'bio',
-    'profileImage',
-    'coverImage',
-    'birthday',
+    'nickname',
+    'name',
     'gender',
-    'hobbies',
-    'interests',
-    'website',
-    'socialLinks',
-    'education',
-    'work',
-    'skills',
+    'age',
+    'occupation',
   ],
   allowedIncludes: ['user'],
   routes: {
     index: {
-      allowedFilters: ['userId', 'createdAt'],
+      allowedFilters: ['userId', 'gender', 'age', 'occupation', 'createdAt'],
       allowedIncludes: ['user'],
     },
     show: {
@@ -58,34 +51,20 @@ import { CurrentUserData } from '../../../../common/decorators/current-user.deco
     },
     create: {
       allowedParams: [
-        'bio',
-        'profileImage',
-        'coverImage',
-        'birthday',
+        'nickname',
+        'name',
         'gender',
-        'hobbies',
-        'interests',
-        'website',
-        'socialLinks',
-        'education',
-        'work',
-        'skills',
+        'age',
+        'occupation',
       ],
     },
     update: {
       allowedParams: [
-        'bio',
-        'profileImage',
-        'coverImage',
-        'birthday',
+        'nickname',
+        'name',
         'gender',
-        'hobbies',
-        'interests',
-        'website',
-        'socialLinks',
-        'education',
-        'work',
-        'skills',
+        'age',
+        'occupation',
       ],
     },
   },
@@ -112,14 +91,6 @@ export class ProfileController {
 
     // 현재 로그인한 사용자의 프로필로 설정
     body.userId = currentUser.id;
-
-    // 빈 배열 초기화
-    if (!body.hobbies) body.hobbies = [];
-    if (!body.interests) body.interests = [];
-    if (!body.socialLinks) body.socialLinks = {};
-    if (!body.education) body.education = [];
-    if (!body.work) body.work = [];
-    if (!body.skills) body.skills = [];
 
     return body;
   }
