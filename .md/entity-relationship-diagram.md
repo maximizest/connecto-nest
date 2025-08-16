@@ -353,13 +353,11 @@ graph TB
 - HIGH: 높음
 - URGENT: 긴급
 
-**NotificationStatus (알림 상태)**:
+**NotificationStatus (알림 상태) - 자동 업데이트만**:
 - PENDING: 대기 중 (기본값)
 - SENT: 전송됨
 - DELIVERED: 배달됨
-- READ: 읽음
 - FAILED: 실패
-- CANCELLED: 취소됨
 
 **NotificationChannel (알림 채널)**:
 - IN_APP: 인앱 알림
@@ -367,13 +365,6 @@ graph TB
 - EMAIL: 이메일
 - SMS: SMS (미래 확장)
 - WEBSOCKET: WebSocket 실시간 알림
-
-**DeliveryResult 구조**:
-- status: 'success' | 'failed' | 'pending'
-- sentAt: Date (선택사항)
-- deliveredAt: Date (선택사항)
-- errorMessage: string (선택사항)
-- attempts: number
 
 **data JSON 필드 구조**:
 - **메시지 관련**: messageContent, messageType, senderName, senderAvatar
