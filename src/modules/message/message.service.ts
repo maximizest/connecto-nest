@@ -27,7 +27,7 @@ export class MessageService extends CrudService<Message> {
   /**
    * 메시지 조회 시 count 필드를 계산하여 추가
    */
-  async findWithCounts(messageId: number): Promise<Message> {
+  async findWithCounts(messageId: number): Promise<Message | null> {
     const message = await this.repository
       .createQueryBuilder('message')
       .leftJoinAndSelect('message.sender', 'sender')

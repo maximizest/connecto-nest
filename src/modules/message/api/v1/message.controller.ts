@@ -1,7 +1,6 @@
 import {
   AfterCreate,
   AfterDestroy,
-  AfterIndex,
   AfterRecover,
   AfterShow,
   AfterUpdate,
@@ -509,40 +508,20 @@ export class MessageController {
     }
   }
 
-  /**
-   * 메시지 목록 조회 후 count 필드 계산
-   */
-  @AfterIndex()
-  async afterIndex(@Request() req: Request, @Body() messages: Message[]) {
-    // loadRelationCountAndMap를 사용하면 자동으로 계산되지만,
-    // include로 관계를 로드한 경우 직접 계산
-    if (req.query?.include?.includes('readReceipts') || 
-        req.query?.include?.includes('replies')) {
-      messages.forEach(message => {
-        if (message.readReceipts) {
-          message.readCount = message.readReceipts.length;
-        }
-        if (message.replies) {
-          message.replyCount = message.replies.length;
-        }
-      });
-    }
-    return messages;
-  }
 
   /**
    * 단일 메시지 조회 후 count 필드 계산
    */
   @AfterShow()
-  async afterShow(@Request() req: Request, @Body() message: Message) {
+  async afterShow(entity: Message, context: any): Promise<Message> {
     // loadRelationCountAndMap를 사용하면 자동으로 계산되지만,
     // include로 관계를 로드한 경우 직접 계산
-    if (message.readReceipts) {
-      message.readCount = message.readReceipts.length;
+    if (entity.readReceipts) {
+      entity.readCount = entity.readReceipts.length;
     }
-    if (message.replies) {
-      message.replyCount = message.replies.length;
+    if (entity.replies) {
+      entity.replyCount = entity.replies.length;
     }
-    return message;
+    return entity;
   }
 }
