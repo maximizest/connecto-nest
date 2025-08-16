@@ -1,503 +1,244 @@
-# Connecto Nest - Project Index Documentation
+# 📚 Connecto NestJS Project Index
 
-## 🚀 Project Overview
+## 개요
+Connecto는 여행 그룹 기반의 실시간 채팅 애플리케이션입니다. NestJS 프레임워크를 사용하여 구축되었으며, PostgreSQL, Redis, WebSocket을 활용한 확장 가능한 백엔드 시스템입니다.
 
-**Connecto** is a modern travel-focused group communication platform built with NestJS. It enables users to create travel groups, manage chat rooms (planets), share media, and collaborate in real-time.
+## 🏗️ 프로젝트 구조
 
-### Tech Stack
+### 핵심 기술 스택
 - **Framework**: NestJS 11.x with TypeScript 5.7.x
-- **Database**: PostgreSQL with TypeORM
+- **Database**: PostgreSQL with TypeORM (Active Record Pattern)
 - **Cache**: Redis for caching and real-time features
-- **Real-time**: Socket.io WebSocket
-- **Storage**: Cloudflare R2 for file uploads
+- **Real-time**: Socket.io for WebSocket communication
+- **Storage**: Cloudflare R2 for file storage
 - **Authentication**: JWT with Google/Apple social login
 
-### Core Architecture Pattern
-- **Entity-First CRUD**: Using `@foryourdev/nestjs-crud` for standardized RESTful APIs
-- **Modular Design**: Clean separation of concerns with domain-driven modules
-- **Real-time First**: WebSocket integration for instant messaging and presence
-- **Type-Safe**: Full TypeScript implementation with validation
+### 아키텍처 패턴
+- **Entity-First CRUD Pattern**: `@foryourdev/nestjs-crud` 라이브러리 활용
+- **Active Record Pattern**: TypeORM BaseEntity 상속
+- **Module-based Architecture**: NestJS 모듈 시스템
+- **Lifecycle Hooks**: 비즈니스 로직 전처리/후처리
 
----
+## 📦 모듈 구조
 
-## 📁 Module Architecture
+### 1. 인증 및 사용자 관리
+| 모듈 | 설명 | 주요 기능 |
+|------|------|----------|
+| **auth** | JWT 기반 인증 | Google/Apple 소셜 로그인, 토큰 관리 |
+| **user** | 사용자 계정 | 프로필, 알림 설정, 차단 관리 |
+| **profile** | 사용자 프로필 | 닉네임, 이름, 성별, 나이, 직업 |
+| **admin** | 관리자 시스템 | bcrypt 암호화, 권한 관리 |
 
-### 🔐 Authentication & User Management
+### 2. 여행 및 그룹 관리
+| 모듈 | 설명 | 주요 기능 |
+|------|------|----------|
+| **travel** | 여행 그룹 | 그룹 생성, 초대 코드, 만료 관리 |
+| **travel-user** | 여행 멤버십 | HOST/PARTICIPANT 역할, 차단 관리 |
+| **planet** | 채팅방 | GROUP/DIRECT 타입, 시간 제한 |
+| **planet-user** | 채팅방 멤버십 | 음소거, 읽음 상태 추적 |
 
-#### **auth** - Authentication Service
-- **Purpose**: JWT-based authentication with social login support
-- **Key Features**:
-  - Google OAuth integration
-  - Apple Sign-In support
-  - JWT token generation and validation
-  - Push token registration during login
-- **API**: `/api/v1/auth/*`
-- **Files**: `src/modules/auth/`
+### 3. 메시징 및 알림
+| 모듈 | 설명 | 주요 기능 |
+|------|------|----------|
+| **message** | 채팅 메시지 | TEXT/IMAGE/VIDEO/FILE/SYSTEM 타입 |
+| **read-receipt** | 읽음 확인 | 메시지별 읽음 상태 추적 |
+| **notification** | 알림 시스템 | FCM Push, Email, SMS 지원 |
+| **websocket** | 실시간 통신 | Socket.io 기반 실시간 메시징 |
 
-#### **user** - User Management
-- **Purpose**: Core user entity and profile management
-- **Entity Fields**:
-  - Social login credentials (Google/Apple)
-  - Profile information (name, email, phone)
-  - Notification preferences
-  - Ban status tracking
-  - Soft deletion support
-- **API**: `/api/v1/users/*`
-- **Files**: `src/modules/user/`
+### 4. 파일 및 미디어
+| 모듈 | 설명 | 주요 기능 |
+|------|------|----------|
+| **file-upload** | 파일 업로드 | 청크 업로드, 최대 500MB |
+| **streaming** | 미디어 스트리밍 | HLS 비디오/오디오 스트리밍 |
+| **video-processing** | 비디오 처리 | 인코딩, 썸네일 생성 |
+| **storage** | 스토리지 관리 | Cloudflare R2 통합 |
 
-#### **profile** - Detailed User Profiles
-- **Purpose**: Extended user profile information (1:1 with User)
-- **Key Features**:
-  - Bio and description
-  - Profile images
-  - Additional metadata
-- **API**: `/api/v1/profiles/*`
-- **Files**: `src/modules/profile/`
+### 5. 성능 및 시스템
+| 모듈 | 설명 | 주요 기능 |
+|------|------|----------|
+| **cache** | 캐싱 시스템 | Redis 기반 TTL 전략 |
+| **scheduler** | 스케줄러 | 백그라운드 작업, 시스템 최적화 |
+| **schema** | 스키마 API | 개발 환경 전용 스키마 정보 |
 
-#### **admin** - System Administration
-- **Purpose**: Admin user management with bcrypt authentication
-- **Key Features**:
-  - Separate admin authentication
-  - Password-based login
-  - System administration capabilities
-- **API**: `/api/v1/admin/*`
-- **Files**: `src/modules/admin/`
+## 📊 데이터 모델
 
----
-
-### 🌍 Travel & Group Management
-
-#### **travel** - Travel Groups
-- **Purpose**: Top-level container for organizing trips and groups
-- **Key Features**:
-  - Travel creation and management
-  - Status tracking (ACTIVE/INACTIVE)
-  - Visibility settings (PUBLIC/INVITE_ONLY)
-  - Date-based lifecycle management
-  - Member limits (max 20 users)
-  - Invite code generation
-- **Entity Relationships**:
-  - Has many TravelUsers (members)
-  - Has many Planets (chat rooms)
-- **API**: `/api/v1/travels/*`
-- **Files**: `src/modules/travel/`
-
-#### **travel-user** - Travel Membership
-- **Purpose**: Manages user participation in travels
-- **Key Features**:
-  - Role-based access (HOST/PARTICIPANT)
-  - Join/leave functionality
-  - Ban system at travel level
-  - Membership tracking
-- **Entity Relationships**:
-  - Belongs to Travel
-  - Belongs to User
-- **API**: `/api/v1/travel-users/*`
-- **Files**: `src/modules/travel-user/`
-
-#### **planet** - Chat Rooms
-- **Purpose**: Chat rooms within travels
-- **Key Features**:
-  - Two types: GROUP (multi-user) / DIRECT (1:1)
-  - Status management (ACTIVE/INACTIVE/ARCHIVED/BLOCKED)
-  - Time restrictions for chat availability
-  - Message limits (1000 messages)
-  - Auto-archival settings
-- **Entity Relationships**:
-  - Belongs to Travel
-  - Has many PlanetUsers (members)
-  - Has many Messages
-- **API**: `/api/v1/planets/*`
-- **Files**: `src/modules/planet/`
-
-#### **planet-user** - Chat Room Membership
-- **Purpose**: Manages user participation in planets
-- **Key Features**:
-  - Join/leave chat rooms
-  - Mute system (instead of bans)
-  - Read status tracking
-  - Notification preferences per room
-- **Entity Relationships**:
-  - Belongs to Planet
-  - Belongs to User
-- **API**: `/api/v1/planet-users/*`
-- **Files**: `src/modules/planet-user/`
-
----
-
-### 💬 Messaging & Communication
-
-#### **message** - Chat Messages
-- **Purpose**: Core messaging functionality
-- **Message Types**:
-  - TEXT - Text messages
-  - IMAGE - Image attachments
-  - VIDEO - Video attachments
-  - FILE - Document attachments
-  - SYSTEM - System notifications
-- **Key Features**:
-  - Soft deletion support
-  - Edit capability
-  - Reply threading
-  - File metadata storage
-  - Read receipt tracking
-- **Entity Relationships**:
-  - Belongs to Planet
-  - Belongs to User (sender)
-  - Has many ReadReceipts
-- **API**: `/api/v1/messages/*`
-- **Files**: `src/modules/message/`
-
-#### **read-receipt** - Message Read Status
-- **Purpose**: Tracks which users have read which messages
-- **Key Features**:
-  - Individual read tracking
-  - Batch read marking
-  - Last read timestamp
-- **Entity Relationships**:
-  - Belongs to Message
-  - Belongs to User
-  - Belongs to Planet
-- **API**: `/api/v1/read-receipts/*`
-- **Files**: `src/modules/read-receipt/`
-
-#### **websocket** - Real-time Communication
-- **Purpose**: WebSocket gateway for real-time features
-- **Key Events**:
-  - `send_message` - Send new messages
-  - `join_room` - Join chat rooms
-  - `leave_room` - Leave chat rooms
-  - `typing` - Typing indicators
-  - `read_message` - Mark messages as read
-  - `edit_message` - Edit existing messages
-  - `delete_message` - Delete messages
-- **Key Features**:
-  - JWT authentication for connections
-  - Rate limiting per event type
-  - Room-based broadcasting
-  - Typing indicators
-  - Online presence tracking
-  - Multi-device support
-- **Files**: `src/modules/websocket/`
-
-#### **notification** - Multi-channel Notifications
-- **Purpose**: Unified notification system
-- **Notification Channels**:
-  - FCM Push notifications (iOS/Android)
-  - Email notifications
-  - SMS notifications
-  - In-app notifications
-- **Notification Types**:
-  - Message notifications
-  - Travel updates
-  - Planet updates
-  - System announcements
-- **Key Features**:
-  - Priority levels (LOW/NORMAL/HIGH/URGENT)
-  - Delivery tracking
-  - User preference respect
-  - Batch notification support
-- **API**: `/api/v1/notifications/*`
-- **Files**: `src/modules/notification/`
-
----
-
-### 📂 File & Media Management
-
-#### **file-upload** - File Upload Service
-- **Purpose**: Handles file uploads to Cloudflare R2
-- **Key Features**:
-  - Chunked uploads (5MB segments)
-  - Support up to 500MB files
-  - Direct upload with presigned URLs
-  - Progress tracking
-  - File type validation
-  - Security scanning
-- **Supported Types**:
-  - Images (JPEG, PNG, GIF, WebP)
-  - Videos (MP4, MOV, AVI)
-  - Documents (PDF, DOC, XLS)
-- **Upload Process**:
-  1. Initialize upload
-  2. Get presigned URL
-  3. Upload chunks
-  4. Complete upload
-  5. Process file (thumbnails, etc.)
-- **API**: `/api/v1/file-upload/*`
-- **Files**: `src/modules/file-upload/`
-
-#### **video-processing** - Video Processing
-- **Purpose**: Video optimization and thumbnail generation
-- **Key Features**:
-  - Automatic quality optimization
-  - Thumbnail generation
-  - Format conversion
-  - Progress tracking via WebSocket
-  - HLS streaming preparation
-- **Processing Pipeline**:
-  1. Upload triggers processing
-  2. Generate thumbnails
-  3. Optimize video quality
-  4. Create streaming formats
-  5. Notify completion via WebSocket
-- **Files**: `src/modules/video-processing/`
-
-#### **storage** - Unified Storage Management
-- **Purpose**: Abstract storage layer for all file operations
-- **Key Features**:
-  - Cloudflare R2 integration
-  - URL generation
-  - File deletion
-  - Storage quota management
-  - CDN URL generation
-- **Files**: `src/modules/storage/`
-
----
-
-### ⚡ Performance & System
-
-#### **cache** - Redis Caching
-- **Purpose**: Caching layer for performance optimization
-- **Key Features**:
-  - Redis integration
-  - TTL-based caching strategies
-  - Cache invalidation
-  - Pub/Sub for real-time features
-- **Cached Data**:
-  - User sessions
-  - Travel/Planet metadata
-  - Message lists
-  - File upload progress
-- **Files**: `src/modules/cache/`
-
-#### **scheduler** - Background Jobs
-- **Purpose**: Scheduled tasks and background processing
-- **Key Jobs**:
-  - Travel expiration checks
-  - Planet auto-archival
-  - File cleanup
-  - Notification batching
-  - Cache warming
-  - System optimization
-- **Development Features**:
-  - Manual trigger endpoints
-  - Job status monitoring
-- **Files**: `src/modules/scheduler/`
-
-#### **schema** - Database Schema API
-- **Purpose**: Development-only schema introspection
-- **Key Features**:
-  - Entity metadata exposure
-  - CRUD configuration details
-  - Relationship mapping
-  - Security validation
-- **⚠️ Note**: Only available in development environment
-- **API**: `/api/v1/schema/*`
-- **Files**: `src/modules/schema/`
-
----
-
-## 🗂️ Database Schema
-
-### Entity Hierarchy
+### 계층 구조
 ```
 User (사용자)
-├── Profile (1:1 - 상세 프로필)
-├── TravelUser (N:M - 여행 멤버십)
-├── PlanetUser (N:M - 채팅방 멤버십)
-├── Message (1:N - 보낸 메시지)
-├── MessageReadReceipt (1:N - 읽음 상태)
-├── FileUpload (1:N - 업로드한 파일)
-└── Notification (1:N - 알림)
-
-Travel (여행 그룹)
-├── TravelUser (1:N - 멤버)
-└── Planet (1:N - 채팅방)
-    ├── PlanetUser (1:N - 멤버)
-    └── Message (1:N - 메시지)
-        └── MessageReadReceipt (1:N - 읽음 상태)
+├── Profile (1:1 관계)
+├── TravelUser (여행 멤버십)
+│   └── Travel (여행 그룹)
+│       └── Planet (채팅방)
+│           ├── PlanetUser (채팅방 멤버십)
+│           └── Message (메시지)
+│               └── MessageReadReceipt (읽음 확인)
+└── Notification (알림)
 ```
 
-### Key Relationships
-- **User ↔ Travel**: Many-to-Many through TravelUser
-- **User ↔ Planet**: Many-to-Many through PlanetUser
-- **Travel → Planet**: One-to-Many (Planets belong to Travels)
-- **Planet → Message**: One-to-Many (Messages in chat rooms)
-- **Message → ReadReceipt**: One-to-Many (Read tracking)
+### 주요 엔티티 (최근 간소화)
+- **User**: 소셜 로그인 정보, 기본 설정 (language, timezone 제거됨)
+- **Profile**: 간소화된 프로필 - 5개 필드만 유지
+  - nickname (닉네임)
+  - name (실명)
+  - gender (성별)
+  - age (나이)
+  - occupation (직업)
+- **Travel**: 여행 그룹 컨테이너 (상태: INACTIVE/ACTIVE)
+- **Planet**: 채팅방 (타입: GROUP/DIRECT)
+- **Message**: 채팅 메시지 (다양한 미디어 타입 지원)
 
-### Deletion Policies
-- **Soft Delete**: User, Message (maintain history)
-- **Cascade Delete**: Most child entities follow parent
-- **Nullify**: FileUpload.userId (preserve files after user deletion)
+## 🔧 개발 환경 설정
 
----
-
-## 🔧 Development Commands
-
-### Build & Test
-```bash
-yarn build          # Build the application
-yarn dev           # Start development server
-yarn lint          # Run ESLint
-yarn test          # Run unit tests
-yarn test:e2e      # Run E2E tests
-yarn test:cov      # Generate coverage report
-```
-
-### Database
-```bash
-yarn migration:generate -- MigrationName  # Generate migration
-yarn migration:run                        # Run migrations
-yarn migration:revert                     # Revert last migration
-```
-
-### Documentation
-```bash
-yarn docs:generate  # Generate API docs from E2E tests
-yarn test:docs     # Run tests and generate docs
-```
-
-### Production
-```bash
-yarn start:prod:migrate  # Run migrations then start
-yarn deploy:prod        # Safe production deployment
-```
-
----
-
-## 🔑 Environment Variables
-
-### Required Configuration
+### 필수 환경 변수
 ```env
-# Database
-DATABASE_URL=postgresql://user:pass@localhost:5432/connecto
-
-# JWT
+DATABASE_URL=postgresql://user:password@localhost:5432/connecto
 JWT_SECRET=your-secret-key-min-32-chars
-
-# Redis
 REDIS_URL=redis://localhost:6379
-
-# Cloudflare R2
-CLOUDFLARE_R2_ACCESS_KEY_ID=xxx
-CLOUDFLARE_R2_SECRET_ACCESS_KEY=xxx
-CLOUDFLARE_R2_BUCKET_NAME=xxx
-CLOUDFLARE_R2_ENDPOINT=xxx
-CLOUDFLARE_R2_PUBLIC_URL=xxx
-
-# Social Login
-GOOGLE_CLIENT_ID=xxx
-APPLE_CLIENT_ID=xxx
-
-# Push Notifications (Optional)
-FCM_PROJECT_ID=xxx
-FCM_PRIVATE_KEY=xxx
-FCM_CLIENT_EMAIL=xxx
+CLOUDFLARE_R2_ACCESS_KEY_ID=your-access-key
+CLOUDFLARE_R2_SECRET_ACCESS_KEY=your-secret-key
+CLOUDFLARE_R2_BUCKET_NAME=your-bucket
+CLOUDFLARE_R2_PUBLIC_URL=https://your-public-url
+GOOGLE_CLIENT_ID=your-google-client-id
+APPLE_CLIENT_ID=your-apple-client-id
 ```
 
----
+### 주요 명령어
+```bash
+# 개발
+yarn dev                # 개발 서버 실행 (watch mode)
+yarn build              # 프로덕션 빌드
+yarn start:prod         # 프로덕션 실행
 
-## 📚 API Documentation
+# 테스트
+yarn test               # 단위 테스트
+yarn test:e2e           # E2E 테스트
+yarn test:cov           # 커버리지 리포트
 
-### Base URL
-- Development: `http://localhost:3000/api/v1`
-- Production: `https://api.connecto.com/api/v1`
+# 데이터베이스
+yarn migration:generate -- MigrationName  # 마이그레이션 생성
+yarn migration:run                        # 마이그레이션 실행
+yarn migration:revert                     # 마이그레이션 롤백
 
-### Authentication
-All API endpoints (except auth) require JWT authentication:
-```
-Authorization: Bearer <jwt-token>
-```
-
-### API Documentation
-- Swagger UI: `/api-docs` (development only)
-- Generated from E2E tests using `@foryourdev/jest-swag`
-
-### WebSocket Connection
-```javascript
-const socket = io('ws://localhost:3000', {
-  auth: {
-    token: 'jwt-token-here'
-  }
-});
+# 코드 품질
+yarn lint               # ESLint 실행
+yarn format             # Prettier 포맷팅
 ```
 
+## 📚 프로젝트 문서
+
+### 메인 문서
+- [CLAUDE.md](./CLAUDE.md) - Claude AI 가이드라인
+- [README.md](./README.md) - 프로젝트 개요
+- [PROJECT_INDEX.md](./PROJECT_INDEX.md) - 이 문서
+
+### 기술 문서 (.md/)
+- [entity-relationship-diagram.md](./.md/entity-relationship-diagram.md) - ERD 및 데이터베이스 스키마
+- [routes.md](./.md/routes.md) - API 라우트 문서
+- [NESTJSCRUD.md](./.md/NESTJSCRUD.md) - NestJS CRUD 프레임워크 가이드
+- [custom.md](./.md/custom.md) - 커스텀 엔드포인트 문서
+- [relationship.md](./.md/relationship.md) - 엔티티 관계 설명
+
+## 🚀 API 엔드포인트
+
+### 기본 정보
+- **Base URL**: `/api/v1`
+- **인증**: Bearer JWT Token
+- **Rate Limiting**: 100 requests/minute (일반), 10 requests/minute (파일 업로드)
+
+### 주요 엔드포인트 카테고리
+1. **인증**: `/api/v1/auth/*` - 소셜 로그인, 토큰 관리
+2. **사용자**: `/api/v1/users/*` - 사용자 정보 CRUD
+3. **프로필**: `/api/v1/profiles/*` - 프로필 정보 CRUD
+4. **여행**: `/api/v1/travels/*` - 여행 그룹 관리
+5. **채팅방**: `/api/v1/planets/*` - 채팅방 관리
+6. **메시지**: `/api/v1/messages/*` - 메시지 CRUD
+7. **알림**: `/api/v1/notifications/*` - 알림 관리
+8. **파일**: `/api/v1/file-uploads/*` - 파일 업로드/다운로드
+9. **WebSocket**: `/websocket` - 실시간 통신
+
+### CRUD 프레임워크 활용
+- **전체 CRUD 활용**: 11개 모듈이 `@foryourdev/nestjs-crud` 사용
+- **자동 생성 비율**: 표준 CRUD 작업의 약 85%가 자동 생성
+- **커스텀 보완**: 특수 비즈니스 로직은 커스텀 엔드포인트로 구현
+
+## 🔐 보안 가이드라인
+
+### 인증 및 권한
+- 모든 API는 `@UseGuards(AuthGuard)` 사용
+- JWT 토큰 기반 인증 (Access Token + Refresh Token)
+- 소셜 로그인 검증 (Google OAuth, Apple Sign-In)
+
+### 데이터 보호
+- 민감한 데이터는 `@Exclude()` 데코레이터 사용
+- 환경 변수로 시크릿 관리
+- bcrypt를 통한 관리자 비밀번호 해싱
+
+### API 보안
+- CRUD 데코레이터에서 `allowedFilters`, `allowedParams`, `allowedIncludes` 명시
+- Rate Limiting 적용
+- CORS 설정
+- 상대 경로 import 사용 (절대 경로 금지)
+
+## 🎯 최근 변경사항 (2025년 1월)
+
+### 엔티티 간소화
+1. **User 엔티티 간소화**
+   - 제거된 필드: `language`, `timezone`, `lastSeenAt`
+   - 마이그레이션: `RemoveUserLanguageTimezone`
+
+2. **Profile 엔티티 대폭 간소화**
+   - 유지된 필드: `nickname`, `name`, `gender`, `age`, `occupation` (5개만)
+   - 제거된 필드: `bio`, `profileImage`, `coverImage`, `birthday`, `hobbies`, `interests`, `website`, `socialLinks`, `education`, `work`, `skills`, `profileImageUrl`, `settings`
+   - 마이그레이션: `SimplifyProfileEntity`
+
+3. **Travel 엔티티 문서 동기화**
+   - ERD 문서와 실제 구현 일치
+   - 인덱스 정보 업데이트
+
+## 📈 성능 최적화
+
+### 데이터베이스 최적화
+- **복합 인덱스**: Travel `(status, endDate)`, `(visibility, status)`
+- **단일 인덱스**: Profile의 각 필드별 인덱스
+- **Eager/Lazy Loading**: 관계별 최적화된 로딩 전략
+- **Count 필드 비정규화**: memberCount, planetCount 등
+
+### 캐싱 전략
+- Redis 기반 캐싱
+- TTL 전략 적용
+- 실시간 데이터 동기화
+
+### 실시간 통신 최적화
+- WebSocket 연결 풀링
+- Redis Pub/Sub for 스케일링
+- 배치 처리 for 읽음 확인
+
+## 🤝 기여 가이드
+
+### 코드 스타일
+- TypeScript 엄격 모드
+- ESLint + Prettier 설정 준수
+- 상대 경로 import 사용 (절대 경로 금지)
+- 한글 주석 및 문서 작성 시 인코딩 주의
+
+### 커밋 컨벤션
+- feat: 새로운 기능
+- fix: 버그 수정
+- docs: 문서 업데이트
+- refactor: 코드 리팩토링
+- test: 테스트 추가/수정
+- chore: 빌드 및 설정 변경
+
+### 개발 주의사항
+- **패키지 매니저**: yarn만 사용 (npm 사용 금지)
+- **파일 경로**: 상대 경로만 사용
+- **환경 변수**: 민감한 정보는 반드시 .env 파일에
+- **한글 인코딩**: UTF-8 인코딩 확인
+
+## 📞 지원
+
+프로젝트 관련 문의사항이나 이슈는 GitHub Issues를 통해 등록해주세요.
+
 ---
-
-## 🏗️ Architecture Patterns
-
-### CRUD Pattern
-All resource controllers use standardized CRUD pattern:
-```typescript
-@Controller({ path: 'resource', version: '1' })
-@Crud({
-  entity: Entity,
-  allowedFilters: ['field1', 'field2'],
-  allowedIncludes: ['relation1'],
-  only: ['index', 'show', 'create', 'update', 'destroy'],
-})
-```
-
-### Security Patterns
-- JWT authentication on all endpoints
-- Rate limiting on WebSocket events
-- Input validation with class-validator
-- SQL injection prevention with TypeORM
-- File upload validation and scanning
-- Sensitive data exclusion with `@Exclude()`
-
-### Performance Patterns
-- Redis caching for frequent queries
-- Indexed database columns for search
-- Pagination on list endpoints
-- Lazy loading for relations
-- WebSocket room-based broadcasting
-- Chunked file uploads
-
----
-
-## 📈 System Limits
-
-### User Limits
-- Max travels per user: Unlimited
-- Max planets per travel: Unlimited
-- Max users per travel: 20
-- Max users per planet: Depends on type
-
-### Message Limits
-- Max message length: 5000 characters
-- Max messages per planet: 1000 (then auto-archive)
-- Max file size: 500MB
-- Max chunk size: 5MB
-
-### Rate Limits
-- Message send: 10 per minute
-- File upload: 5 per minute
-- Room join: 20 per minute
-- Typing indicator: 1 per 3 seconds
-
----
-
-## 🚦 Status & Health
-
-### Health Check Endpoints
-- GET `/health` - Basic health check
-- GET `/health/db` - Database connectivity
-- GET `/health/redis` - Redis connectivity
-
-### Monitoring
-- Request/Response logging
-- Error tracking
-- Performance metrics
-- WebSocket connection tracking
-- File upload progress monitoring
-
----
-
-## 📖 Additional Resources
-
-- [CLAUDE.md](./CLAUDE.md) - AI assistant guidelines
-- [DELETE.md](./DELETE.md) - Entity deletion policies
-- [Package.json](./package.json) - Dependencies
-- [TypeORM Config](./src/config/database.config.ts) - Database configuration
-- [JWT Config](./src/config/jwt.config.ts) - Authentication configuration
+*Last Updated: 2025년 1월*
+*Generated by: Claude Code*
