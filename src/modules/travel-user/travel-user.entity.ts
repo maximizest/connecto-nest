@@ -33,7 +33,6 @@ export enum TravelUserRole {
  */
 export enum TravelUserStatus {
   ACTIVE = 'active', // 활성 (참여 중)
-  LEFT = 'left', // 탈퇴
   BANNED = 'banned', // 정지
 }
 
@@ -213,12 +212,6 @@ export class TravelUser extends BaseEntity {
     this.role = TravelUserRole.PARTICIPANT;
   }
 
-  /**
-   * Travel 탈퇴
-   */
-  leave(): void {
-    this.status = TravelUserStatus.LEFT;
-  }
 
   /**
    * 가입 기간 계산 (일 단위)

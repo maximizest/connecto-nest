@@ -88,7 +88,7 @@ graph LR
     User[User]
     Travel[Travel]
     Planet[Planet]
-    TravelUser[TravelUser<br/>역할: HOST/PARTICIPANT<br/>상태: ACTIVE/LEFT/BANNED]
+    TravelUser[TravelUser<br/>역할: HOST/PARTICIPANT<br/>상태: ACTIVE/BANNED]
     PlanetUser[PlanetUser<br/>상태: ACTIVE/MUTED]
     
     User -->|참여| TravelUser
@@ -247,7 +247,7 @@ graph TB
 | travelId | int | 여행 ID | FK → Travel.id, Not Null |
 | userId | int | 사용자 ID | FK → User.id, Not Null |
 | role | enum | 역할 (HOST/PARTICIPANT) | Default: 'PARTICIPANT' |
-| status | enum | 상태 (ACTIVE/LEFT/BANNED) | Default: 'ACTIVE' |
+| status | enum | 상태 (ACTIVE/BANNED) | Default: 'ACTIVE' |
 | joinedAt | timestamp | 가입 날짜 | Default: CURRENT_TIMESTAMP |
 | isBanned | boolean | 정지 여부 | Default: false |
 | bannedAt | timestamp | 정지 시작 시간 | |

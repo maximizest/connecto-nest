@@ -242,19 +242,6 @@ export class TravelUserController {
         throw new ForbiddenException(
           '이 여행에서 차단된 사용자입니다. 참여할 수 없습니다.',
         );
-      } else if (existingMember.status === TravelUserStatus.LEFT) {
-        // 기존 탈퇴 기록을 재활성화
-        body.status = TravelUserStatus.ACTIVE;
-        body.role = TravelUserRole.PARTICIPANT;
-        body.joinedAt = new Date();
-
-        await this.travelUserRepository.update(existingMember.id, body);
-
-        this.logger.log(
-          `Travel rejoined: travelId=${body.travelId}, userId=${user.id}`,
-        );
-
-        return body;
       }
     }
 
