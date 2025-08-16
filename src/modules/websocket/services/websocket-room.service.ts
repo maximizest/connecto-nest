@@ -302,9 +302,9 @@ export class WebSocketRoomService {
           return false;
         }
 
-        // 1:1 Planet의 경우 추가 권한 확인
+        // 1:1 Planet의 경우 추가 권한 확인 (활성 상태만 채팅 가능)
         if (planetUser.planet.type === PlanetType.DIRECT) {
-          return planetUser.canChatInDirectPlanet();
+          return planetUser.isActiveParticipant();
         }
 
         return true;

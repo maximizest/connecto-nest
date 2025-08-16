@@ -47,13 +47,11 @@ import { User } from '../../../user/user.entity';
   only: ['index', 'show', 'update'],
 
   // 필터링 허용 필드 (조회용)
-  allowedFilters: ['planetId', 'status', 'role', 'joinedAt'],
+  allowedFilters: ['planetId', 'status', 'joinedAt'],
 
   // Body에서 허용할 파라미터 (수정 시)
   allowedParams: [
-    'bio', // 멤버 소개
-    'nickname', // 멤버 닉네임
-    'settings', // 개인 설정
+    'notificationsEnabled', // 알림 활성화 여부
   ],
 
   // 관계 포함 허용 필드
@@ -63,7 +61,7 @@ import { User } from '../../../user/user.entity';
   routes: {
     // 목록 조회: 본인의 멤버십만 조회
     index: {
-      allowedFilters: ['planetId', 'status', 'role', 'joinedAt'],
+      allowedFilters: ['planetId', 'status', 'joinedAt'],
       allowedIncludes: ['user', 'planet'],
     },
 
@@ -74,7 +72,7 @@ import { User } from '../../../user/user.entity';
 
     // 수정: 본인 정보만 수정 가능
     update: {
-      allowedParams: ['bio', 'nickname', 'settings'],
+      allowedParams: ['notificationsEnabled'],
     },
   },
 })
@@ -144,13 +142,11 @@ export class PlanetUserController {
       throw new ForbiddenException('본인의 멤버십 정보만 수정할 수 있습니다.');
     }
 
-    // 중요한 필드는 수정 불가 (role, status 등)
+    // 중요한 필드는 수정 불가
     delete body.userId;
     delete body.planetId;
-    delete body.role;
     delete body.status;
     delete body.joinedAt;
-    delete body.invitedBy;
 
     return body;
   }

@@ -17,7 +17,6 @@ import { Repository } from 'typeorm';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import {
   PlanetUser,
-  PlanetUserRole,
   PlanetUserStatus,
 } from '../../../planet-user/planet-user.entity';
 import {
@@ -318,9 +317,7 @@ export class TravelUserController {
             planetId: planet.id,
             userId: entity.userId,
             status: PlanetUserStatus.ACTIVE,
-            role: PlanetUserRole.PARTICIPANT,
             joinedAt: new Date(),
-            invitedBy: entity.userId,
           });
 
           await this.planetUserRepository.save(planetUser);

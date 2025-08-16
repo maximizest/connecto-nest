@@ -89,7 +89,7 @@ graph LR
     Travel[Travel]
     Planet[Planet]
     TravelUser[TravelUser<br/>역할: HOST/PARTICIPANT<br/>상태: ACTIVE/BANNED]
-    PlanetUser[PlanetUser<br/>역할: PARTICIPANT/MODERATOR<br/>상태: ACTIVE/LEFT/INVITED/MUTED]
+    PlanetUser[PlanetUser<br/>상태: ACTIVE/BANNED]
     
     User -->|참여| TravelUser
     Travel -->|멤버| TravelUser
@@ -264,60 +264,13 @@ graph TB
 | planetId | int | 채팅방 ID | FK → Planet.id, Not Null |
 | userId | int | 사용자 ID | FK → User.id, Nullable |
 | isDeletedUser | boolean | 탈퇴한 사용자 기록 여부 | Default: false |
-| role | enum | 역할 (PARTICIPANT/MODERATOR) | Default: 'PARTICIPANT' |
-| status | enum | 상태 (ACTIVE/LEFT/INVITED/MUTED) | Default: 'ACTIVE' |
+| status | enum | 상태 (ACTIVE/BANNED) | Default: 'ACTIVE' |
 | joinedAt | timestamp | 참여일시 | Default: CURRENT_TIMESTAMP |
-| lastSeenAt | timestamp | 마지막 접속 시간 | |
-| leftAt | timestamp | 탈퇴일시 | |
-| invitedBy | int | 초대한 사용자 ID | FK → User.id |
-| invitedAt | timestamp | 초대 날짜 | |
-| respondedAt | timestamp | 초대 응답 날짜 | |
-| lastReadMessageId | int | 마지막 읽은 메시지 ID | FK → Message.id |
-| lastReadAt | timestamp | 마지막 읽음 시간 | |
-| unreadCount | int | 읽지 않은 메시지 수 | Default: 0 |
 | notificationsEnabled | boolean | 알림 활성화 여부 | Default: true |
-| isMuted | boolean | 음소거 상태 | Default: false |
-| muteUntil | timestamp | 음소거 해제 시간 | |
-| permissions | json | Planet 내 개별 권한 설정 | |
-| personalSettings | json | Planet별 개인 설정 | |
-| messageCount | int | Planet에서 전송한 메시지 수 | Default: 0 |
-| fileCount | int | 업로드한 파일 수 | Default: 0 |
-| firstMessageAt | timestamp | 첫 메시지 전송 시간 | |
-| lastMessageAt | timestamp | 마지막 메시지 전송 시간 | |
-| metadata | json | 추가 메타데이터 | |
 | createdAt | timestamp | 생성일시 | Not Null |
 | updatedAt | timestamp | 수정일시 | Not Null |
 
 **복합 유니크 인덱스**: (planetId, userId)
-
-**권한 설정 (permissions JSON)**:
-- canSendMessages: 메시지 전송 권한
-- canUploadFiles: 파일 업로드 권한  
-- canDeleteMessages: 메시지 삭제 권한
-- canInviteMembers: 멤버 초대 권한
-- canManageMembers: 멤버 관리 권한
-- canEditPlanetInfo: Planet 정보 수정 권한
-- maxDailyMessages: 일일 메시지 제한
-- customPermissions: 사용자 정의 권한
-
-**개인화 설정 (personalSettings JSON)**:
-- nickname: Planet 내 별명
-- customStatus: 사용자 정의 상태 메시지
-- theme: 테마 설정 (light/dark)
-- fontSize: 폰트 크기 (small/medium/large)
-- soundEnabled: 소리 알림
-- vibrationEnabled: 진동 알림
-- showReadReceipts: 읽음 상태 표시
-- showTypingIndicators: 타이핑 상태 표시
-- autoDownloadImages: 이미지 자동 다운로드
-- autoDownloadVideos: 비디오 자동 다운로드
-
-**메타데이터 (metadata JSON)**:
-- joinMethod: 참여 방법 (invite/auto/manual)
-- inviteAcceptedAt: 초대 수락 시간
-- connectionQuality: 연결 품질 (good/poor)
-- clientInfo: 클라이언트 정보 (platform, version, device)
-- preferences: 개인 선호도
 
 ### MessageReadReceipt (메시지 읽음 확인)
 | 필드명 | 타입 | 설명 | 제약조건 |
@@ -477,7 +430,6 @@ graph TB
 - MessageReadReceipt의 `metadata` (읽음 처리 방식, 위치 정보 등)
 - VideoProcessing의 `inputMetadata`, `outputMetadata`, `thumbnails`, `processingLogs`
 - User의 `socialMetadata`
-- PlanetUser의 `permissions` (Planet 내 개별 권한), `personalSettings` (Planet별 개인 설정), `metadata` (추가 메타데이터)
 
 ## 데이터베이스 인덱스 전략
 
@@ -500,9 +452,7 @@ graph TB
 - TravelUser: `(userId, status)` - 사용자별 활성 Travel 조회
 - TravelUser: `(status, joinedAt)` - 상태별 가입순 정렬
 - PlanetUser: `(planetId, userId)` - 중복 방지
-- PlanetUser: `(planetId, status)` - Planet 내 활성 멤버 조회  
-- PlanetUser: `(userId, status)` - 사용자별 활성 Planet 조회
-- PlanetUser: `(status, joinedAt)` - 상태별 가입순 정렬
+- PlanetUser: `(planetId, status)` - Planet 내 활성 멤버 조회
 - MessageReadReceipt: `(messageId, userId)` - 중복 읽음 방지
 - MessageReadReceipt: `(planetId, userId, readAt)` - Planet 내 사용자별 시간순
 - Message: `(planetId, createdAt)` - 메시지 목록 조회 최적화
@@ -513,7 +463,7 @@ graph TB
 - Travel: `status`, `endDate`, `visibility`, `inviteCode`
 - Planet: `type`, `travelId`, `status`
 - TravelUser: `travelId`, `userId`, `role`, `status`, `joinedAt`
-- PlanetUser: `planetId`, `userId`, `role`, `status`, `joinedAt`, `isDeletedUser`, `lastReadMessageId`
+- PlanetUser: `planetId`, `userId`, `status`, `joinedAt`, `isDeletedUser`
 - Message: `senderId`, `replyToMessageId`, `searchableText`
 - Notification: `recipientId`, `isRead`, `type`
 - FileUpload: `uploaderId`, `status`
