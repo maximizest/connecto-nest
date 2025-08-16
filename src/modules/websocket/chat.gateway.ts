@@ -1251,15 +1251,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const notificationRoom = `notifications:${client.user.id}`;
       await client.join(notificationRoom);
 
-      // 읽지 않은 알림 개수 전송
-      const unreadCount =
-        await this.notificationService.getUnreadNotificationCount(
-          client.user.id,
-        );
-
+      // 알림 구독 완료 전송 (읽음 상태는 더 이상 추적하지 않음)
       client.emit('notifications:subscribed', {
         userId: client.user.id,
-        unreadCount: unreadCount,
         subscribedAt: new Date().toISOString(),
       });
 
@@ -1298,75 +1292,82 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /**
-   * 알림 읽음 처리 (WebSocket)
+   * 알림 상태 업데이트 (WebSocket)
+   * 알림 읽음 상태는 더 이상 추적하지 않으며, 시스템 상태만 관리합니다.
    */
-  @SubscribeMessage('notifications:mark_read')
+  @SubscribeMessage('notifications:update_status')
   @UseGuards(WebSocketAuthGuard)
-  async handleMarkNotificationRead(
+  async handleUpdateNotificationStatus(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() payload: { notificationId: number },
   ) {
     try {
       const { notificationId } = payload;
 
-      const notification = await this.notificationService.markAsRead(
-        notificationId,
+      // 알림 조회만 수행 (읽음 처리는 제거됨)
+      // NotificationService에 findOne이 private이므로 getUserNotifications 사용
+      const { notifications } = await this.notificationService.getUserNotifications(
         client.user.id,
+        { limit: 1 },
       );
+      
+      const notification = notifications.find(n => n.id === notificationId);
+      if (!notification || notification.userId !== client.user.id) {
+        throw new Error('알림을 찾을 수 없습니다.');
+      }
 
-      // 클라이언트에 성공 응답
-      client.emit('notifications:mark_read_success', {
+      // 클라이언트에 알림 정보 전송
+      client.emit('notifications:status_updated', {
         notificationId: notification.id,
-        isRead: notification.isRead,
-        readAt: notification.readAt,
-        readBy: client.user.id,
-      });
-
-      // 사용자의 모든 소켓에 읽음 상태 동기화
-      const notificationRoom = `notifications:${client.user.id}`;
-      client.to(notificationRoom).emit('notifications:read_synced', {
-        notificationId: notification.id,
-        isRead: notification.isRead,
-        readAt: notification.readAt,
-        syncedAt: new Date().toISOString(),
+        status: notification.status,
+        userId: client.user.id,
+        updatedAt: new Date().toISOString(),
       });
 
       this.logger.debug(
-        `Notification ${notificationId} marked as read by user ${client.user.id}`,
+        `Notification ${notificationId} status checked by user ${client.user.id}`,
       );
     } catch (error) {
-      this.logger.error('Mark notification read failed:', error);
-      client.emit('error', { message: '알림 읽음 처리에 실패했습니다.' });
+      this.logger.error('Update notification status failed:', error);
+      client.emit('error', { message: '알림 상태 업데이트에 실패했습니다.' });
     }
   }
 
   /**
-   * 읽지 않은 알림 개수 조회 (WebSocket)
+   * 알림 목록 조회 (WebSocket)
+   * 읽음 상태 대신 전송 상태별로 알림을 조회합니다.
    */
-  @SubscribeMessage('notifications:get_unread_count')
+  @SubscribeMessage('notifications:get_list')
   @UseGuards(WebSocketAuthGuard)
-  async handleGetNotificationUnreadCount(
+  async handleGetNotificationList(
     @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload?: { status?: string; limit?: number },
   ) {
     try {
-      const unreadCount =
-        await this.notificationService.getUnreadNotificationCount(
-          client.user.id,
-        );
+      const { status = 'DELIVERED', limit = 20 } = payload || {};
 
-      client.emit('notifications:unread_count', {
+      // 사용자의 알림 목록 조회
+      const result = await this.notificationService.getUserNotifications(
+        client.user.id,
+        { limit, page: 1 },
+      );
+
+      client.emit('notifications:list', {
         userId: client.user.id,
-        unreadCount: unreadCount,
-        checkedAt: new Date().toISOString(),
+        notifications: result.notifications,
+        count: result.notifications.length,
+        total: result.total,
+        hasMore: result.hasMore,
+        retrievedAt: new Date().toISOString(),
       });
 
       this.logger.debug(
-        `Unread count retrieved for user ${client.user.id}: ${unreadCount}`,
+        `Notifications retrieved for user ${client.user.id}: ${result.notifications.length} items`,
       );
     } catch (error) {
-      this.logger.error('Get unread count failed:', error);
+      this.logger.error('Get notification list failed:', error);
       client.emit('error', {
-        message: '읽지 않은 알림 개수 조회에 실패했습니다.',
+        message: '알림 목록 조회에 실패했습니다.',
       });
     }
   }
