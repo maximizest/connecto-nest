@@ -55,10 +55,10 @@ graph TB
     User ---|1:N| TravelUser
     User ---|1:N| PlanetUser
     
-    style User fill:#f9f,stroke:#333,stroke-width:4px
-    style Profile fill:#bbf,stroke:#333,stroke-width:2px
-    style TravelUser fill:#bfb,stroke:#333,stroke-width:2px
-    style PlanetUser fill:#fbf,stroke:#333,stroke-width:2px
+    style User fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#000
+    style Profile fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000
+    style TravelUser fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px,color:#000
+    style PlanetUser fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000
 ```
 
 ### 2. 여행-채팅방 계층 구조 (Travel-Planet Hierarchy)
@@ -71,9 +71,9 @@ graph TD
     Travel -->|1:N| Planet
     Planet -->|1:N| Message
     
-    style Travel fill:#f96,stroke:#333,stroke-width:4px
-    style Planet fill:#69f,stroke:#333,stroke-width:3px
-    style Message fill:#6f9,stroke:#333,stroke-width:2px
+    style Travel fill:#fce4ec,stroke:#880e4f,stroke-width:2px,color:#000
+    style Planet fill:#e3f2fd,stroke:#0d47a1,stroke-width:2px,color:#000
+    style Message fill:#e0f2f1,stroke:#004d40,stroke-width:2px,color:#000
 ```
 
 ### 3. 멤버십 관계 (Membership Relations)
@@ -90,8 +90,11 @@ graph LR
     User -->|참여| PlanetUser
     Planet -->|멤버| PlanetUser
     
-    style TravelUser fill:#ffd,stroke:#333,stroke-width:2px
-    style PlanetUser fill:#dff,stroke:#333,stroke-width:2px
+    style User fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#000
+    style Travel fill:#fce4ec,stroke:#880e4f,stroke-width:2px,color:#000
+    style Planet fill:#e3f2fd,stroke:#0d47a1,stroke-width:2px,color:#000
+    style TravelUser fill:#f1f8e9,stroke:#33691e,stroke-width:2px,color:#000
+    style PlanetUser fill:#fef5e7,stroke:#ff6f00,stroke-width:2px,color:#000
 ```
 
 ### 4. 메시지 시스템 (Message System)
@@ -109,8 +112,11 @@ graph TB
     Message -.->|답장| ReplyMessage
     User -->|읽음| MessageReadReceipt
     
-    style Message fill:#9f9,stroke:#333,stroke-width:3px
-    style MessageReadReceipt fill:#ff9,stroke:#333,stroke-width:2px
+    style User fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#000
+    style Planet fill:#e3f2fd,stroke:#0d47a1,stroke-width:2px,color:#000
+    style Message fill:#e0f2f1,stroke:#004d40,stroke-width:2px,color:#000
+    style MessageReadReceipt fill:#fff8e1,stroke:#f57f17,stroke-width:2px,color:#000
+    style ReplyMessage fill:#efebe9,stroke:#3e2723,stroke-width:2px,color:#000
 ```
 
 ### 5. 알림 및 파일 시스템 (Notification & File System)
@@ -125,8 +131,10 @@ graph TB
     User -->|업로드| FileUpload
     FileUpload -.->|첨부| Message
     
-    style Notification fill:#f99,stroke:#333,stroke-width:2px
-    style FileUpload fill:#99f,stroke:#333,stroke-width:2px
+    style User fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#000
+    style Notification fill:#ffebee,stroke:#b71c1c,stroke-width:2px,color:#000
+    style FileUpload fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000
+    style Message fill:#e0f2f1,stroke:#004d40,stroke-width:2px,color:#000
 ```
 
 ## 엔티티 상세 구조
