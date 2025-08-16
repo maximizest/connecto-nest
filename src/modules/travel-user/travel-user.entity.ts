@@ -212,7 +212,6 @@ export class TravelUser extends BaseEntity {
     this.role = TravelUserRole.PARTICIPANT;
   }
 
-
   /**
    * 가입 기간 계산 (일 단위)
    */

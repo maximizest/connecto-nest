@@ -23,43 +23,14 @@ import { Travel } from '../travel/travel.entity';
 import { User } from '../user/user.entity';
 
 /**
- * 알림 타입
+ * 알림 타입 - 단순화된 5가지 핵심 타입
  */
 export enum NotificationType {
-  // 메시지 관련
-  MESSAGE_RECEIVED = 'message_received', // 새 메시지
-  MESSAGE_MENTION = 'message_mention', // 메시지에서 언급
-  MESSAGE_REPLY = 'message_reply', // 메시지 답글
-  MESSAGE_EDITED = 'message_edited', // 메시지 편집
-  MESSAGE_DELETED = 'message_deleted', // 메시지 삭제
-
-  // Travel 관련
-  TRAVEL_INVITATION = 'travel_invitation', // Travel 초대
-  TRAVEL_JOIN_REQUEST = 'travel_join_request', // Travel 가입 요청
-  TRAVEL_MEMBER_JOINED = 'travel_member_joined', // 새 멤버 가입
-  TRAVEL_MEMBER_LEFT = 'travel_member_left', // 멤버 탈퇴
-  TRAVEL_EXPIRY_WARNING = 'travel_expiry_warning', // Travel 만료 경고
-  TRAVEL_EXPIRED = 'travel_expired', // Travel 만료
-  TRAVEL_UPDATED = 'travel_updated', // Travel 정보 업데이트
-  TRAVEL_DELETED = 'travel_deleted', // Travel 삭제
-
-  // Planet 관련
-  PLANET_CREATED = 'planet_created', // 새 Planet 생성
-  PLANET_INVITATION = 'planet_invitation', // Planet 초대
-  PLANET_MEMBER_JOINED = 'planet_member_joined', // Planet 멤버 가입
-  PLANET_MEMBER_LEFT = 'planet_member_left', // Planet 멤버 탈퇴
-  PLANET_UPDATED = 'planet_updated', // Planet 정보 업데이트
-  PLANET_DELETED = 'planet_deleted', // Planet 삭제
-
-  // 사용자 관련
-  USER_BANNED = 'user_banned', // 사용자 밴
-  USER_UNBANNED = 'user_unbanned', // 사용자 언밴
-  USER_ROLE_CHANGED = 'user_role_changed', // 사용자 역할 변경
-
-  // 시스템 관련
-  SYSTEM_ANNOUNCEMENT = 'system_announcement', // 시스템 공지
-  SYSTEM_MAINTENANCE = 'system_maintenance', // 시스템 점검
-  SYSTEM_UPDATE = 'system_update', // 시스템 업데이트
+  MESSAGE = 'message', // 새 메시지
+  MENTION = 'mention', // 메시지에서 멘션
+  REPLY = 'reply', // 메시지 답글
+  BANNED = 'banned', // 사용자 차단
+  SYSTEM = 'system', // 시스템 공지/점검/업데이트
 }
 
 /**

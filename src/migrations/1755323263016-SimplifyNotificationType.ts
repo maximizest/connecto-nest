@@ -1,9 +1,9 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class RemovePlanetUserColumns1755322182662
+export class SimplifyNotificationType1755323263016
   implements MigrationInterface
 {
-  name = 'RemovePlanetUserColumns1755322182662';
+  name = 'SimplifyNotificationType1755323263016';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
@@ -120,6 +120,25 @@ export class RemovePlanetUserColumns1755322182662
       `ALTER TABLE "travel_users" DROP COLUMN "isDeletedUser"`,
     );
     await queryRunner.query(
+      `DROP INDEX "public"."IDX_5d06d6169ad1f3d8f83d63902b"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_3363924e627d40f4b945c3276f"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_8cfc4757bd393ac9aec5dde530"`,
+    );
+    await queryRunner.query(
+      `ALTER TYPE "public"."notifications_type_enum" RENAME TO "notifications_type_enum_old"`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."notifications_type_enum" AS ENUM('message', 'mention', 'reply', 'banned', 'system')`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "notifications" ALTER COLUMN "type" TYPE "public"."notifications_type_enum" USING "type"::"text"::"public"."notifications_type_enum"`,
+    );
+    await queryRunner.query(`DROP TYPE "public"."notifications_type_enum_old"`);
+    await queryRunner.query(
       `DROP INDEX "public"."IDX_b695cd6a2251661385019f2ee4"`,
     );
     await queryRunner.query(
@@ -202,6 +221,15 @@ export class RemovePlanetUserColumns1755322182662
       `DROP TYPE "public"."travel_users_status_enum_old"`,
     );
     await queryRunner.query(
+      `CREATE INDEX "IDX_5d06d6169ad1f3d8f83d63902b" ON "notifications" ("planetId", "type") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_3363924e627d40f4b945c3276f" ON "notifications" ("travelId", "type") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_8cfc4757bd393ac9aec5dde530" ON "notifications" ("userId", "type", "createdAt") `,
+    );
+    await queryRunner.query(
       `CREATE INDEX "IDX_b695cd6a2251661385019f2ee4" ON "planet_users" ("planetId", "status") `,
     );
     await queryRunner.query(
@@ -257,6 +285,15 @@ export class RemovePlanetUserColumns1755322182662
     );
     await queryRunner.query(
       `DROP INDEX "public"."IDX_b695cd6a2251661385019f2ee4"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_8cfc4757bd393ac9aec5dde530"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_3363924e627d40f4b945c3276f"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_5d06d6169ad1f3d8f83d63902b"`,
     );
     await queryRunner.query(
       `CREATE TYPE "public"."travel_users_status_enum_old" AS ENUM('pending', 'active', 'left', 'banned', 'invited')`,
@@ -335,6 +372,25 @@ export class RemovePlanetUserColumns1755322182662
     );
     await queryRunner.query(
       `CREATE INDEX "IDX_b695cd6a2251661385019f2ee4" ON "planet_users" ("planetId", "status") `,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."notifications_type_enum_old" AS ENUM('message_received', 'message_mention', 'message_reply', 'message_edited', 'message_deleted', 'travel_invitation', 'travel_join_request', 'travel_member_joined', 'travel_member_left', 'travel_expiry_warning', 'travel_expired', 'travel_updated', 'travel_deleted', 'planet_created', 'planet_invitation', 'planet_member_joined', 'planet_member_left', 'planet_updated', 'planet_deleted', 'user_banned', 'user_unbanned', 'user_role_changed', 'system_announcement', 'system_maintenance', 'system_update')`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "notifications" ALTER COLUMN "type" TYPE "public"."notifications_type_enum_old" USING "type"::"text"::"public"."notifications_type_enum_old"`,
+    );
+    await queryRunner.query(`DROP TYPE "public"."notifications_type_enum"`);
+    await queryRunner.query(
+      `ALTER TYPE "public"."notifications_type_enum_old" RENAME TO "notifications_type_enum"`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_8cfc4757bd393ac9aec5dde530" ON "notifications" ("userId", "type", "createdAt") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_3363924e627d40f4b945c3276f" ON "notifications" ("type", "travelId") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_5d06d6169ad1f3d8f83d63902b" ON "notifications" ("type", "planetId") `,
     );
     await queryRunner.query(
       `ALTER TABLE "travel_users" ADD "isDeletedUser" boolean NOT NULL DEFAULT false`,

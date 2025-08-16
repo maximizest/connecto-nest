@@ -150,7 +150,7 @@ export class NotificationController {
       // Create virtual Notification entity with unread count stats
       const unreadStatsEntity = Object.assign(new Notification(), {
         id: 0,
-        type: NotificationType.SYSTEM_ANNOUNCEMENT,
+        type: NotificationType.SYSTEM,
         title: '읽지 않은 알림 개수',
         content: `읽지 않은 알림 ${unreadCount}개`,
         userId: user.id,
@@ -206,7 +206,7 @@ export class NotificationController {
       // Create virtual Notification entity with batch read info
       const batchReadEntity = Object.assign(new Notification(), {
         id: 0,
-        type: NotificationType.SYSTEM_ANNOUNCEMENT,
+        type: NotificationType.SYSTEM,
         title: `알림 읽음 처리`,
         content: `${affectedCount}개 알림 읽음 완료`,
         userId: user.id,
@@ -264,7 +264,7 @@ export class NotificationController {
       // Create virtual Notification entity with read all info
       const readAllEntity = Object.assign(new Notification(), {
         id: 0,
-        type: NotificationType.SYSTEM_ANNOUNCEMENT,
+        type: NotificationType.SYSTEM,
         title: '모든 알림 읽음 처리',
         content: `모든 알림 ${results.length}개 읽음 완료`,
         userId: user.id,
@@ -322,7 +322,7 @@ export class NotificationController {
       // Create virtual Notification entity with push token registration
       const pushTokenEntity = Object.assign(new Notification(), {
         id: 0,
-        type: NotificationType.SYSTEM_ANNOUNCEMENT,
+        type: NotificationType.SYSTEM,
         title: '푸시 토큰 등록',
         content: `${platform} 디바이스에 푸시 토큰 등록 완료`,
         userId: user.id,
@@ -368,7 +368,7 @@ export class NotificationController {
       // Create virtual Notification entity with push token unregistration
       const unregisterEntity = Object.assign(new Notification(), {
         id: 0,
-        type: NotificationType.SYSTEM_ANNOUNCEMENT,
+        type: NotificationType.SYSTEM,
         title: '푸시 토큰 해제',
         content: `디바이스 ${deviceId} 푸시 토큰 해제 완료`,
         userId: user.id,
@@ -406,7 +406,7 @@ export class NotificationController {
       // Create virtual Notification entity with push token list
       const tokenListEntity = Object.assign(new Notification(), {
         id: 0,
-        type: NotificationType.SYSTEM_ANNOUNCEMENT,
+        type: NotificationType.SYSTEM,
         title: '푸시 토큰 목록',
         content: `등록된 디바이스 ${pushTokens.length}개 (활성: ${pushTokens.filter((t) => t.isActive).length}개)`,
         userId: user.id,
@@ -464,7 +464,7 @@ export class NotificationController {
 
     try {
       const {
-        type = NotificationType.SYSTEM_ANNOUNCEMENT,
+        type = NotificationType.SYSTEM,
         title = '테스트 알림',
         content = '이것은 테스트 알림입니다.',
         priority = NotificationPriority.NORMAL,
