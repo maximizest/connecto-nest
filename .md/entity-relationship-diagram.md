@@ -41,123 +41,6 @@ erDiagram
     Admin ||--|| Admin : "self-reference"
 ```
 
-## 엔티티 상세 구조
-
-### User (사용자)
-```mermaid
-erDiagram
-    User {
-        int id PK
-        string email UK
-        string socialId UK
-        string socialProvider
-        string name
-        string phone
-        string language
-        string timezone
-        boolean notificationsEnabled
-        boolean advertisingConsentEnabled
-        boolean isBanned
-        timestamp lastSeenAt
-        timestamp createdAt
-        timestamp updatedAt
-        timestamp deletedAt
-        int deletedBy FK
-        string deletionReason
-    }
-```
-
-### Profile (프로필)
-```mermaid
-erDiagram
-    Profile {
-        int id PK
-        int userId FK_UK
-        string bio
-        string profileImage
-        string coverImage
-        date birthday
-        string gender
-        json hobbies
-        json interests
-        string website
-        json socialLinks
-        json education
-        json work
-        json skills
-        timestamp createdAt
-        timestamp updatedAt
-    }
-```
-
-### Travel (여행 그룹)
-```mermaid
-erDiagram
-    Travel {
-        int id PK
-        string name
-        string description
-        string coverImage
-        string invitationCode UK
-        string status
-        string visibility
-        timestamp startDate
-        timestamp endDate
-        json metadata
-        timestamp createdAt
-        timestamp updatedAt
-        timestamp deletedAt
-    }
-```
-
-### Planet (채팅방)
-```mermaid
-erDiagram
-    Planet {
-        int id PK
-        int travelId FK
-        string name
-        string description
-        string imageUrl
-        string type
-        int partnerId FK
-        boolean isActive
-        json timeRestriction
-        json metadata
-        timestamp createdAt
-        timestamp updatedAt
-        timestamp deletedAt
-    }
-```
-
-### Message (메시지)
-```mermaid
-erDiagram
-    Message {
-        int id PK
-        int planetId FK
-        int senderId FK
-        string type
-        string content
-        json fileMetadata
-        json systemMetadata
-        int replyToMessageId FK
-        int readCount
-        int replyCount
-        boolean isEdited
-        timestamp editedAt
-        string originalContent
-        string searchableText
-        json metadata
-        string status
-        timestamp createdAt
-        timestamp updatedAt
-        timestamp deletedAt
-        int deletedBy FK
-        string deletionReason
-    }
-```
-
 ## 핵심 관계 설명
 
 ### 1. 사용자 관련 (User-centric)
@@ -246,153 +129,207 @@ graph TB
     style FileUpload fill:#99f,stroke:#333,stroke-width:2px
 ```
 
-## 멤버십 엔티티 상세
+## 엔티티 상세 구조
+
+### User (사용자)
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|----------|
+| id | int | Primary Key | PK, Auto Increment |
+| email | string | 이메일 | Unique, Not Null |
+| socialId | string | 소셜 로그인 ID | Unique |
+| socialProvider | string | 소셜 제공자 (google/apple) | |
+| name | string | 사용자 이름 | |
+| phone | string | 전화번호 | |
+| language | string | 언어 설정 | Default: 'ko' |
+| timezone | string | 시간대 | Default: 'Asia/Seoul' |
+| notificationsEnabled | boolean | 알림 활성화 | Default: true |
+| advertisingConsentEnabled | boolean | 광고 동의 | Default: false |
+| isBanned | boolean | 차단 여부 | Default: false |
+| lastSeenAt | timestamp | 마지막 접속 시간 | |
+| createdAt | timestamp | 생성일시 | Not Null |
+| updatedAt | timestamp | 수정일시 | Not Null |
+| deletedAt | timestamp | 삭제일시 (Soft Delete) | |
+| deletedBy | int | 삭제자 ID | FK → User.id |
+| deletionReason | string | 삭제 사유 | |
+
+### Profile (프로필)
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|----------|
+| id | int | Primary Key | PK, Auto Increment |
+| userId | int | 사용자 ID | FK → User.id, Unique |
+| bio | string | 자기소개 | |
+| profileImage | string | 프로필 이미지 URL | |
+| coverImage | string | 커버 이미지 URL | |
+| birthday | date | 생년월일 | |
+| gender | string | 성별 | |
+| hobbies | json | 취미 목록 | |
+| interests | json | 관심사 목록 | |
+| website | string | 웹사이트 | |
+| socialLinks | json | 소셜 링크 | |
+| education | json | 학력 정보 | |
+| work | json | 경력 정보 | |
+| skills | json | 기술 목록 | |
+| createdAt | timestamp | 생성일시 | Not Null |
+| updatedAt | timestamp | 수정일시 | Not Null |
+
+### Travel (여행 그룹)
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|----------|
+| id | int | Primary Key | PK, Auto Increment |
+| name | string | 여행 이름 | Not Null |
+| description | string | 여행 설명 | |
+| coverImage | string | 커버 이미지 URL | |
+| invitationCode | string | 초대 코드 | Unique, Not Null |
+| status | enum | 상태 (PLANNING/ACTIVE/COMPLETED/CANCELLED) | Not Null |
+| visibility | enum | 공개 범위 (PUBLIC/PRIVATE/FRIENDS) | Default: 'PRIVATE' |
+| startDate | timestamp | 시작일 | |
+| endDate | timestamp | 종료일 | |
+| metadata | json | 메타데이터 | |
+| createdAt | timestamp | 생성일시 | Not Null |
+| updatedAt | timestamp | 수정일시 | Not Null |
+| deletedAt | timestamp | 삭제일시 (Soft Delete) | |
+
+### Planet (채팅방)
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|----------|
+| id | int | Primary Key | PK, Auto Increment |
+| travelId | int | 여행 ID | FK → Travel.id, Not Null |
+| name | string | 채팅방 이름 | Not Null |
+| description | string | 채팅방 설명 | |
+| imageUrl | string | 이미지 URL | |
+| type | enum | 타입 (GROUP/DIRECT) | Not Null |
+| partnerId | int | 파트너 ID (DIRECT인 경우) | FK → User.id |
+| isActive | boolean | 활성화 여부 | Default: true |
+| timeRestriction | json | 시간 제한 설정 | |
+| metadata | json | 메타데이터 | |
+| createdAt | timestamp | 생성일시 | Not Null |
+| updatedAt | timestamp | 수정일시 | Not Null |
+| deletedAt | timestamp | 삭제일시 (Soft Delete) | |
+
+### Message (메시지)
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|----------|
+| id | int | Primary Key | PK, Auto Increment |
+| planetId | int | 채팅방 ID | FK → Planet.id, Not Null |
+| senderId | int | 발신자 ID | FK → User.id, Not Null |
+| type | enum | 타입 (TEXT/IMAGE/VIDEO/FILE/SYSTEM) | Not Null |
+| content | string | 메시지 내용 | |
+| fileMetadata | json | 파일 메타데이터 | |
+| systemMetadata | json | 시스템 메타데이터 | |
+| replyToMessageId | int | 답장 대상 메시지 ID | FK → Message.id |
+| readCount | int | 읽은 수 | Default: 0 |
+| replyCount | int | 답장 수 | Default: 0 |
+| isEdited | boolean | 편집 여부 | Default: false |
+| editedAt | timestamp | 편집일시 | |
+| originalContent | string | 원본 내용 | |
+| searchableText | string | 검색용 텍스트 | |
+| metadata | json | 메타데이터 | |
+| status | enum | 상태 (ACTIVE/DELETED/HIDDEN) | Default: 'ACTIVE' |
+| createdAt | timestamp | 생성일시 | Not Null |
+| updatedAt | timestamp | 수정일시 | Not Null |
+| deletedAt | timestamp | 삭제일시 (Soft Delete) | |
+| deletedBy | int | 삭제자 ID | FK → User.id |
+| deletionReason | string | 삭제 사유 | |
 
 ### TravelUser (여행 멤버십)
-```mermaid
-erDiagram
-    TravelUser {
-        int id PK
-        int travelId FK
-        int userId FK
-        string role
-        string status
-        timestamp bannedUntil
-        timestamp joinedAt
-        timestamp leftAt
-        timestamp createdAt
-        timestamp updatedAt
-    }
-```
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|----------|
+| id | int | Primary Key | PK, Auto Increment |
+| travelId | int | 여행 ID | FK → Travel.id, Not Null |
+| userId | int | 사용자 ID | FK → User.id, Not Null |
+| role | enum | 역할 (HOST/PARTICIPANT) | Not Null |
+| status | enum | 상태 (ACTIVE/BANNED/LEFT) | Default: 'ACTIVE' |
+| bannedUntil | timestamp | 차단 만료 시간 | |
+| joinedAt | timestamp | 참여일시 | Not Null |
+| leftAt | timestamp | 탈퇴일시 | |
+| createdAt | timestamp | 생성일시 | Not Null |
+| updatedAt | timestamp | 수정일시 | Not Null |
 
-**역할 (Role)**
-- `HOST`: 여행 관리자
-- `PARTICIPANT`: 일반 참여자
-
-**상태 (Status)**
-- `ACTIVE`: 활성 멤버
-- `BANNED`: 차단됨
-- `LEFT`: 자진 탈퇴
+**복합 유니크 인덱스**: (travelId, userId)
 
 ### PlanetUser (채팅방 멤버십)
-```mermaid
-erDiagram
-    PlanetUser {
-        int id PK
-        int planetId FK
-        int userId FK
-        string status
-        timestamp mutedUntil
-        int lastReadMessageId FK
-        timestamp joinedAt
-        timestamp leftAt
-        timestamp createdAt
-        timestamp updatedAt
-    }
-```
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|----------|
+| id | int | Primary Key | PK, Auto Increment |
+| planetId | int | 채팅방 ID | FK → Planet.id, Not Null |
+| userId | int | 사용자 ID | FK → User.id, Not Null |
+| status | enum | 상태 (ACTIVE/MUTED) | Default: 'ACTIVE' |
+| mutedUntil | timestamp | 음소거 만료 시간 | |
+| lastReadMessageId | int | 마지막 읽은 메시지 ID | FK → Message.id |
+| joinedAt | timestamp | 참여일시 | Not Null |
+| leftAt | timestamp | 탈퇴일시 | |
+| createdAt | timestamp | 생성일시 | Not Null |
+| updatedAt | timestamp | 수정일시 | Not Null |
 
-**상태 (Status)**
-- `ACTIVE`: 활성 멤버
-- `MUTED`: 음소거 상태
-
-## 읽음 확인 및 알림 엔티티
+**복합 유니크 인덱스**: (planetId, userId)
 
 ### MessageReadReceipt (메시지 읽음 확인)
-```mermaid
-erDiagram
-    MessageReadReceipt {
-        int id PK
-        int messageId FK
-        int userId FK
-        int planetId FK
-        timestamp readAt
-        timestamp createdAt
-    }
-```
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|----------|
+| id | int | Primary Key | PK, Auto Increment |
+| messageId | int | 메시지 ID | FK → Message.id, Not Null |
+| userId | int | 사용자 ID | FK → User.id, Not Null |
+| planetId | int | 채팅방 ID | FK → Planet.id, Not Null |
+| readAt | timestamp | 읽은 시간 | Not Null |
+| createdAt | timestamp | 생성일시 | Not Null |
+
+**복합 유니크 인덱스**: (messageId, userId)
 
 ### Notification (알림)
-```mermaid
-erDiagram
-    Notification {
-        int id PK
-        int recipientId FK
-        string type
-        string title
-        string body
-        json data
-        boolean isRead
-        timestamp readAt
-        timestamp sentAt
-        timestamp createdAt
-        timestamp updatedAt
-    }
-```
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|----------|
+| id | int | Primary Key | PK, Auto Increment |
+| recipientId | int | 수신자 ID | FK → User.id, Not Null |
+| type | enum | 알림 타입 | Not Null |
+| title | string | 제목 | Not Null |
+| body | string | 내용 | Not Null |
+| data | json | 추가 데이터 | |
+| isRead | boolean | 읽음 여부 | Default: false |
+| readAt | timestamp | 읽은 시간 | |
+| sentAt | timestamp | 발송 시간 | Not Null |
+| createdAt | timestamp | 생성일시 | Not Null |
+| updatedAt | timestamp | 수정일시 | Not Null |
 
-**알림 타입 (Type)**
-- `MESSAGE`: 새 메시지
-- `MESSAGE_REPLY`: 답장
-- `TRAVEL_INVITATION`: 여행 초대
-- `TRAVEL_UPDATE`: 여행 업데이트
-- `PLANET_UPDATE`: 채팅방 업데이트
-- `USER_JOINED`: 사용자 참여
-- `USER_LEFT`: 사용자 탈퇴
-- `MENTION`: 멘션
-- `ANNOUNCEMENT`: 공지사항
-- `SYSTEM`: 시스템 알림
-
-## 파일 및 관리자 엔티티
+**알림 타입**:
+- MESSAGE, MESSAGE_REPLY, TRAVEL_INVITATION
+- TRAVEL_UPDATE, PLANET_UPDATE
+- USER_JOINED, USER_LEFT
+- MENTION, ANNOUNCEMENT, SYSTEM
 
 ### FileUpload (파일 업로드)
-```mermaid
-erDiagram
-    FileUpload {
-        int id PK
-        int uploaderId FK
-        string fileName
-        string originalName
-        string mimeType
-        int fileSize
-        string storageKey
-        string storageUrl
-        string thumbnailUrl
-        json metadata
-        string status
-        timestamp uploadStartedAt
-        timestamp uploadCompletedAt
-        timestamp createdAt
-        timestamp updatedAt
-        timestamp deletedAt
-    }
-```
-
-**상태 (Status)**
-- `PENDING`: 대기 중
-- `UPLOADING`: 업로드 중
-- `COMPLETED`: 완료
-- `FAILED`: 실패
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|----------|
+| id | int | Primary Key | PK, Auto Increment |
+| uploaderId | int | 업로더 ID | FK → User.id, Not Null |
+| fileName | string | 파일명 | Not Null |
+| originalName | string | 원본 파일명 | Not Null |
+| mimeType | string | MIME 타입 | Not Null |
+| fileSize | int | 파일 크기 (bytes) | Not Null |
+| storageKey | string | 저장소 키 | Unique, Not Null |
+| storageUrl | string | 저장소 URL | Not Null |
+| thumbnailUrl | string | 썸네일 URL | |
+| metadata | json | 메타데이터 | |
+| status | enum | 상태 (PENDING/UPLOADING/COMPLETED/FAILED) | Default: 'PENDING' |
+| uploadStartedAt | timestamp | 업로드 시작 시간 | |
+| uploadCompletedAt | timestamp | 업로드 완료 시간 | |
+| createdAt | timestamp | 생성일시 | Not Null |
+| updatedAt | timestamp | 수정일시 | Not Null |
+| deletedAt | timestamp | 삭제일시 (Soft Delete) | |
 
 ### Admin (관리자)
-```mermaid
-erDiagram
-    Admin {
-        int id PK
-        string email UK
-        string password
-        string name
-        string role
-        boolean isActive
-        timestamp lastLoginAt
-        json permissions
-        int createdBy FK
-        timestamp createdAt
-        timestamp updatedAt
-    }
-```
-
-**역할 (Role)**
-- `SUPER_ADMIN`: 최고 관리자
-- `ADMIN`: 일반 관리자
-- `MODERATOR`: 중재자
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|----------|
+| id | int | Primary Key | PK, Auto Increment |
+| email | string | 이메일 | Unique, Not Null |
+| password | string | 비밀번호 (bcrypt) | Not Null |
+| name | string | 이름 | Not Null |
+| role | enum | 역할 (SUPER_ADMIN/ADMIN/MODERATOR) | Not Null |
+| isActive | boolean | 활성화 여부 | Default: true |
+| lastLoginAt | timestamp | 마지막 로그인 시간 | |
+| permissions | json | 권한 설정 | |
+| createdBy | int | 생성자 ID | FK → Admin.id |
+| createdAt | timestamp | 생성일시 | Not Null |
+| updatedAt | timestamp | 수정일시 | Not Null |
 
 ## 주요 특징
 
@@ -420,6 +357,7 @@ erDiagram
 - Travel: `invitationCode`
 - Admin: `email`
 - Profile: `userId` (1:1 관계)
+- FileUpload: `storageKey`
 
 ### 복합 인덱스
 - TravelUser: `(travelId, userId)` - 중복 방지
