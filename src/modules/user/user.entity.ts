@@ -39,7 +39,10 @@ export enum UserRole {
 }
 
 @Entity('users')
-@Index(['socialId', 'provider'], { unique: true }) // 소셜 ID + 제공자 조합 고유
+@Index(['socialId', 'provider'], { 
+  unique: true,
+  where: '"socialId" IS NOT NULL AND "provider" IS NOT NULL' // 소셜 로그인 사용자만
+}) // 소셜 ID + 제공자 조합 고유
 // 복합 인덱스 - 성능 향상
 @Index(['isBanned']) // 밴된 사용자 조회
 export class User extends BaseEntity {
@@ -47,21 +50,29 @@ export class User extends BaseEntity {
   id: number;
 
   /**
-   * 소셜 로그인 정보
+   * 소셜 로그인 정보 (일반 사용자용)
    */
-  @Column({ type: 'varchar', length: 255, comment: '소셜 로그인 고유 ID' })
+  @Column({ 
+    type: 'varchar', 
+    length: 255, 
+    nullable: true,
+    comment: '소셜 로그인 고유 ID (ADMIN은 null)' 
+  })
+  @IsOptional()
   @IsString()
   @Index() // 소셜 ID 조회 최적화
-  socialId: string;
+  socialId?: string;
 
   @Column({
     type: 'enum',
     enum: SocialProvider,
-    comment: '소셜 로그인 제공자 (Google, Apple)',
+    nullable: true,
+    comment: '소셜 로그인 제공자 (ADMIN은 null)',
   })
+  @IsOptional()
   @IsEnum(SocialProvider)
   @Index() // 제공자별 조회 최적화
-  provider: SocialProvider;
+  provider?: SocialProvider;
 
   /**
    * 기본 프로필 정보
@@ -124,8 +135,19 @@ export class User extends BaseEntity {
   advertisingConsentEnabled: boolean;
 
   /**
-   * 보안 정보 (소셜 로그인 전용이므로 패스워드 없음)
+   * 보안 정보
    */
+  @Column({
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    comment: '비밀번호 (bcrypt 해시, ADMIN 전용)',
+  })
+  @IsOptional()
+  @IsString()
+  @Exclude()
+  password?: string;
+
   @Column({
     type: 'varchar',
     length: 255,
@@ -272,23 +294,59 @@ export class User extends BaseEntity {
     this.role = UserRole.ADMIN;
   }
 
+  /**
+   * 이메일/비밀번호 로그인 가능 여부 확인
+   */
+  canLoginWithPassword(): boolean {
+    return this.role === UserRole.ADMIN && !!this.password;
+  }
+
+  /**
+   * 소셜 로그인 사용자인지 확인
+   */
+  isSocialUser(): boolean {
+    return !!this.socialId && !!this.provider;
+  }
+
   // =================================================================
   // TypeORM Lifecycle Hooks (Entity Level)
   // =================================================================
 
   /**
-   * 사용자 생성 전 기본값 설정
+   * 사용자 생성 전 기본값 설정 및 유효성 검사
    */
   @BeforeInsert()
   beforeInsert() {
-    // Hook for future use
+    // ADMIN은 비밀번호 필수, 소셜 로그인 정보 없어야 함
+    if (this.role === UserRole.ADMIN) {
+      if (!this.password) {
+        throw new Error('ADMIN 계정은 비밀번호가 필수입니다.');
+      }
+      if (this.socialId || this.provider) {
+        throw new Error('ADMIN 계정은 소셜 로그인을 사용할 수 없습니다.');
+      }
+    } 
+    // 일반 사용자는 소셜 로그인 정보 필수
+    else {
+      if (!this.socialId || !this.provider) {
+        throw new Error('일반 사용자는 소셜 로그인 정보가 필수입니다.');
+      }
+      if (this.password) {
+        throw new Error('일반 사용자는 비밀번호를 설정할 수 없습니다.');
+      }
+    }
   }
 
   /**
-   * 사용자 정보 수정 전 처리
+   * 사용자 정보 수정 전 처리 및 유효성 검사
    */
   @BeforeUpdate()
   beforeUpdate() {
-    // Hook for future use
+    // 역할 변경 시 유효성 검사
+    if (this.role === UserRole.ADMIN) {
+      if (!this.password && !this.socialId) {
+        throw new Error('ADMIN 계정은 비밀번호가 필수입니다.');
+      }
+    }
   }
 }
