@@ -29,6 +29,15 @@ export enum SocialProvider {
   APPLE = 'apple',
 }
 
+/**
+ * 사용자 역할
+ */
+export enum UserRole {
+  ADMIN = 'admin', // 관리자
+  HOST = 'host', // 호스트 (여행 생성 가능)
+  USER = 'user', // 일반 사용자
+}
+
 @Entity('users')
 @Index(['socialId', 'provider'], { unique: true }) // 소셜 ID + 제공자 조합 고유
 // 복합 인덱스 - 성능 향상
@@ -81,6 +90,19 @@ export class User extends BaseEntity {
   @IsString()
   @Index() // 전화번호 검색 최적화
   phone?: string;
+
+  /**
+   * 사용자 역할
+   */
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.USER,
+    comment: '사용자 역할 (ADMIN/HOST/USER)',
+  })
+  @IsEnum(UserRole)
+  @Index() // 역할별 조회 최적화
+  role: UserRole;
 
   /**
    * 추가 설정
@@ -218,6 +240,36 @@ export class User extends BaseEntity {
    */
   getDisplayName(): string {
     return this.name || this.email.split('@')[0];
+  }
+
+  /**
+   * 관리자 권한 확인
+   */
+  isAdmin(): boolean {
+    return this.role === UserRole.ADMIN;
+  }
+
+  /**
+   * 호스트 권한 확인 (여행 생성 가능)
+   */
+  isHost(): boolean {
+    return this.role === UserRole.HOST || this.role === UserRole.ADMIN;
+  }
+
+  /**
+   * 역할 업그레이드
+   */
+  upgradeToHost(): void {
+    if (this.role === UserRole.USER) {
+      this.role = UserRole.HOST;
+    }
+  }
+
+  /**
+   * 관리자 권한 부여
+   */
+  makeAdmin(): void {
+    this.role = UserRole.ADMIN;
   }
 
   // =================================================================

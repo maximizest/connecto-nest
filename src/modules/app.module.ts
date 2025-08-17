@@ -12,7 +12,6 @@ import {
 import { JWT_CONFIG, validateJwtConfig } from '../config/jwt.config';
 import { validateRedisConfig } from '../config/redis.config';
 import { validateStorageConfig } from '../config/storage.config';
-import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { CacheModule } from './cache/cache.module';
 import { RedisModule } from './cache/redis.module';
@@ -67,7 +66,6 @@ modules.push(FileUploadModule);
 modules.push(VideoProcessingModule);
 modules.push(NotificationModule);
 modules.push(SchedulerModule);
-modules.push(AdminModule);
 modules.push(AuthModule);
 modules.push(UserModule);
 modules.push(ProfileModule);

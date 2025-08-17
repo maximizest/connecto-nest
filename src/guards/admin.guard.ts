@@ -8,7 +8,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { CurrentUserData } from '../common/decorators/current-user.decorator';
-import { Admin } from '../modules/admin/admin.entity';
+import { User, UserRole } from '../modules/user/user.entity';
 
 @Injectable()
 export class AdminGuard implements CanActivate {
@@ -31,13 +31,18 @@ export class AdminGuard implements CanActivate {
       );
 
       // 데이터베이스에서 사용자 정보를 조회하여 role 확인
-      const user = await Admin.findOne({
+      const user = await User.findOne({
         where: { id: payload.id },
-        select: ['id', 'email'],
+        select: ['id', 'email', 'role'],
       });
 
       if (!user) {
         throw new UnauthorizedException('사용자를 찾을 수 없습니다');
+      }
+
+      // ADMIN 역할 확인
+      if (user.role !== UserRole.ADMIN) {
+        throw new ForbiddenException('관리자 권한이 필요합니다');
       }
 
       (request as Request & { user: CurrentUserData }).user = payload;
