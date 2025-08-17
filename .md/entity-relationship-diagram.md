@@ -325,7 +325,6 @@ graph TB
 | scheduledAt | timestamp | 예약 전송 시간 | Index |
 | expiresAt | timestamp | 알림 만료 시간 | |
 | data | json | 알림 관련 추가 데이터 | 메시지, Travel, Planet, 액션, 푸시 알림 관련 데이터 |
-| metadata | json | 알림 메타데이터 | 디바이스 타입, 앱 버전, 언어/지역, 시간대, 재시도 횟수 등 |
 | createdAt | timestamp | 알림 생성 시간 | Not Null, Index |
 | updatedAt | timestamp | 알림 정보 수정 시간 | Not Null |
 
@@ -370,15 +369,7 @@ graph TB
 - **액션 관련**: actionUrl, actionText, actionData
 - **푸시 알림 관련**: badge, sound, category, icon, image
 - **사용자 정의**: customData
-
-**metadata JSON 필드 구조**:
-- deviceType: 대상 디바이스 타입
-- appVersion: 앱 버전
-- locale: 언어/지역
-- timezone: 시간대
-- retryCount: 재시도 횟수
-- batchId: 배치 ID (대량 전송시)
-- tags: 분류 태그
+- **시스템 정보**: createdBy, batchId, channel (시스템에서 자동 추가)
 
 ### FileUpload (파일 업로드)
 | 필드명 | 타입 | 설명 | 제약조건 |
@@ -495,8 +486,7 @@ graph TB
 - Message의 `metadata`, `fileMetadata`, `systemMetadata`, `reactions`
 - FileUpload의 `metadata`
 - Admin의 `permissions`
-- Notification의 `data` (메시지, Travel, Planet, 액션, 푸시 알림 관련 데이터)
-- Notification의 `metadata` (디바이스 타입, 앱 버전, 언어/지역, 시간대, 재시도 횟수 등)
+- Notification의 `data` (메시지, Travel, Planet, 액션, 푸시 알림, 시스템 정보 관련 데이터)
 - MessageReadReceipt의 `metadata` (읽음 처리 방식, 위치 정보 등)
 - VideoProcessing의 `inputMetadata`, `outputMetadata`, `thumbnails`, `processingLogs`
 - User의 `socialMetadata`
