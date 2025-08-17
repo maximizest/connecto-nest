@@ -63,17 +63,6 @@ export class FileUpload extends BaseEntity {
   @JoinColumn({ name: 'user_id' })
   user?: User;
 
-  /**
-   * 하드 삭제 익명화 필드
-   */
-  @Column({
-    type: 'boolean',
-    default: false,
-    comment: '탈퇴한 사용자의 파일 여부',
-  })
-  @IsBoolean()
-  @Index() // 탈퇴한 사용자 파일 필터링
-  isFromDeletedUser: boolean;
 
   /**
    * 파일 기본 정보
@@ -140,81 +129,12 @@ export class FileUpload extends BaseEntity {
   @IsOptional()
   publicUrl?: string;
 
-  @Column({ type: 'text', nullable: true, comment: '썸네일 URL (이미지/비디오)' })
-  @IsString()
-  @IsOptional()
-  thumbnailUrl?: string;
-
-  @Column({ 
-    type: 'varchar', 
-    length: 100, 
-    nullable: true, 
-    comment: 'Cloudflare Media ID (Stream UID 또는 Images ID)' 
-  })
-  @IsString()
-  @IsOptional()
-  @MaxLength(100)
-  cloudflareMediaId?: string;
-
-  @Column({ 
-    type: 'enum',
-    enum: ['r2', 'stream', 'images'],
-    default: 'r2',
-    comment: '미디어 저장 위치' 
-  })
-  @IsString()
-  mediaStorage: 'r2' | 'stream' | 'images';
-
-  @Column({ type: 'json', nullable: true, comment: '미디어 변형 URLs (이미지 variants, 비디오 스트리밍 URLs)' })
-  @IsJSON()
-  @IsOptional()
-  mediaVariants?: {
-    // Cloudflare Images variants
-    thumbnail?: string;
-    small?: string;
-    medium?: string;
-    large?: string;
-    // Cloudflare Stream URLs
-    hls?: string;
-    dash?: string;
-    // 추가 썸네일들
-    additionalThumbnails?: string[];
-  };
 
   @Column({ type: 'json', nullable: true, comment: '추가 메타데이터' })
   @IsJSON()
   @IsOptional()
   metadata?: Record<string, any>;
 
-  /**
-   * 에러 정보
-   */
-  @Column({ type: 'text', nullable: true, comment: '실패 사유' })
-  @IsString()
-  @IsOptional()
-  errorMessage?: string;
-
-
-  /**
-   * 시간 정보
-   */
-  @Column({
-    type: 'timestamp',
-    nullable: true,
-    comment: '업로드 시작 시간',
-  })
-  @IsDateString()
-  @IsOptional()
-  startedAt?: Date;
-
-  @Column({
-    type: 'timestamp',
-    nullable: true,
-    comment: '업로드 완료 시간',
-  })
-  @IsDateString()
-  @IsOptional()
-  completedAt?: Date;
 
 
   @CreateDateColumn({ comment: '생성 시간' })
@@ -231,19 +151,10 @@ export class FileUpload extends BaseEntity {
    */
 
   /**
-   * 업로드 시작
-   */
-  startUpload(): void {
-    this.status = FileUploadStatus.PENDING;
-    this.startedAt = new Date();
-  }
-
-  /**
    * 업로드 완료
    */
   completeUpload(publicUrl?: string): void {
     this.status = FileUploadStatus.COMPLETED;
-    this.completedAt = new Date();
     if (publicUrl) {
       this.publicUrl = publicUrl;
     }
@@ -252,20 +163,8 @@ export class FileUpload extends BaseEntity {
   /**
    * 업로드 실패
    */
-  failUpload(errorMessage: string): void {
+  failUpload(): void {
     this.status = FileUploadStatus.FAILED;
-    this.errorMessage = errorMessage;
-  }
-
-
-  /**
-   * 업로드 소요 시간 계산 (초)
-   */
-  getUploadDuration(): number | null {
-    if (!this.startedAt) return null;
-
-    const endTime = this.completedAt || new Date();
-    return Math.floor((endTime.getTime() - this.startedAt.getTime()) / 1000);
   }
 
 
@@ -294,9 +193,7 @@ export class FileUpload extends BaseEntity {
       fileSize: this.fileSize,
       status: this.status,
       uploadType: this.uploadType,
-      duration: this.getUploadDuration(),
       createdAt: this.createdAt,
-      completedAt: this.completedAt,
     };
   }
 
@@ -326,20 +223,9 @@ export class FileUpload extends BaseEntity {
   }
 
   /**
-   * 업로드 사용자 표시 이름 반환 (탈퇴한 사용자 처리)
+   * 업로드 사용자 표시 이름 반환
    */
   getUploaderDisplayName(fallbackName?: string): string {
-    if (this.isFromDeletedUser) {
-      return '탈퇴한 사용자';
-    }
-
     return this.user?.name || fallbackName || '알 수 없음';
-  }
-
-  /**
-   * 탈퇴한 사용자의 파일인지 확인
-   */
-  isFromDeletedUserAccount(): boolean {
-    return this.isFromDeletedUser;
   }
 }

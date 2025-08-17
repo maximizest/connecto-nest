@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CloudflareMediaModule } from '../cloudflare-media/cloudflare-media.module';
 import { StorageModule } from '../storage/storage.module';
 import { User } from '../user/user.entity';
 import { FileUploadController } from './api/v1/file-upload.controller';
@@ -10,8 +9,7 @@ import { FileUploadService } from './file-upload.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([FileUpload, User]),
-    StorageModule,
-    CloudflareMediaModule, // Cloudflare Media 서비스 추가
+    StorageModule
   ],
   providers: [FileUploadService],
   controllers: [FileUploadController],
