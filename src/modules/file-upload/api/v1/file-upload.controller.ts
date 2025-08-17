@@ -32,11 +32,6 @@ import { STORAGE_SETTINGS } from '../../../../config/storage.config';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { StorageService } from '../../../storage/storage.service';
 import { User } from '../../../user/user.entity';
-import { VideoProcessingService } from '../../../video-processing/video-processing.service';
-import {
-  VideoProcessingType,
-  VideoQualityProfile,
-} from '../../../video-processing/video-processing.entity';
 import {
   FileUpload,
   FileUploadStatus,
@@ -96,7 +91,6 @@ export class FileUploadController {
     @InjectRepository(FileUpload)
     private readonly fileUploadRepository: Repository<FileUpload>,
     private readonly storageService: StorageService,
-    private readonly videoProcessingService: VideoProcessingService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -243,16 +237,6 @@ export class FileUploadController {
         fileName: entity.originalFileName,
       });
 
-      // 비디오 파일인 경우 자동으로 처리 시작
-      if (entity.mimeType && entity.mimeType.startsWith('video/')) {
-        this.startAutoVideoProcessing(entity).catch((err) => {
-          this.logger.error(
-            `비디오 자동 처리 실패: ${entity.originalFileName}`,
-            err.stack,
-          );
-        });
-      }
-
       // 이미지 파일인 경우 자동 리사이징 (대용량 이미지 최적화)
       if (entity.mimeType && entity.mimeType.startsWith('image/')) {
         this.startAutoImageOptimization(entity).catch((err) => {
@@ -316,43 +300,6 @@ export class FileUploadController {
     }
   }
 
-  /**
-   * 비디오 자동 처리 시작
-   * 업로드된 비디오를 자동으로 최적화합니다.
-   */
-  private async startAutoVideoProcessing(
-    fileUpload: FileUpload,
-  ): Promise<void> {
-    try {
-      // 기본 품질 프로필 설정 (MEDIUM)
-      const qualityProfile = VideoQualityProfile.MEDIUM;
-
-      // 비디오 처리 시작 이벤트 발행 (실제 처리는 이벤트 리스너에서)
-      this.eventEmitter.emit('video.processing.start', {
-        fileUploadId: fileUpload.id,
-        inputStorageKey: fileUpload.storageKey,
-        outputStorageKey: `processed/videos/${Date.now()}_${fileUpload.originalFileName}`,
-        userId: fileUpload.userId,
-        type: VideoProcessingType.COMPRESSION,
-        qualityProfile,
-        metadata: {
-          originalSize: fileUpload.fileSize,
-          originalMimeType: fileUpload.mimeType,
-          autoProcessing: true,
-        },
-      });
-
-      this.logger.log(
-        `자동 비디오 처리 시작 이벤트 발행: ${fileUpload.originalFileName}`,
-      );
-    } catch (error) {
-      this.logger.error(
-        `비디오 자동 처리 이벤트 발행 실패: ${fileUpload.originalFileName}`,
-        error.stack,
-      );
-      // 자동 처리 실패해도 업로드는 성공으로 처리
-    }
-  }
 
   /**
    * 이미지 자동 최적화

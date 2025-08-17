@@ -4,13 +4,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '../cache/cache.module';
 import { FileUpload } from '../file-upload/file-upload.entity';
 import { StorageService } from '../storage/storage.service';
-import { VideoProcessing } from '../video-processing/video-processing.entity';
 import { SchedulerService } from './scheduler.service';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
-    TypeOrmModule.forFeature([FileUpload, VideoProcessing]),
+    TypeOrmModule.forFeature([FileUpload]),
     CacheModule,
   ],
   providers: [SchedulerService, StorageService],

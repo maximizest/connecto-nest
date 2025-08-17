@@ -64,6 +64,7 @@ export const STORAGE_SETTINGS = {
     files: 'files',
     thumbnails: 'thumbnails',
     temp: 'temp',
+    uploads: 'uploads',
   },
 
   // CDN 설정

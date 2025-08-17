@@ -29,7 +29,6 @@ import { TravelUserModule } from './travel-user/travel-user.module';
 import { TravelModule } from './travel/travel.module';
 import { UserModule } from './user/user.module';
 import { WebSocketModule } from './websocket/websocket.module';
-import { CloudflareMediaModule } from './cloudflare-media/cloudflare-media.module';
 
 const NODE_ENV = process.env.NODE_ENV;
 // 기본 모듈 설정
@@ -63,7 +62,6 @@ modules.push(RedisModule);
 modules.push(CacheModule);
 modules.push(StorageModule);
 modules.push(FileUploadModule);
-modules.push(CloudflareMediaModule);
 modules.push(NotificationModule);
 modules.push(SchedulerModule);
 modules.push(AuthModule);

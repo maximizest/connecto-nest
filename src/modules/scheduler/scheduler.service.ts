@@ -8,10 +8,6 @@ import {
   FileUploadStatus,
 } from '../file-upload/file-upload.entity';
 import { StorageService } from '../storage/storage.service';
-import {
-  VideoProcessing,
-  VideoProcessingStatus,
-} from '../video-processing/video-processing.entity';
 import { SchedulerStats } from './types/scheduler-stats.interface';
 
 @Injectable()
@@ -25,8 +21,6 @@ export class SchedulerService {
   constructor(
     @InjectRepository(FileUpload)
     private readonly fileUploadRepository: Repository<FileUpload>,
-    @InjectRepository(VideoProcessing)
-    private readonly videoProcessingRepository: Repository<VideoProcessing>,
     private readonly redisService: RedisService,
     private readonly storageService: StorageService,
   ) {}
@@ -114,48 +108,7 @@ export class SchedulerService {
           }
         }
 
-        // 3. 완료되지 않은 비디오 프로세싱 정리 (3일 이상)
-        const threeDaysAgo = new Date();
-        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-
-        const staleVideoProcessing = await this.videoProcessingRepository.find({
-          where: {
-            status: VideoProcessingStatus.PROCESSING,
-            startedAt: LessThan(threeDaysAgo),
-          },
-        });
-
-        for (const processing of staleVideoProcessing) {
-          try {
-            // 상태를 실패로 변경
-            processing.status = VideoProcessingStatus.FAILED;
-            processing.errorMessage =
-              'Processing timeout - cleaned up by scheduler';
-            processing.completedAt = new Date();
-
-            await this.videoProcessingRepository.save(processing);
-
-            // 관련 임시 파일들 정리
-            if (processing.outputStorageKeys) {
-              const keys = processing.outputStorageKeys.split(',');
-              for (const key of keys) {
-                await this.storageService.deleteFile(key.trim());
-              }
-            }
-
-            processedItems++;
-
-            this.logger.debug(
-              `Cleaned up stale video processing: ${processing.id}`,
-            );
-          } catch (error) {
-            this.logger.warn(
-              `Failed to cleanup video processing ${processing.id}: ${error.message}`,
-            );
-          }
-        }
-
-        // 4. 고아 파일 찾기 및 정리 (참조되지 않는 파일)
+        // 3. 고아 파일 찾기 및 정리 (참조되지 않는 파일)
         const orphanedFiles = await this.findOrphanedFiles();
         for (const fileKey of orphanedFiles) {
           try {
@@ -179,7 +132,6 @@ export class SchedulerService {
           metrics: {
             failedUploads: failedUploads.length,
             tempFiles: oldTempUploads.length,
-            staleVideoProcessing: staleVideoProcessing.length,
             orphanedFiles: orphanedFiles.length,
           },
         };
