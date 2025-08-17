@@ -20,6 +20,7 @@ import { PushNotificationService } from '../../../notification/services/push-not
 import { AuthService } from '../../auth.service';
 import { JwtPayload } from '../../types/jwt-payload.interface';
 import { SocialSigninDto } from '../../dto/social-signin.dto';
+import { AdminSigninDto } from '../../dto/admin-signin.dto';
 
 @Controller({
   path: 'auth',
@@ -195,6 +196,54 @@ export class AuthController {
       }
 
       throw new BadRequestException(ERROR_MESSAGES.LOGOUT_ERROR);
+    }
+  }
+
+  @Post('sign/admin')
+  async signAdmin(@Body() data: AdminSigninDto) {
+    try {
+      // 관리자 자격 증명 검증
+      const user = await this.authService.validateAdminCredentials(
+        data.email,
+        data.password,
+      );
+
+      // JWT 토큰 생성
+      const payload: JwtPayload = {
+        id: user.id,
+        email: user.email,
+      };
+
+      const tokens = this.authService.generateTokenPair(payload);
+
+      // 리프레시 토큰 저장
+      await User.update(user.id, { refreshToken: tokens.refreshToken });
+
+      this.logger.log(
+        `Admin login successful: userId=${user.id}, email=${user.email}`,
+      );
+
+      return {
+        ...tokens,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+
+      this.logger.error('관리자 로그인 처리 중 오류:', error);
+      throw new BadRequestException(
+        '관리자 로그인 처리 중 오류가 발생했습니다.',
+      );
     }
   }
 

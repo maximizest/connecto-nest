@@ -1,13 +1,14 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { OAuth2Client } from 'google-auth-library';
+import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { JwksClient } from 'jwks-client';
 import {
   ERROR_MESSAGES,
   SECURITY_CONSTANTS,
 } from 'src/common/constants/app.constants';
-import { SocialProvider } from '../user/user.entity';
+import { SocialProvider, User, UserRole } from '../user/user.entity';
 import { JwtPayload } from './types/jwt-payload.interface';
 import { SocialUserInfo } from './types/social-user-info.interface';
 import { TokenPair } from './types/token-pair.interface';
@@ -225,5 +226,71 @@ export class AuthService {
       this.logger.error('Apple 토큰 검증 실패:', error);
       throw new UnauthorizedException('Apple 토큰 검증에 실패했습니다.');
     }
+  }
+
+  /**
+   * 관리자 이메일/비밀번호 로그인 검증
+   */
+  async validateAdminCredentials(
+    email: string,
+    password: string,
+  ): Promise<User> {
+    try {
+      // 이메일로 사용자 조회 (ADMIN 역할만)
+      const user = await User.findOne({
+        where: {
+          email,
+          role: UserRole.ADMIN,
+        },
+        select: ['id', 'email', 'name', 'role', 'password', 'isBanned'],
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('관리자 계정을 찾을 수 없습니다.');
+      }
+
+      // 계정 정지 확인
+      if (user.isBanned) {
+        throw new UnauthorizedException('정지된 관리자 계정입니다.');
+      }
+
+      // 비밀번호 확인
+      if (!user.password) {
+        throw new UnauthorizedException('비밀번호가 설정되지 않은 계정입니다.');
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
+      }
+
+      return user;
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      this.logger.error('관리자 로그인 검증 실패:', error);
+      throw new UnauthorizedException(
+        '관리자 로그인 처리 중 오류가 발생했습니다.',
+      );
+    }
+  }
+
+  /**
+   * 비밀번호 해시 생성
+   */
+  async hashPassword(password: string): Promise<string> {
+    const saltRounds = 12;
+    return bcrypt.hash(password, saltRounds);
+  }
+
+  /**
+   * 비밀번호 검증
+   */
+  async comparePassword(
+    password: string,
+    hashedPassword: string,
+  ): Promise<boolean> {
+    return bcrypt.compare(password, hashedPassword);
   }
 }
