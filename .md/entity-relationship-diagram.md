@@ -11,7 +11,6 @@ erDiagram
     User ||--o{ MessageReadReceipt : "reads"
     User ||--o{ Notification : "receives"
     User ||--o{ FileUpload : "uploads"
-    User ||--o{ VideoProcessing : "requests"
     
     Travel ||--o{ TravelUser : "has members"
     Travel ||--o{ Planet : "contains"
@@ -39,10 +38,6 @@ erDiagram
     Notification }o--|| User : "recipient"
     
     FileUpload }o--|| User : "uploader"
-    FileUpload ||--o{ VideoProcessing : "processes"
-    
-    VideoProcessing }o--|| User : "requester"
-    VideoProcessing }o--|| FileUpload : "processes"
 ```
 
 ## 핵심 관계 설명
@@ -128,20 +123,16 @@ graph TB
 graph TB
     User[User]
     Notification[Notification<br/>알림]
-    FileUpload[FileUpload<br/>파일 업로드]
-    VideoProcessing[VideoProcessing<br/>비디오 처리]
+    FileUpload[FileUpload<br/>파일 업로드<br/>Cloudflare Media 지원]
     Message[Message]
     
     User -->|수신| Notification
     User -->|업로드| FileUpload
-    User -->|요청| VideoProcessing
-    FileUpload -->|처리| VideoProcessing
     FileUpload -.->|첨부| Message
     
     style User fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#000
     style Notification fill:#ffebee,stroke:#b71c1c,stroke-width:2px,color:#000
     style FileUpload fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000
-    style VideoProcessing fill:#fff8e1,stroke:#f57f17,stroke-width:2px,color:#000
     style Message fill:#e0f2f1,stroke:#004d40,stroke-width:2px,color:#000
 ```
 
@@ -385,7 +376,10 @@ graph TB
 | status | enum | 업로드 상태 | FileUploadStatus enum, Default: 'PENDING', Index |
 | folder | string | 스토리지 폴더 경로 | Max Length: 255 |
 | publicUrl | text | 공개 접근 URL | |
-| thumbnailUrls | json | 썸네일 URL 목록 | |
+| thumbnailUrl | text | 썸네일 URL (이미지/비디오) | |
+| cloudflareMediaId | string | Cloudflare Media ID | Max Length: 100 |
+| mediaStorage | enum | 미디어 저장 위치 | 'r2'/'stream'/'images', Default: 'r2' |
+| mediaVariants | json | 미디어 변형 URLs | 이미지 variants, 비디오 스트리밍 URLs |
 | metadata | json | 추가 메타데이터 | |
 | startedAt | timestamp | 업로드 시작 시간 | |
 | completedAt | timestamp | 업로드 완료 시간 | |
@@ -401,47 +395,14 @@ graph TB
 - `COMPLETED`: 완료
 - `FAILED`: 실패
 
+**MediaStorage (미디어 저장 위치)**:
+- `r2`: Cloudflare R2 (기본값, 모든 파일 타입)
+- `stream`: Cloudflare Stream (비디오 최적화)
+- `images`: Cloudflare Images (이미지 최적화)
+
 **복합 인덱스**:
 - (userId, status): 사용자별 상태 조회 최적화
 - (status, createdAt): 상태별 시간순 조회
-
-### VideoProcessing (비디오 처리)
-| 필드명 | 타입 | 설명 | 제약조건 |
-|--------|------|------|----------|
-| id | int | Primary Key | PK, Auto Increment |
-| userId | int | 요청한 사용자 ID | FK → User.id |
-| fileUploadId | int | 원본 파일 업로드 ID | FK → FileUpload.id |
-| processingType | enum | 처리 타입 (COMPRESSION/THUMBNAIL/METADATA/PREVIEW/FULL_PROCESSING) | Not Null |
-| status | enum | 처리 상태 (PENDING/PROCESSING/COMPLETED/FAILED/CANCELLED) | Default: 'PENDING' |
-| qualityProfile | enum | 품질 프로필 (LOW/MEDIUM/HIGH/ULTRA) | |
-| inputStorageKey | string | 원본 파일 스토리지 키 | Not Null |
-| originalFileName | string | 원본 파일명 | Not Null |
-| inputFileSize | bigint | 원본 파일 크기 (bytes) | Not Null |
-| inputMimeType | string | 원본 MIME 타입 | Not Null |
-| outputStorageKeys | text | 처리된 파일 키들 (JSON) | |
-| outputTotalSize | bigint | 출력 파일들 총 크기 | |
-| outputUrls | text | 출력 파일 URLs (JSON) | |
-| progress | int | 진행률 (0-100) | Default: 0 |
-| estimatedDurationSeconds | int | 예상 소요 시간 (초) | |
-| actualDurationSeconds | int | 실제 소요 시간 (초) | |
-| inputMetadata | json | 입력 파일 메타데이터 | |
-| outputMetadata | json | 출력 파일 메타데이터 | |
-| thumbnails | json | 썸네일 정보 | |
-| errorMessage | text | 에러 메시지 | |
-| processingLogs | json | 처리 로그 | |
-| retryCount | int | 재시도 횟수 | Default: 0 |
-| isFromDeletedUser | boolean | 탈퇴한 사용자 작업 여부 | Default: false |
-| startedAt | timestamp | 처리 시작 시간 | |
-| completedAt | timestamp | 처리 완료 시간 | |
-| createdAt | timestamp | 생성일시 | Not Null |
-| updatedAt | timestamp | 수정일시 | Not Null |
-
-**처리 타입**:
-- COMPRESSION: 비디오 압축
-- THUMBNAIL: 썸네일 추출
-- METADATA: 메타데이터 추출
-- PREVIEW: 미리보기 생성
-- FULL_PROCESSING: 전체 처리
 
 ## 주요 특징
 
@@ -450,7 +411,7 @@ graph TB
 - `deletedAt` 필드로 관리
 - 데이터 보존 및 복구 가능
 - Travel, Planet은 Soft Delete 미지원 (status로 관리)
-- FileUpload, VideoProcessing은 하드 삭제 (익명화 처리만 지원)
+- FileUpload은 하드 삭제 (익명화 처리만 지원)
 
 ### 2. Planet 타입 및 상태
 - **타입 (type)**:
@@ -483,10 +444,9 @@ graph TB
 ### 5. 메타데이터 지원 (JSON 필드)
 - Planet의 `timeRestriction`
 - Message의 `metadata`, `fileMetadata`, `systemMetadata`, `reactions`
-- FileUpload의 `metadata`
+- FileUpload의 `metadata`, `mediaVariants` (Cloudflare Media 변형 URLs)
 - Notification의 `data` (메시지, Travel, Planet, 액션, 푸시 알림, 시스템 정보 관련 데이터)
 - MessageReadReceipt의 `metadata` (읽음 처리 방식, 위치 정보 등)
-- VideoProcessing의 `inputMetadata`, `outputMetadata`, `thumbnails`, `processingLogs`
 - User의 `socialMetadata`
 
 ## 데이터베이스 인덱스 전략
@@ -518,8 +478,6 @@ graph TB
 - MessageReadReceipt: `(planetId, userId, readAt)` - Planet 내 사용자별 시간순
 - MessageReadReceipt: `(planetId, messageId, userId)` - 트리플 인덱스
 - Message: `(planetId, createdAt)` - 메시지 목록 조회 최적화
-- VideoProcessing: `(userId, status)` - 사용자별 상태 조회
-- VideoProcessing: `(status, createdAt)` - 상태별 시간순 조회
 - Notification: `(userId, status)` - 사용자별 상태 필터링
 - Notification: `(userId, type, createdAt)` - 사용자별 타입별 시간순
 - Notification: `(status, scheduledAt)` - 예약된 대기 알림
@@ -576,3 +534,10 @@ graph TB
 - Redis를 활용한 온라인 상태 관리
 - WebSocket을 통한 실시간 메시지 전송
 - 읽음 확인 일괄 처리 (batch processing)
+
+### 6. Cloudflare Media 통합
+- FileUpload 엔티티에 Cloudflare Stream/Images 지원 추가
+- 비디오: Cloudflare Stream으로 자동 최적화 (HLS/DASH 스트리밍)
+- 이미지: Cloudflare Images로 자동 변형 생성 (thumbnail, small, medium, large)
+- R2 스토리지와 함께 작동하는 적응형 시스템
+- 통합 Cloudflare API 키 사용 (STORAGE_SECRET_ACCESS_KEY)
