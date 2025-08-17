@@ -375,21 +375,35 @@ graph TB
 | 필드명 | 타입 | 설명 | 제약조건 |
 |--------|------|------|----------|
 | id | int | Primary Key | PK, Auto Increment |
-| uploaderId | int | 업로더 ID | FK → User.id, Not Null |
-| fileName | string | 파일명 | Not Null |
-| originalName | string | 원본 파일명 | Not Null |
-| mimeType | string | MIME 타입 | Not Null |
-| fileSize | int | 파일 크기 (bytes) | Not Null |
-| storageKey | string | 저장소 키 | Unique, Not Null |
-| storageUrl | string | 저장소 URL | Not Null |
-| thumbnailUrl | string | 썸네일 URL | |
-| metadata | json | 메타데이터 | |
-| status | enum | 상태 (PENDING/UPLOADING/COMPLETED/FAILED) | Default: 'PENDING' |
-| uploadStartedAt | timestamp | 업로드 시작 시간 | |
-| uploadCompletedAt | timestamp | 업로드 완료 시간 | |
+| userId | int | 업로드한 사용자 ID | FK → User.id, Nullable, Index |
+| isFromDeletedUser | boolean | 탈퇴한 사용자의 파일 여부 | Default: false, Index |
+| originalFileName | string | 원본 파일명 | Not Null, Max Length: 255 |
+| storageKey | string | 스토리지 키 (경로) | Not Null, Max Length: 500, Index |
+| mimeType | string | 파일 MIME 타입 | Not Null, Max Length: 100 |
+| fileSize | bigint | 파일 크기 (bytes) | Not Null |
+| uploadType | enum | 업로드 타입 | FileUploadType enum, Index |
+| status | enum | 업로드 상태 | FileUploadStatus enum, Default: 'PENDING', Index |
+| folder | string | 스토리지 폴더 경로 | Max Length: 255 |
+| publicUrl | text | 공개 접근 URL | |
+| thumbnailUrls | json | 썸네일 URL 목록 | |
+| metadata | json | 추가 메타데이터 | |
+| startedAt | timestamp | 업로드 시작 시간 | |
+| completedAt | timestamp | 업로드 완료 시간 | |
+| errorMessage | text | 에러 메시지 | |
 | createdAt | timestamp | 생성일시 | Not Null |
 | updatedAt | timestamp | 수정일시 | Not Null |
-| deletedAt | timestamp | 삭제일시 (Soft Delete) | |
+
+**FileUploadType (업로드 타입)**:
+- `DIRECT`: Direct Upload (Presigned URL)
+
+**FileUploadStatus (업로드 상태)**:
+- `PENDING`: 업로드 대기
+- `COMPLETED`: 완료
+- `FAILED`: 실패
+
+**복합 인덱스**:
+- (userId, status): 사용자별 상태 조회 최적화
+- (status, createdAt): 상태별 시간순 조회
 
 ### Admin (관리자)
 | 필드명 | 타입 | 설명 | 제약조건 |
@@ -447,11 +461,11 @@ graph TB
 ## 주요 특징
 
 ### 1. Soft Delete 지원 엔티티
-- User, Message, FileUpload
+- User, Message
 - `deletedAt` 필드로 관리
 - 데이터 보존 및 복구 가능
 - Travel, Planet은 Soft Delete 미지원 (status로 관리)
-- VideoProcessing은 하드 삭제 (익명화 처리만 지원)
+- FileUpload, VideoProcessing은 하드 삭제 (익명화 처리만 지원)
 
 ### 2. Planet 타입 및 상태
 - **타입 (type)**:
@@ -498,7 +512,6 @@ graph TB
 - Travel: `inviteCode`
 - Admin: `email`
 - Profile: `userId` (1:1 관계)
-- FileUpload: `storageKey`
 
 ### 복합 인덱스
 - User: `(socialId, provider)` - 소셜 로그인 조회
@@ -537,7 +550,7 @@ graph TB
 - Message: `senderId`, `replyToMessageId`, `searchableText`
 - MessageReadReceipt: `messageId`, `userId`, `planetId`, `isRead`, `readAt`
 - Notification: `userId`, `type`, `priority`, `status`, `travelId`, `planetId`, `scheduledAt`, `createdAt`
-- FileUpload: `uploaderId`, `status`
+- FileUpload: `userId`, `status`, `storageKey`, `uploadType`, `isFromDeletedUser`
 - All entities: `createdAt`, `deletedAt`
 
 ## 관계 제약 조건

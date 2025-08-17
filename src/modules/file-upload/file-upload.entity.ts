@@ -28,11 +28,8 @@ import { User } from '../user/user.entity';
  */
 export enum FileUploadStatus {
   PENDING = 'pending', // 업로드 대기
-  UPLOADING = 'uploading', // 업로드 중
-  PROCESSING = 'processing', // 후처리 중 (썸네일 생성 등)
   COMPLETED = 'completed', // 완료
   FAILED = 'failed', // 실패
-  CANCELLED = 'cancelled', // 취소됨
 }
 
 /**
@@ -40,8 +37,6 @@ export enum FileUploadStatus {
  */
 export enum FileUploadType {
   DIRECT = 'direct', // Direct Upload (Presigned URL)
-  SINGLE = 'single', // 단일 파일 업로드 (레거시)
-  MULTIPART = 'multipart', // 멀티파트 업로드 (레거시)
 }
 
 /**
@@ -125,39 +120,6 @@ export class FileUpload extends BaseEntity {
   @Index() // 상태별 조회
   status: FileUploadStatus;
 
-  @Column({
-    type: 'varchar',
-    length: 100,
-    nullable: true,
-    comment: '업로드 ID (레거시 멀티파트용)',
-  })
-  @IsString()
-  @IsOptional()
-  @MaxLength(100)
-  uploadId?: string;
-
-  /**
-   * 진행률 정보
-   */
-  @Column({ type: 'int', default: 0, comment: '전체 청크 수 (레거시)' })
-  @IsNumber()
-  totalChunks: number;
-
-  @Column({ type: 'int', default: 0, comment: '완료된 청크 수 (레거시)' })
-  @IsNumber()
-  completedChunks: number;
-
-  @Column({
-    type: 'bigint',
-    default: 0,
-    comment: '업로드된 바이트 수 (레거시)',
-  })
-  @IsNumber()
-  uploadedBytes: number;
-
-  @Column({ type: 'int', default: 0, comment: '진행률 (0-100)' })
-  @IsNumber()
-  progress: number;
 
   /**
    * 추가 정보
@@ -191,9 +153,6 @@ export class FileUpload extends BaseEntity {
   @IsOptional()
   errorMessage?: string;
 
-  @Column({ type: 'int', default: 0, comment: '재시도 횟수' })
-  @IsNumber()
-  retryCount: number;
 
   /**
    * 시간 정보
@@ -216,14 +175,6 @@ export class FileUpload extends BaseEntity {
   @IsOptional()
   completedAt?: Date;
 
-  @Column({
-    type: 'timestamp',
-    nullable: true,
-    comment: '마지막 청크 업로드 시간',
-  })
-  @IsDateString()
-  @IsOptional()
-  lastChunkUploadedAt?: Date;
 
   @CreateDateColumn({ comment: '생성 시간' })
   @IsDateString()
@@ -242,26 +193,8 @@ export class FileUpload extends BaseEntity {
    * 업로드 시작
    */
   startUpload(): void {
-    this.status = FileUploadStatus.UPLOADING;
+    this.status = FileUploadStatus.PENDING;
     this.startedAt = new Date();
-  }
-
-  /**
-   * 청크 업로드 완료
-   */
-  completeChunk(chunkSize: number): void {
-    this.completedChunks += 1;
-    this.uploadedBytes += chunkSize;
-    this.lastChunkUploadedAt = new Date();
-
-    // 진행률 계산
-    if (this.totalChunks > 0) {
-      this.progress = Math.round(
-        (this.completedChunks / this.totalChunks) * 100,
-      );
-    } else {
-      this.progress = Math.round((this.uploadedBytes / this.fileSize) * 100);
-    }
   }
 
   /**
@@ -269,7 +202,6 @@ export class FileUpload extends BaseEntity {
    */
   completeUpload(publicUrl?: string): void {
     this.status = FileUploadStatus.COMPLETED;
-    this.progress = 100;
     this.completedAt = new Date();
     if (publicUrl) {
       this.publicUrl = publicUrl;
@@ -282,15 +214,8 @@ export class FileUpload extends BaseEntity {
   failUpload(errorMessage: string): void {
     this.status = FileUploadStatus.FAILED;
     this.errorMessage = errorMessage;
-    this.retryCount += 1;
   }
 
-  /**
-   * 업로드 취소
-   */
-  cancelUpload(): void {
-    this.status = FileUploadStatus.CANCELLED;
-  }
 
   /**
    * 업로드 소요 시간 계산 (초)
@@ -302,26 +227,6 @@ export class FileUpload extends BaseEntity {
     return Math.floor((endTime.getTime() - this.startedAt.getTime()) / 1000);
   }
 
-  /**
-   * 평균 업로드 속도 계산 (bytes/sec)
-   */
-  getAverageSpeed(): number | null {
-    const duration = this.getUploadDuration();
-    if (!duration || duration === 0) return null;
-
-    return Math.floor(this.uploadedBytes / duration);
-  }
-
-  /**
-   * 예상 남은 시간 계산 (초)
-   */
-  getEstimatedTimeRemaining(): number | null {
-    const avgSpeed = this.getAverageSpeed();
-    if (!avgSpeed || this.status !== FileUploadStatus.UPLOADING) return null;
-
-    const remainingBytes = this.fileSize - this.uploadedBytes;
-    return Math.ceil(remainingBytes / avgSpeed);
-  }
 
   /**
    * 업로드 상태 확인 메서드들
@@ -334,16 +239,8 @@ export class FileUpload extends BaseEntity {
     return this.status === FileUploadStatus.FAILED;
   }
 
-  isInProgress(): boolean {
-    return this.status === FileUploadStatus.UPLOADING;
-  }
-
-  isCancelled(): boolean {
-    return this.status === FileUploadStatus.CANCELLED;
-  }
-
   canRetry(): boolean {
-    return this.status === FileUploadStatus.FAILED && this.retryCount < 3;
+    return this.status === FileUploadStatus.FAILED;
   }
 
   /**
@@ -355,11 +252,8 @@ export class FileUpload extends BaseEntity {
       fileName: this.originalFileName,
       fileSize: this.fileSize,
       status: this.status,
-      progress: this.progress,
       uploadType: this.uploadType,
       duration: this.getUploadDuration(),
-      averageSpeed: this.getAverageSpeed(),
-      estimatedTimeRemaining: this.getEstimatedTimeRemaining(),
       createdAt: this.createdAt,
       completedAt: this.completedAt,
     };
@@ -378,28 +272,15 @@ export class FileUpload extends BaseEntity {
   beforeInsert() {
     // 기본값 설정
     this.status = this.status || FileUploadStatus.PENDING;
-    this.totalChunks = this.totalChunks || 0;
-    this.completedChunks = this.completedChunks || 0;
-    this.uploadedBytes = this.uploadedBytes || 0;
-    this.progress = this.progress || 0;
-    this.retryCount = this.retryCount || 0;
 
     // Log creation for debugging
   }
 
   /**
    * 파일 업로드 레코드 수정 전 처리
-   * - 진행률 재계산
    */
   @BeforeUpdate()
   beforeUpdate() {
-    // 진행률 재계산 (청크 업로드의 경우)
-    if (this.completedChunks !== undefined && this.totalChunks > 0) {
-      this.progress = Math.round(
-        (this.completedChunks / this.totalChunks) * 100,
-      );
-    }
-
     // Log update for debugging
   }
 

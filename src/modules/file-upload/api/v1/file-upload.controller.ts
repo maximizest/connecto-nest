@@ -436,7 +436,7 @@ export class FileUploadController {
       // 업로드 레코드 상태 업데이트
       const cancelledUpload = await this.crudService.updateStatus(
         uploadId,
-        FileUploadStatus.CANCELLED,
+        FileUploadStatus.FAILED,
       );
 
       this.logger.log(
