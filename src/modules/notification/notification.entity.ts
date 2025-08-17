@@ -262,25 +262,6 @@ export class Notification extends BaseEntity {
     customData?: Record<string, any>;
   };
 
-  /**
-   * 메타데이터
-   */
-  @Column({
-    type: 'json',
-    nullable: true,
-    comment: '알림 메타데이터 (JSON)',
-  })
-  @IsOptional()
-  @IsJSON()
-  metadata?: {
-    deviceType?: string; // 대상 디바이스 타입
-    appVersion?: string; // 앱 버전
-    locale?: string; // 언어/지역
-    timezone?: string; // 시간대
-    retryCount?: number; // 재시도 횟수
-    batchId?: string; // 배치 ID (대량 전송시)
-    tags?: string[]; // 분류 태그
-  };
 
   /**
    * 시간 정보

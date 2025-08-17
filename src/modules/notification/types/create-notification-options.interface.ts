@@ -25,5 +25,4 @@ export interface CreateNotificationOptions {
   scheduledAt?: Date;
   expiresAt?: Date;
   data?: any;
-  metadata?: any;
 }

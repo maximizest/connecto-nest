@@ -3,6 +3,8 @@
 ## 개요
 Connecto는 여행 그룹 기반의 실시간 채팅 애플리케이션입니다. NestJS 프레임워크를 사용하여 구축되었으며, PostgreSQL, Redis, WebSocket을 활용한 확장 가능한 백엔드 시스템입니다.
 
+> ⚠️ **최근 업데이트 (2025-08-16)**: 알림 시스템이 대폭 간소화되었습니다. 읽음 상태 추적이 제거되고 자동 상태 업데이트로 변경되었습니다.
+
 ## 🏗️ 프로젝트 구조
 
 ### 핵심 기술 스택
@@ -42,7 +44,7 @@ Connecto는 여행 그룹 기반의 실시간 채팅 애플리케이션입니다
 |------|------|----------|
 | **message** | 채팅 메시지 | TEXT/IMAGE/VIDEO/FILE/SYSTEM 타입 |
 | **read-receipt** | 읽음 확인 | 메시지별 읽음 상태 추적 |
-| **notification** | 알림 시스템 | FCM Push, Email, SMS 지원 |
+| **notification** | 알림 시스템 | 자동 상태 업데이트, 채널별 개별 알림 생성 |
 | **websocket** | 실시간 통신 | Socket.io 기반 실시간 메시징 |
 
 ### 4. 파일 및 미디어
@@ -73,6 +75,7 @@ User (사용자)
 │           └── Message (메시지)
 │               └── MessageReadReceipt (읽음 확인)
 └── Notification (알림)
+    └── 채널별 개별 알림 (PUSH/EMAIL/SMS/IN_APP)
 ```
 
 ### 주요 엔티티 (최근 간소화)
@@ -179,7 +182,27 @@ yarn format             # Prettier 포맷팅
 - CORS 설정
 - 상대 경로 import 사용 (절대 경로 금지)
 
-## 🎯 최근 변경사항 (2025년 1월)
+## 🎯 최근 변경사항
+
+### 2025년 8월 업데이트
+
+#### 알림 시스템 간소화
+1. **Notification 엔티티 변경**
+   - 제거된 필드: `isRead`, `readAt`, `deliveryResults`
+   - 변경된 로직: 읽음 상태 추적 제거, 자동 상태 업데이트만 관리
+   - 상태: `PENDING`, `SENT`, `FAILED` (READ, CANCELLED 제거)
+   - 마이그레이션: `RemoveNotificationReadFields`, `RemoveNotificationDeliveryResults`
+
+2. **알림 생성 방식 변경**
+   - 이전: 하나의 알림에 여러 채널 전송 결과 저장
+   - 현재: 각 채널별로 개별 알림 생성 (PUSH, EMAIL, SMS, IN_APP)
+   - 장점: 채널별 독립적인 상태 관리 가능
+
+3. **API 변경사항**
+   - 추가: `GET /api/v1/notifications` - 알림 목록 조회 (상태별 필터링)
+   - 변경: `PATCH /api/v1/notifications/:id` - 알림 상태 업데이트 (읽음 처리 제거)
+
+### 2025년 1월 업데이트
 
 ### 엔티티 간소화
 1. **User 엔티티 간소화**
@@ -191,7 +214,11 @@ yarn format             # Prettier 포맷팅
    - 제거된 필드: `bio`, `profileImage`, `coverImage`, `birthday`, `hobbies`, `interests`, `website`, `socialLinks`, `education`, `work`, `skills`, `profileImageUrl`, `settings`
    - 마이그레이션: `SimplifyProfileEntity`
 
-3. **Travel 엔티티 대폭 간소화**
+3. **Travel/Planet User 엔티티 변경**
+   - TravelUser, PlanetUser에서 불필요한 필드 제거
+   - 마이그레이션: `RemoveUnusedUserEntityFields`
+
+4. **Travel 엔티티 대폭 간소화**
    - 유지된 필드: `name`, `description`, `imageUrl`, `status`, `startDate`, `endDate`, `visibility`, `inviteCode`
    - 제거된 필드: `inviteCodeEnabled`, `maxPlanets`, `maxGroupMembers`, `memberCount`, `planetCount`, `totalMessages`, `lastActivityAt`, `settings`, `metadata`
    - 마이그레이션: `SimplifyTravelEntity`

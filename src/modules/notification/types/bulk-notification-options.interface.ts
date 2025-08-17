@@ -25,5 +25,4 @@ export interface BulkNotificationOptions {
   scheduledAt?: Date;
   expiresAt?: Date;
   data?: any;
-  metadata?: any;
 }

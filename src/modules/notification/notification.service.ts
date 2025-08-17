@@ -62,12 +62,13 @@ export class NotificationService extends CrudService<Notification> {
           triggeredBy: options.triggeredBy,
           scheduledAt: options.scheduledAt,
           expiresAt: options.expiresAt,
-          data: options.data,
-          metadata: {
-            ...options.metadata,
-            createdBy: 'system',
-            batchId,
-            channel,
+          data: {
+            ...options.data,
+            system: {
+              createdBy: 'system',
+              batchId,
+              channel,
+            },
           },
         });
 
@@ -125,12 +126,13 @@ export class NotificationService extends CrudService<Notification> {
             triggeredBy: options.triggeredBy,
             scheduledAt: options.scheduledAt,
             expiresAt: options.expiresAt,
-            data: options.data,
-            metadata: {
-              ...options.metadata,
-              createdBy: 'system',
-              batchId,
-              channel,
+            data: {
+              ...options.data,
+              system: {
+                createdBy: 'system',
+                batchId,
+                channel,
+              },
             },
           });
         }
