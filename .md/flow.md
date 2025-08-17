@@ -338,7 +338,7 @@ graph TD
 ```mermaid
 graph TD
     A[비디오 메시지 클릭] --> B[스트리밍 URL 요청]
-    B --> C[GET /api/v1/file-uploads/{id}/stream]
+    B --> C["GET /api/v1/file-uploads/:id/stream"]
 
     C --> D[CDN URL 반환]
     D --> E[비디오 플레이어 초기화]
@@ -391,8 +391,8 @@ graph TD
     B -->|Planet별 알림| D[PlanetUser.notificationsEnabled]
     B -->|푸시 토큰| E[푸시 토큰 관리]
 
-    C --> F[PATCH /api/v1/users/{id}]
-    D --> G[PATCH /api/v1/planet-users/{id}]
+    C --> F["PATCH /api/v1/users/:id"]
+    D --> G["PATCH /api/v1/planet-users/:id"]
     E --> H{동작}
 
     H -->|등록| I[POST /api/v1/notifications/push-token]
@@ -426,7 +426,7 @@ graph TD
     H --> J
     K --> C
 
-    J --> L[PATCH /api/v1/profiles/{id}]
+    J --> L["PATCH /api/v1/profiles/:id"]
     L --> M[프로필 업데이트]
     M --> N[성공 메시지]
 ```
@@ -470,7 +470,7 @@ graph TD
     B --> C[차단 옵션]
 
     C --> D[차단 사유 입력]
-    D --> E[PATCH /api/v1/travel-users/{id}]
+    D --> E["PATCH /api/v1/travel-users/:id"]
 
     E --> F[status: BANNED 설정]
     F --> G[모든 Planet에서 자동 제거]
@@ -492,7 +492,7 @@ graph TD
     A[채팅방 내 사용자] --> B[사용자 프로필 클릭]
     B --> C[뮤트 옵션]
 
-    C --> D[PATCH /api/v1/planet-users/{id}]
+    C --> D["PATCH /api/v1/planet-users/:id"]
     D --> E[status: MUTED 설정]
 
     E --> F{뮤트 효과}
