@@ -43,8 +43,6 @@ erDiagram
     
     VideoProcessing }o--|| User : "requester"
     VideoProcessing }o--|| FileUpload : "processes"
-    
-    Admin ||--|| Admin : "created by"
 ```
 
 ## 핵심 관계 설명
@@ -153,11 +151,13 @@ graph TB
 | 필드명 | 타입 | 설명 | 제약조건 |
 |--------|------|------|----------|
 | id | int | Primary Key | PK, Auto Increment |
-| socialId | string | 소셜 로그인 ID | Not Null, Index |
-| provider | enum | 소셜 제공자 (GOOGLE/APPLE) | Not Null |
+| socialId | string | 소셜 로그인 ID (ADMIN은 null) | Nullable, Index |
+| provider | enum | 소셜 제공자 (GOOGLE/APPLE) | Nullable |
 | name | string | 사용자 이름 | Not Null |
 | email | string | 이메일 | Unique, Not Null |
 | phone | string | 전화번호 | |
+| role | enum | 사용자 역할 (ADMIN/HOST/USER) | Default: 'USER', Index |
+| password | string | 비밀번호 (bcrypt, ADMIN 전용) | Nullable |
 | notificationsEnabled | boolean | 알림 활성화 | Default: false |
 | advertisingConsentEnabled | boolean | 광고 동의 | Default: false |
 | isBanned | boolean | 차단 여부 | Default: false |
@@ -169,7 +169,7 @@ graph TB
 | deletedBy | int | 삭제자 ID | FK → User.id |
 | deletionReason | string | 삭제 사유 | |
 
-**복합 유니크 인덱스**: (socialId, provider)
+**복합 유니크 인덱스**: (socialId, provider) WHERE socialId IS NOT NULL AND provider IS NOT NULL
 
 ### Profile (프로필)
 | 필드명 | 타입 | 설명 | 제약조건 |
@@ -381,7 +381,7 @@ graph TB
 | storageKey | string | 스토리지 키 (경로) | Not Null, Max Length: 500, Index |
 | mimeType | string | 파일 MIME 타입 | Not Null, Max Length: 100 |
 | fileSize | bigint | 파일 크기 (bytes) | Not Null |
-| uploadType | enum | 업로드 타입 | FileUploadType enum, Index |
+| uploadType | enum | 업로드 타입 | FileUploadType enum, Default: 'DIRECT', Index |
 | status | enum | 업로드 상태 | FileUploadStatus enum, Default: 'PENDING', Index |
 | folder | string | 스토리지 폴더 경로 | Max Length: 255 |
 | publicUrl | text | 공개 접근 URL | |
@@ -394,7 +394,7 @@ graph TB
 | updatedAt | timestamp | 수정일시 | Not Null |
 
 **FileUploadType (업로드 타입)**:
-- `DIRECT`: Direct Upload (Presigned URL)
+- `DIRECT`: Presigned URL 방식 (기본값)
 
 **FileUploadStatus (업로드 상태)**:
 - `PENDING`: 업로드 대기
@@ -404,21 +404,6 @@ graph TB
 **복합 인덱스**:
 - (userId, status): 사용자별 상태 조회 최적화
 - (status, createdAt): 상태별 시간순 조회
-
-### Admin (관리자)
-| 필드명 | 타입 | 설명 | 제약조건 |
-|--------|------|------|----------|
-| id | int | Primary Key | PK, Auto Increment |
-| email | string | 이메일 | Unique, Not Null |
-| password | string | 비밀번호 (bcrypt) | Not Null |
-| name | string | 이름 | Not Null |
-| role | enum | 역할 (SUPER_ADMIN/ADMIN/MODERATOR) | Not Null |
-| isActive | boolean | 활성화 여부 | Default: true |
-| lastLoginAt | timestamp | 마지막 로그인 시간 | |
-| permissions | json | 권한 설정 | |
-| createdBy | int | 생성자 ID | FK → Admin.id |
-| createdAt | timestamp | 생성일시 | Not Null |
-| updatedAt | timestamp | 수정일시 | Not Null |
 
 ### VideoProcessing (비디오 처리)
 | 필드명 | 타입 | 설명 | 제약조건 |
@@ -499,7 +484,6 @@ graph TB
 - Planet의 `timeRestriction`
 - Message의 `metadata`, `fileMetadata`, `systemMetadata`, `reactions`
 - FileUpload의 `metadata`
-- Admin의 `permissions`
 - Notification의 `data` (메시지, Travel, Planet, 액션, 푸시 알림, 시스템 정보 관련 데이터)
 - MessageReadReceipt의 `metadata` (읽음 처리 방식, 위치 정보 등)
 - VideoProcessing의 `inputMetadata`, `outputMetadata`, `thumbnails`, `processingLogs`
@@ -508,13 +492,13 @@ graph TB
 ## 데이터베이스 인덱스 전략
 
 ### 유니크 인덱스
-- User: `email`, `(socialId, provider)` 복합 유니크
+- User: `email`, `(socialId, provider)` 복합 유니크 (조건부: WHERE socialId IS NOT NULL AND provider IS NOT NULL)
 - Travel: `inviteCode`
-- Admin: `email`
 - Profile: `userId` (1:1 관계)
 
 ### 복합 인덱스
-- User: `(socialId, provider)` - 소셜 로그인 조회
+- User: `(socialId, provider)` - 소셜 로그인 조회 (조건부 인덱스)
+- User: `role` - 역할별 사용자 조회
 - Travel: `(status, endDate)` - 상태별 만료일 조회
 - Travel: `(visibility, status)` - 공개 설정별 상태 조회
 - Planet: `(travelId, type)` - Travel 내 타입별 조회
