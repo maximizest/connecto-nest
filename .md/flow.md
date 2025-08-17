@@ -2,25 +2,35 @@
 
 ## 📱 Application Overview
 
-Connecto는 여행 그룹 기반의 실시간 메시징 및 커뮤니케이션 플랫폼입니다. 사용자들이 여행 그룹(Travel)을 만들고, 그 안에서 다양한 채팅방(Planet)을 통해 소통할 수 있는 시스템입니다.
+Connecto는 여행 그룹 기반의 실시간 메시징 및 커뮤니케이션 플랫폼입니다. 사용자들이 여행 그룹(Travel)을 만들고, 그 안에서 다양한 채팅방(Planet)을 통해 소통할 수 있는 엔터프라이즈급 시스템입니다.
 
 ### Core Architecture
 ```
-User (사용자)
-  ├── Travel (여행 그룹)
-  │   ├── TravelUser (멤버십)
-  │   └── Planet (채팅방)
-  │       ├── PlanetUser (멤버십)
-  │       └── Message (메시지)
-  │           └── ReadReceipt (읽음 확인)
-  └── Notification (알림)
+User (사용자) 1:1 Profile (프로필)
+├── TravelUser (여행 멤버십) M:M Travel (여행 그룹)
+│   └── Planet (채팅방) 1:M
+│       ├── PlanetUser (채팅방 멤버십) M:M
+│       └── Message (메시지) 1:M
+│           └── MessageReadReceipt (읽음 확인) M:M
+├── Notification (알림) 1:M
+└── FileUpload (파일 업로드) M:1
 ```
+
+### System Features
+- **Social Authentication**: Google/Apple OAuth 통합
+- **Real-time Communication**: WebSocket 기반 실시간 메시징
+- **Multi-Channel Notifications**: FCM, Email, SMS, In-App
+- **Enterprise File Handling**: 500MB 파일, 청크 업로드, Cloudflare R2
+- **Advanced Moderation**: 3단계 차단 시스템 (User/Travel/Planet)
+- **Rich Messaging**: 텍스트, 이미지, 비디오, 파일, 반응, 답글
+- **Sophisticated Read Receipts**: 메시지별 읽음 상태 추적
+- **Complex Scheduling**: 채팅방별 시간 제한 설정
 
 ---
 
-## 🔐 1. Authentication & Registration Flow
+## 🔐 1. Authentication & Profile System
 
-### 1.1 Social Login (Google/Apple)
+### 1.1 Social Login Flow (Google/Apple)
 
 #### Flow Sequence:
 ```mermaid
@@ -32,8 +42,8 @@ sequenceDiagram
     participant ProfileService
     participant DB
     
-    Client->>AuthController: POST /api/v1/auth/social-signin
-    Note right of Client: {provider, idToken}
+    Client->>AuthController: POST /api/v1/auth/sign/social
+    Note right of Client: {provider, idToken, pushToken, deviceInfo}
     
     AuthController->>AuthService: verifySocialToken()
     alt Google Provider
@@ -50,321 +60,327 @@ sequenceDiagram
     alt New User
         UserService->>DB: Create User
         UserService->>ProfileService: createProfile()
-        ProfileService->>DB: Create Profile
+        ProfileService->>DB: Create Profile (1:1)
+        UserService->>UserService: registerPushToken()
     else Existing User
         UserService->>DB: Update last login
+        UserService->>UserService: updatePushToken()
     end
     
     AuthService->>AuthService: generateTokenPair()
-    AuthService-->>Client: {accessToken, refreshToken, user}
+    AuthService-->>Client: {accessToken, refreshToken, user, profile}
 ```
 
 #### Technical Details:
-- **Endpoint**: `POST /api/v1/auth/social-signin`
-- **Request Body**:
-  ```json
-  {
-    "provider": "google" | "apple",
-    "idToken": "string",
-    "deviceInfo": {
-      "deviceId": "string",
-      "platform": "ios" | "android" | "web",
-      "pushToken": "string (optional)"
-    }
-  }
-  ```
-- **Response**:
-  ```json
-  {
-    "accessToken": "JWT token",
-    "refreshToken": "JWT token",
-    "user": {
-      "id": 1,
-      "email": "user@example.com",
-      "name": "User Name",
-      "profile": {...}
-    }
-  }
-  ```
+- **Endpoint**: `POST /api/v1/auth/sign/social`
+- **Authentication**: Google OAuth2 / Apple Sign In
+- **Push Token Registration**: Automatic FCM token registration
+- **User Roles**: ADMIN, HOST, USER
+- **Profile Completion**: Automatic percentage calculation
 
-### 1.2 Token Refresh Flow
+### 1.2 Profile Management System
 
-#### Flow Sequence:
-```mermaid
-sequenceDiagram
-    participant Client
-    participant AuthController
-    participant AuthService
-    participant UserService
-    
-    Client->>AuthController: POST /api/v1/auth/refresh
-    Note right of Client: {refreshToken}
-    
-    AuthController->>AuthService: verifyToken(refreshToken)
-    AuthService->>UserService: findById(userId)
-    
-    alt Valid Token & Active User
-        AuthService->>AuthService: generateTokenPair()
-        AuthService-->>Client: {accessToken, refreshToken}
-    else Invalid/Expired Token
-        AuthService-->>Client: 401 Unauthorized
-    end
+#### Profile Entity Features:
+```typescript
+interface Profile {
+  nickname?: string;        // User display name
+  name?: string;           // Real name
+  gender?: string;         // Gender information
+  age?: number;           // Age
+  occupation?: string;     // Job/occupation
+  profileCompletion: number; // Auto-calculated percentage
+  preferences: UserPreferences; // Notification & privacy settings
+}
+
+interface UserPreferences {
+  notifications: {
+    push: boolean;
+    email: boolean;
+    sms: boolean;
+    inApp: boolean;
+  };
+  privacy: {
+    profileVisibility: 'public' | 'friends' | 'private';
+    lastSeenVisibility: boolean;
+  };
+}
 ```
 
 ---
 
-## 🌍 2. Travel (여행 그룹) Management Flow
+## 🌍 2. Travel (여행 그룹) Management System
 
-### 2.1 Travel Creation Flow
+### 2.1 Travel Creation & Lifecycle
 
 #### Flow Sequence:
 ```mermaid
 sequenceDiagram
-    participant Client
+    participant Admin
     participant TravelController
     participant TravelService
     participant TravelUserService
     participant PlanetService
-    participant NotificationService
     participant DB
     
-    Client->>TravelController: POST /api/v1/travels
-    Note right of Client: {name, description, startDate, endDate}
+    Admin->>TravelController: POST /api/v1/travels
+    Note right of Admin: {name, description, startDate, endDate, visibility}
     
     TravelController->>TravelService: create()
-    TravelService->>DB: Create Travel
+    TravelService->>DB: Create Travel (status: INACTIVE)
     
     TravelService->>TravelUserService: addHost()
     TravelUserService->>DB: Create TravelUser (role: HOST)
     
-    TravelService->>PlanetService: createDefaultPlanets()
-    PlanetService->>DB: Create General Planet
-    PlanetService->>DB: Create Announcement Planet
+    TravelService->>PlanetService: createDefaultPlanet()
+    PlanetService->>DB: Create GROUP Planet (auto-join all members)
     
-    TravelService->>NotificationService: sendWelcomeNotification()
-    
-    TravelService-->>Client: Travel object with id
+    Note over TravelService: Travel becomes ACTIVE when startDate reached
+    TravelService-->>Admin: Travel object with inviteCode
 ```
 
-#### Technical Details:
-- **Endpoint**: `POST /api/v1/travels`
-- **Request Body**:
-  ```json
-  {
-    "name": "유럽 여행 2024",
-    "description": "파리-런던-바르셀로나 3주 여행",
-    "imageUrl": "https://...",
-    "startDate": "2024-06-01",
-    "endDate": "2024-06-21",
-    "visibility": "invite_only" | "public",
-    "inviteCode": "auto-generated if invite_only"
-  }
-  ```
-- **Auto-created Planets**:
-  - General Chat (GROUP type)
-  - Announcements (ANNOUNCEMENT type)
+#### Travel Status Lifecycle:
+```typescript
+enum TravelStatus {
+  INACTIVE = 'inactive',  // 계획 중, 취소됨, 완료됨
+  ACTIVE = 'active',      // 진행 중 (startDate ~ endDate)
+}
 
-### 2.2 Travel Join Flow
+// Auto-activation logic
+// - INACTIVE → ACTIVE: when current time >= startDate
+// - ACTIVE → INACTIVE: when current time > endDate
+// - Admin can extend endDate to reactivate
+```
+
+### 2.2 Travel Join Flow with Validation
 
 #### Flow Sequence:
 ```mermaid
 sequenceDiagram
-    participant Client
+    participant User
     participant TravelController
     participant TravelService
     participant TravelUserService
     participant PlanetUserService
     participant NotificationService
     
-    Client->>TravelController: POST /api/v1/travels/{id}/join
-    Note right of Client: {inviteCode (if required)}
+    User->>TravelController: POST /api/v1/travels/{id}/join
+    Note right of User: {inviteCode (if INVITE_ONLY)}
     
     TravelController->>TravelService: validateJoinRequest()
     
-    alt Public Travel
-        TravelService->>TravelService: Allow join
-    else Invite Only
-        TravelService->>TravelService: Verify invite code
+    alt PUBLIC Travel
+        TravelService->>TravelService: Check travel is ACTIVE
+    else INVITE_ONLY Travel
+        TravelService->>TravelService: Verify inviteCode + ACTIVE status
     end
     
     TravelService->>TravelUserService: addParticipant()
-    TravelUserService->>DB: Create TravelUser (role: PARTICIPANT)
+    TravelUserService->>DB: Create TravelUser (role: PARTICIPANT, status: ACTIVE)
     
-    TravelService->>PlanetUserService: addToDefaultPlanets()
-    loop For each default planet
-        PlanetUserService->>DB: Create PlanetUser
+    TravelService->>PlanetUserService: addToGroupPlanets()
+    loop For each GROUP planet
+        PlanetUserService->>DB: Create PlanetUser (auto-join)
     end
     
-    TravelService->>NotificationService: notifyHostAndMembers()
+    TravelService->>NotificationService: sendJoinNotification()
     
-    TravelService-->>Client: Success with travel details
+    TravelService-->>User: Success with travel + planets
 ```
 
-### 2.3 Travel Member Management
+### 2.3 Travel Visibility & Access Control
 
-#### Host Capabilities:
-- Invite/remove members
-- Promote participants to moderators
-- Create/delete planets
-- Send announcements
-- Modify travel settings
-- Ban/unban users
+#### Visibility Types:
+```typescript
+enum TravelVisibility {
+  PUBLIC = 'public',          // 누구나 참여 가능
+  INVITE_ONLY = 'invite_only' // 초대코드 필요
+}
 
-#### Participant Capabilities:
-- View travel info
-- Join available planets
-- Send messages
-- Leave travel
+// Invite Code System
+// - Auto-generated 8-character code for INVITE_ONLY travels
+// - Code regeneration by HOST
+// - Code sharing via system or external means
+```
 
 ---
 
-## 💬 3. Planet (채팅방) Management Flow
+## 💬 3. Planet (채팅방) Advanced Management
 
-### 3.1 Planet Creation Flow
+### 3.1 Planet Types & Features
+
+#### Planet Type System:
+```typescript
+enum PlanetType {
+  GROUP = 'group',           // 다중 사용자 채팅
+  DIRECT = 'direct',         // 1:1 개인 채팅
+  ANNOUNCEMENT = 'announcement' // 공지사항 전용
+}
+
+// GROUP Planet Features:
+// - All travel members auto-join
+// - Moderator role management
+// - Time restrictions with scheduling
+// - File sharing & reactions
+// - Message threading
+
+// DIRECT Planet Features:
+// - Exactly 2 users only
+// - Cannot add/remove members
+// - Private conversation
+// - Auto-created on first message
+
+// ANNOUNCEMENT Planet Features:
+// - Read-only for participants
+// - Only HOST/MODERATOR can post
+// - System-wide important notices
+// - No time restrictions
+```
+
+### 3.2 Complex Time Restriction System
+
+#### Time Restriction Features:
+```typescript
+enum TimeRestrictionType {
+  NONE = 'none',        // No restrictions
+  DAILY = 'daily',      // Daily time windows
+  WEEKLY = 'weekly',    // Weekly schedules  
+  CUSTOM = 'custom'     // Custom scheduling
+}
+
+interface TimeRestriction {
+  type: TimeRestrictionType;
+  startTime?: string;     // HH:mm format
+  endTime?: string;       // HH:mm format
+  daysOfWeek?: number[];  // 0(Sunday) ~ 6(Saturday)
+  timezone?: string;      // User timezone
+  customSchedule?: {
+    startDate: Date;
+    endDate: Date;
+    recurring?: boolean;
+  }[];
+}
+
+// Chat allowance calculation:
+// 1. Check planet status (ACTIVE/INACTIVE)
+// 2. Evaluate time restrictions for user's timezone
+// 3. Apply custom schedules if defined
+// 4. Return boolean: can chat now?
+```
+
+### 3.3 Direct Message (1:1) Auto-Creation
 
 #### Flow Sequence:
 ```mermaid
 sequenceDiagram
-    participant Client
-    participant PlanetController
+    participant User1
+    participant User2
     participant PlanetService
-    participant TravelUserService
     participant PlanetUserService
     participant DB
     
-    Client->>PlanetController: POST /api/v1/planets
-    Note right of Client: {travelId, name, type, description}
+    User1->>PlanetService: Send message to User2
+    PlanetService->>DB: Check existing DIRECT planet
     
-    PlanetController->>TravelUserService: verifyHostPermission()
-    
-    alt User is Host/Moderator
-        PlanetService->>DB: Create Planet
-        
-        PlanetService->>PlanetUserService: addCreatorAsModerator()
-        PlanetUserService->>DB: Create PlanetUser (role: MODERATOR)
-        
-        alt Auto-add all members
-            PlanetService->>PlanetUserService: addAllTravelMembers()
-        end
-        
-        PlanetService-->>Client: Planet object
-    else Insufficient Permission
-        PlanetController-->>Client: 403 Forbidden
-    end
-```
-
-### 3.2 Direct Message (1:1 Chat) Flow
-
-#### Flow Sequence:
-```mermaid
-sequenceDiagram
-    participant Client
-    participant PlanetController
-    participant PlanetService
-    participant PlanetUserService
-    
-    Client->>PlanetController: POST /api/v1/planets/direct
-    Note right of Client: {travelId, targetUserId}
-    
-    PlanetController->>PlanetService: findOrCreateDirectPlanet()
-    PlanetService->>DB: Check existing DM planet
-    
-    alt DM Exists
-        PlanetService-->>Client: Existing planet
+    alt DM Planet Exists
+        PlanetService->>DB: Use existing planet
     else Create New DM
         PlanetService->>DB: Create Planet (type: DIRECT)
         PlanetService->>PlanetUserService: addBothUsers()
-        PlanetService-->>Client: New planet
+        PlanetUserService->>DB: Create PlanetUser for User1
+        PlanetUserService->>DB: Create PlanetUser for User2
     end
+    
+    PlanetService-->>User1: Planet ready for messaging
 ```
-
-### 3.3 Planet Types & Features
-
-#### GROUP Planet:
-- Multiple members
-- Moderator roles
-- Member management
-- File sharing
-- Message reactions
-
-#### DIRECT Planet:
-- Exactly 2 members
-- No moderators
-- Cannot add/remove members
-- Private conversation
-
-#### ANNOUNCEMENT Planet:
-- Read-only for participants
-- Only hosts/moderators can post
-- System-wide notifications
-- Pinned messages
 
 ---
 
-## 📨 4. Messaging Flow
+## 📨 4. Advanced Messaging System
 
-### 4.1 Real-time Message Sending (WebSocket)
+### 4.1 Rich Message Types & Features
 
-#### Flow Sequence:
+#### Message Type System:
+```typescript
+enum MessageType {
+  TEXT = 'text',           // Plain text with markdown support
+  IMAGE = 'image',         // Image with optional caption
+  VIDEO = 'video',         // Video with auto-thumbnail
+  FILE = 'file',           // Document/file attachment
+  SYSTEM = 'system'        // System-generated messages
+}
+
+// Message Features:
+interface MessageFeatures {
+  editing: {
+    timeLimit: 15;          // 15 minutes edit window
+    trackOriginal: true;    // Keep original content
+    textOnly: true;         // Only text messages editable
+  };
+  softDelete: {
+    recoveryWindow: 24;     // 24 hours recovery
+    placeholder: "Message deleted"; // Shown to users
+    adminCanRestore: true;  // Admin override
+  };
+  reactions: {
+    emojiSupport: true;     // Unicode emoji reactions
+    multiplePerUser: true;  // Multiple reactions per user
+    realTimeSync: true;     // WebSocket sync
+  };
+  replies: {
+    threadSupport: true;    // Message reply chains
+    contextPreservation: true; // Show original message
+  };
+  search: {
+    fullTextSearch: true;   // searchableText field
+    fileContentSearch: false; // Files not searchable
+  };
+}
+```
+
+### 4.2 Real-time Message Flow (WebSocket)
+
+#### Advanced Message Broadcasting:
 ```mermaid
 sequenceDiagram
-    participant Client
-    participant WebSocketGateway
+    participant Sender
+    participant ChatGateway
     participant MessageService
     participant PlanetUserService
     participant NotificationService
     participant Redis
-    participant DB
+    participant OtherUsers
+    participant OfflineUsers
     
-    Client->>WebSocketGateway: socket.emit('message:send')
-    Note right of Client: {planetId, content, type, files}
+    Sender->>ChatGateway: socket.emit('message:send')
+    Note right of Sender: {planetId, content, type, fileAttachment}
     
-    WebSocketGateway->>PlanetUserService: validateMembership()
+    ChatGateway->>PlanetUserService: validateMembership()
+    ChatGateway->>PlanetUserService: checkMuteStatus()
+    ChatGateway->>PlanetService: checkTimeRestrictions()
     
-    alt User is Member & Not Muted
-        WebSocketGateway->>MessageService: createMessage()
-        MessageService->>DB: Save Message
+    alt User Authorized & Chat Allowed
+        ChatGateway->>MessageService: createMessage()
+        MessageService->>DB: Save Message with searchableText
         
-        WebSocketGateway->>Redis: Publish to channel
-        Redis-->>WebSocketGateway: Broadcast to subscribers
+        ChatGateway->>Redis: Publish to planet channel
+        Redis-->>ChatGateway: Broadcast confirmation
         
-        WebSocketGateway->>Client: socket.emit('message:created')
-        WebSocketGateway->>OtherClients: socket.emit('message:received')
+        ChatGateway->>Sender: socket.emit('message:new')
+        ChatGateway->>OtherUsers: socket.emit('message:new')
         
-        WebSocketGateway->>NotificationService: sendPushNotifications()
-        NotificationService-->>OfflineUsers: Push Notification
-    else Not Authorized
-        WebSocketGateway->>Client: socket.emit('error')
+        ChatGateway->>NotificationService: triggerNotifications()
+        NotificationService->>OfflineUsers: Send push notifications
+        
+        Note over MessageService: Auto-generate searchable text
+        Note over MessageService: File processing if attached
+    else Not Authorized/Muted/Time Restricted
+        ChatGateway->>Sender: socket.emit('error', {code, reason})
     end
 ```
 
-### 4.2 Message Types & Features
+### 4.3 Enterprise File Upload System
 
-#### Message Types:
-```typescript
-enum MessageType {
-  TEXT = 'text',           // Plain text message
-  IMAGE = 'image',         // Image with optional caption
-  VIDEO = 'video',         // Video with optional caption
-  FILE = 'file',           // Document/file attachment
-  LOCATION = 'location',   // GPS coordinates
-  SYSTEM = 'system',       // System-generated messages
-  REPLY = 'reply',         // Reply to another message
-}
-```
-
-#### Message Operations:
-- **Send**: Create new message
-- **Edit**: Modify own messages (within 24 hours)
-- **Delete**: Soft delete with "Message deleted" placeholder
-- **Reply**: Thread-based replies
-- **React**: Emoji reactions
-- **Forward**: Share to other planets
-- **Pin**: Pin important messages (moderators only)
-
-### 4.3 File Upload Flow
-
-#### Flow Sequence:
+#### Chunked Upload Flow:
 ```mermaid
 sequenceDiagram
     participant Client
@@ -372,786 +388,783 @@ sequenceDiagram
     participant StorageService
     participant CloudflareR2
     participant MessageService
+    participant ImageOptimization
     
     Client->>FileUploadController: POST /api/v1/file-uploads/presigned-url
-    Note right of Client: {fileName, fileSize, mimeType}
+    Note right of Client: {fileName, fileSize, mimeType, chunkSize: 5MB}
     
     FileUploadController->>StorageService: generatePresignedUrl()
-    StorageService->>CloudflareR2: Create presigned URL
-    StorageService-->>Client: {uploadUrl, uploadId}
+    StorageService->>CloudflareR2: Create multipart upload
+    StorageService-->>Client: {uploadUrls[], uploadId, chunkSize}
     
-    Client->>CloudflareR2: Direct upload file
-    CloudflareR2-->>Client: Success
+    loop For each 5MB chunk
+        Client->>CloudflareR2: Upload chunk with ETags
+        CloudflareR2-->>Client: ETag response
+    end
     
     Client->>FileUploadController: POST /api/v1/file-uploads/complete
-    Note right of Client: {uploadId, storageKey}
+    Note right of Client: {uploadId, eTags[], totalSize}
     
-    FileUploadController->>StorageService: verifyUpload()
-    StorageService->>CloudflareR2: Check file exists
+    FileUploadController->>StorageService: completeMultipartUpload()
+    StorageService->>CloudflareR2: Combine chunks
+    
+    alt Image File (>5MB)
+        FileUploadController->>ImageOptimization: startAutoOptimization()
+        ImageOptimization->>CloudflareR2: Generate optimized versions
+    end
     
     FileUploadController->>MessageService: attachFileToMessage()
-    MessageService-->>Client: Message with file attachment
+    MessageService-->>Client: Message with file metadata
 ```
 
-#### File Size Limits:
-- Images: 10MB
-- Videos: 500MB
-- Documents: 50MB
-- Audio: 100MB
+#### File Size Limits & Processing:
+```yaml
+File Limits:
+  Maximum Size: 500MB per file
+  Chunk Size: 5MB segments
+  Concurrent Uploads: 3 per user
+  
+Image Processing:
+  Auto-optimization: >5MB images
+  Formats: WebP conversion for efficiency
+  Thumbnails: Auto-generated for videos
+  
+Security:
+  Virus Scanning: All uploads scanned
+  Type Validation: MIME type verification
+  Content Analysis: Suspicious content detection
+```
 
 ---
 
-## 🔔 5. Notification System Flow
+## 📊 5. Advanced Read Receipt System
 
-### 5.1 Notification Types
+### 5.1 Granular Read Tracking
 
+#### Read Receipt Architecture:
 ```typescript
-enum NotificationType {
-  MESSAGE = 'message',     // New message in planet
-  MENTION = 'mention',     // User mentioned in message
-  REPLY = 'reply',         // Reply to user's message
-  BANNED = 'banned',       // User banned from travel/planet
-  SYSTEM = 'system',       // System announcements
+interface MessageReadReceipt {
+  messageId: number;
+  userId: number;
+  readAt: Date;
+  deviceType?: string;      // iOS, Android, Web
+  readContext?: {
+    planetId: number;
+    sessionId: string;
+    ipAddress: string;       // For analytics
+    timeInView: number;      // Milliseconds
+  };
 }
+
+// Features:
+// - Per-message, per-user tracking
+// - Device analytics
+// - Batch read operations
+// - Unread count optimization
+// - Read status synchronization across devices
 ```
 
-### 5.2 Multi-Channel Notification Delivery
+### 5.2 Batch Read Operations Flow
 
 #### Flow Sequence:
+```mermaid
+sequenceDiagram
+    participant Client
+    participant ChatGateway
+    participant ReadReceiptService
+    participant Redis
+    participant DB
+    participant MessageSenders
+    
+    Client->>ChatGateway: socket.emit('messages:read_multiple')
+    Note right of Client: {planetId, messageIds[], readAt}
+    
+    ChatGateway->>ReadReceiptService: batchMarkAsRead()
+    
+    par Database Update
+        ReadReceiptService->>DB: Bulk insert/update receipts
+    and Cache Update
+        ReadReceiptService->>Redis: Update unread counts
+        ReadReceiptService->>Redis: Cache read timestamps
+    end
+    
+    ChatGateway->>Client: socket.emit('read:confirmed')
+    ChatGateway->>MessageSenders: socket.emit('message:read:batch')
+    Note left of MessageSenders: Update UI with read indicators
+    
+    Note over ReadReceiptService: Analytics: track reading patterns
+```
+
+### 5.3 Unread Count Management
+
+#### Real-time Unread Counting:
+```typescript
+// Redis-based unread count optimization
+interface UnreadCounting {
+  planetUnreadCounts: {
+    key: `user:${userId}:planet:${planetId}:unread`;
+    ttl: 7 * 24 * 60 * 60; // 7 days
+    value: number;
+  };
+  
+  globalUnreadCount: {
+    key: `user:${userId}:total:unread`;
+    ttl: 24 * 60 * 60; // 24 hours
+    value: number;
+  };
+  
+  lastReadMessage: {
+    key: `user:${userId}:planet:${planetId}:lastRead`;
+    ttl: 7 * 24 * 60 * 60; // 7 days
+    value: {messageId: number, readAt: Date};
+  };
+}
+
+// WebSocket Events:
+// - planet:get_unread_count
+// - user:get_all_unread_counts
+// - unread_count_updated (broadcast)
+```
+
+---
+
+## 🔔 6. Multi-Channel Notification System
+
+### 6.1 Individual Channel Architecture
+
+#### Notification Channel System:
+```typescript
+enum NotificationChannel {
+  IN_APP = 'in_app',       // 앱 내 알림
+  PUSH = 'push',           // FCM 푸시 알림
+  EMAIL = 'email',         // 이메일 알림
+  SMS = 'sms',            // SMS 알림 (미래 확장)
+  WEBSOCKET = 'websocket'  // 실시간 WebSocket
+}
+
+// Individual Channel Records:
+// Each notification creates separate records per channel
+// Allows independent delivery tracking and retry logic
+// User preferences control which channels are active
+```
+
+### 6.2 Notification Delivery Flow
+
+#### Multi-Channel Delivery:
 ```mermaid
 sequenceDiagram
     participant Event
     participant NotificationService
     participant UserService
-    participant PushService
+    participant FCMService
     participant EmailService
     participant WebSocketGateway
     participant DB
     
-    Event->>NotificationService: Trigger notification
+    Event->>NotificationService: createNotification()
+    Note right of Event: {type, userId, content, data}
     
     NotificationService->>UserService: getUserPreferences()
-    UserService-->>NotificationService: Notification settings
+    UserService-->>NotificationService: {channels: [PUSH, IN_APP, WEBSOCKET]}
     
-    NotificationService->>DB: Create notification record
+    par Create Channel Records
+        NotificationService->>DB: Create PUSH notification
+        NotificationService->>DB: Create IN_APP notification  
+        NotificationService->>DB: Create WEBSOCKET notification
+    end
     
-    par Push Notification
-        NotificationService->>PushService: sendPush()
-        PushService->>FCM/APNs: Send push
-    and Email Notification
-        NotificationService->>EmailService: sendEmail()
-        EmailService->>SMTP: Send email
-    and In-App Notification
-        NotificationService->>DB: Store for in-app
-    and WebSocket
+    par Deliver to Channels
+        NotificationService->>FCMService: sendPush()
+        FCMService->>FCM: Deliver push notification
+        FCMService-->>NotificationService: Delivery status
+    and
         NotificationService->>WebSocketGateway: emit('notification')
-        WebSocketGateway->>OnlineClients: Real-time notification
-    end
-```
-
-### 5.3 Notification Preferences
-
-Users can configure:
-- Channel preferences (push, email, in-app, websocket)
-- Notification types (messages, mentions, replies, etc.)
-- Quiet hours (Do Not Disturb schedule)
-- Per-planet mute settings
-
----
-
-## 👥 6. User Profile & Settings Flow
-
-### 6.1 Profile Management
-
-#### Profile Update Flow:
-```mermaid
-sequenceDiagram
-    participant Client
-    participant ProfileController
-    participant ProfileService
-    participant StorageService
-    participant DB
-    
-    Client->>ProfileController: PATCH /api/v1/profiles/me
-    Note right of Client: {bio, avatar, preferences}
-    
-    alt Avatar Upload
-        ProfileController->>StorageService: uploadAvatar()
-        StorageService->>CloudflareR2: Store image
-        StorageService-->>ProfileController: Avatar URL
+        WebSocketGateway->>OnlineUsers: Real-time delivery
+    and
+        NotificationService->>DB: Store IN_APP for later retrieval
     end
     
-    ProfileController->>ProfileService: updateProfile()
-    ProfileService->>DB: Update profile
-    
-    ProfileService-->>Client: Updated profile
+    NotificationService->>DB: Update delivery status per channel
 ```
 
-### 6.2 User Settings
+### 6.3 FCM Push Notification System
 
-#### Available Settings:
+#### Push Token Management:
 ```typescript
-interface UserSettings {
-  // Privacy
-  profileVisibility: 'public' | 'friends' | 'private';
-  lastSeenVisibility: boolean;
-  readReceiptsEnabled: boolean;
+interface PushTokenManagement {
+  registration: {
+    endpoint: 'POST /api/v1/notifications/push-token';
+    automatic: true; // During social login
+    multiDevice: true; // Multiple tokens per user
+  };
   
-  // Notifications
-  pushNotifications: boolean;
-  emailNotifications: boolean;
-  soundEnabled: boolean;
-  vibrationEnabled: boolean;
+  tokenLifecycle: {
+    renewal: 'automatic'; // Token refresh handling
+    cleanup: 'scheduled'; // Remove expired tokens
+    validation: 'realtime'; // Verify token validity
+  };
   
-  // Appearance
-  theme: 'light' | 'dark' | 'auto';
-  fontSize: 'small' | 'medium' | 'large';
-  
-  // Language & Region
-  language: string;
-  timezone: string;
-  
-  // Security
-  twoFactorEnabled: boolean;
-  biometricEnabled: boolean;
+  deviceSupport: {
+    platforms: ['iOS', 'Android', 'Web'];
+    badges: true; // Unread count badges
+    sounds: true; // Custom notification sounds
+    actions: true; // Interactive push actions
+  };
+}
+
+// Push Payload Structure:
+interface PushPayload {
+  title: string;
+  body: string;
+  badge?: number;           // Unread count
+  sound?: string;          // Notification sound
+  category?: string;       // Notification category
+  data: {
+    notificationId: number;
+    type: NotificationType;
+    planetId?: number;     // Deep link data
+    travelId?: number;     // Deep link data
+    customData?: any;      // Additional payload
+  };
 }
 ```
 
 ---
 
-## 📊 7. Read Receipt & Typing Indicator Flow
+## 🔒 7. Three-Tier Security & Permission System
 
-### 7.1 Read Receipt Flow
+### 7.1 Multi-Level Ban Architecture
 
-#### Flow Sequence:
-```mermaid
-sequenceDiagram
-    participant Client
-    participant WebSocketGateway
-    participant ReadReceiptService
-    participant Redis
-    participant DB
-    
-    Client->>WebSocketGateway: socket.emit('message:read')
-    Note right of Client: {messageId, planetId}
-    
-    WebSocketGateway->>ReadReceiptService: markAsRead()
-    ReadReceiptService->>DB: Create/Update ReadReceipt
-    
-    ReadReceiptService->>Redis: Update last read cache
-    
-    WebSocketGateway->>MessageSender: socket.emit('message:read:confirmation')
-    Note left of MessageSender: Show double check mark
+#### Ban System Hierarchy:
+```typescript
+// Level 1: Platform-Level (User Entity)
+interface UserBan {
+  level: 'PLATFORM';
+  field: 'User.isBanned';
+  effect: 'Complete login prevention';
+  scope: 'All travels and planets';
+  duration: 'Permanent or time-limited';
+  authority: 'System Admin only';
+}
+
+// Level 2: Travel-Level (TravelUser Entity)  
+interface TravelBan {
+  level: 'TRAVEL';
+  field: 'TravelUser.status = BANNED';
+  effect: 'Travel participation restriction';
+  scope: 'Specific travel + all its planets';
+  duration: 'Configurable by HOST';
+  authority: 'Travel HOST/MODERATOR';
+}
+
+// Level 3: Planet-Level (PlanetUser Entity)
+interface PlanetMute {
+  level: 'PLANET';
+  field: 'PlanetUser.status = BANNED'; // Actually mute
+  effect: 'Cannot send messages, can read';
+  scope: 'Specific planet only';
+  duration: 'Time-limited (1h, 24h, 7d)';
+  authority: 'Planet MODERATOR';
+}
 ```
 
-### 7.2 Typing Indicator Flow
+### 7.2 Permission Matrix
 
-#### Flow Sequence:
-```mermaid
-sequenceDiagram
-    participant Client
-    participant WebSocketGateway
-    participant TypingService
-    participant Redis
-    participant OtherClients
-    
-    Client->>WebSocketGateway: socket.emit('typing:start')
-    Note right of Client: {planetId}
-    
-    WebSocketGateway->>TypingService: addTypingUser()
-    TypingService->>Redis: Set with TTL (5 seconds)
-    
-    WebSocketGateway->>OtherClients: socket.emit('user:typing')
-    Note left of OtherClients: Show "User is typing..."
-    
-    alt User stops typing
-        Client->>WebSocketGateway: socket.emit('typing:stop')
-    else Auto timeout
-        Redis-->>TypingService: TTL expires
-    end
-    
-    WebSocketGateway->>OtherClients: socket.emit('user:stopped:typing')
-```
-
----
-
-## 🔒 8. Security & Permission Flow
-
-### 8.1 Permission Hierarchy
-
+#### Role-Based Access Control:
 ```yaml
-System Admin:
-  - All permissions
-  - System maintenance
-  - User management
+System Admin (User.role = ADMIN):
+  - All permissions globally
+  - User management (ban/unban)
+  - System configuration
+  - Audit log access
+  - Emergency controls
 
-Travel Host:
+Travel Host (TravelUser.role = HOST):
   - Travel settings management
   - Member management (invite/remove/ban)
   - Planet creation/deletion
-  - Announcement posting
   - Moderator assignment
+  - Travel lifecycle control
 
-Travel Moderator:
-  - Member muting
-  - Message deletion
-  - Planet settings (within assigned planets)
-  - Pinned messages
+Travel Moderator (TravelUser.role = MODERATOR):
+  - Limited member management
+  - Message deletion within travel
+  - Planet-specific moderation
+  - Report handling
 
-Planet Moderator:
-  - Message moderation (edit/delete others)
-  - Member muting (planet-specific)
+Planet Moderator (PlanetUser.role = MODERATOR):
+  - Message moderation in planet
+  - User muting (planet-specific)
   - Pinned messages
   - Planet settings
 
-Regular Member:
-  - Send messages
-  - Edit/delete own messages
+Regular Member (PARTICIPANT/USER):
+  - Send/edit/delete own messages
   - React to messages
-  - View member list
-  - Leave planet/travel
+  - Reply to messages
+  - View member lists
+  - Leave travel/planet
 ```
 
-### 8.2 Ban System Flow
+### 7.3 Ban Enforcement Flow
 
-#### Flow Sequence:
+#### Travel-Level Ban Process:
 ```mermaid
 sequenceDiagram
-    participant Host
+    participant HOST
     participant TravelUserController
     participant TravelUserService
     participant PlanetUserService
     participant NotificationService
-    participant WebSocketGateway
+    participant ChatGateway
+    participant BannedUser
     
-    Host->>TravelUserController: POST /api/v1/travel-users/{id}/ban
-    Note right of Host: {reason, duration}
+    HOST->>TravelUserController: POST /api/v1/travel-users/{id}/ban
+    Note right of HOST: {reason, duration, banType}
     
     TravelUserController->>TravelUserService: banUser()
-    TravelUserService->>DB: Update status to BANNED
+    TravelUserService->>DB: Update TravelUser.status = BANNED
     
-    TravelUserService->>PlanetUserService: removeFromAllPlanets()
-    loop For each planet
-        PlanetUserService->>DB: Delete PlanetUser
+    TravelUserService->>PlanetUserService: removeFromAllTravelPlanets()
+    loop For each planet in travel
+        PlanetUserService->>DB: Delete PlanetUser record
     end
     
-    TravelUserService->>WebSocketGateway: disconnectUser()
-    WebSocketGateway->>BannedUser: Force disconnect
+    TravelUserService->>ChatGateway: disconnectUserFromTravel()
+    ChatGateway->>BannedUser: Force disconnect from travel rooms
     
     TravelUserService->>NotificationService: sendBanNotification()
+    NotificationService->>BannedUser: BANNED notification
     
-    TravelUserService-->>Host: Ban confirmation
+    TravelUserService-->>HOST: Ban confirmation with details
 ```
-
-### 8.3 Mute System Flow
-
-Planet-specific muting (less severe than ban):
-- User can view messages
-- Cannot send messages
-- Cannot react to messages
-- Time-limited (e.g., 1 hour, 24 hours, 7 days)
 
 ---
 
-## 🚀 9. Performance Optimization Flows
+## ⚡ 8. Advanced WebSocket System
 
-### 9.1 Message Pagination (Cursor-based)
+### 8.1 WebSocket Event Architecture
 
+#### Core Event Categories:
 ```typescript
-// Efficient cursor-based pagination for messages
-interface MessagePaginationQuery {
-  planetId: number;
-  cursor?: string;  // Base64 encoded {id, createdAt}
-  limit?: number;   // Default: 50, Max: 100
-  direction?: 'before' | 'after';
+// Message Events
+interface MessageEvents {
+  'message:send': MessageSendDto;
+  'message:edit': MessageEditDto;
+  'message:delete': MessageDeleteDto;
+  'message:restore': MessageRestoreDto;
+  'message:new': Message;           // Broadcast
+  'message:edited': Message;        // Broadcast
+  'message:deleted': {id: number};  // Broadcast
 }
 
-// Response includes next/prev cursors for infinite scroll
-interface PaginatedMessages {
-  messages: Message[];
-  meta: {
-    hasMore: boolean;
-    nextCursor?: string;
-    prevCursor?: string;
-    totalUnread: number;
+// Room Management Events
+interface RoomEvents {
+  'room:join': JoinRoomDto;
+  'room:leave': LeaveRoomDto;
+  'room:get_info': {planetId: number};
+  'user:joined': {userId: number, planetId: number};
+  'user:left': {userId: number, planetId: number};
+}
+
+// Advanced Typing Events
+interface TypingEvents {
+  'typing:advanced_start': {
+    planetId: number;
+    messageLength?: number;
+    language?: string;
+  };
+  'typing:stop': {planetId: number};
+  'typing:update': {
+    planetId: number; 
+    progress: number; // 0-100%
+  };
+  'typing:get_status': {planetId: number};
+  'typing:get_analytics': {planetId: number};
+}
+
+// Read Receipt Events
+interface ReadReceiptEvents {
+  'message:read': MarkMessageReadDto;
+  'messages:read_multiple': MarkMultipleReadDto;
+  'planet:read_all': MarkAllReadDto;
+  'planet:get_unread_count': {planetId: number};
+  'user:get_all_unread_counts': {};
+}
+```
+
+### 8.2 Advanced Rate Limiting
+
+#### Multi-Tier Rate Limiting:
+```typescript
+interface RateLimitStrategy {
+  messagesSend: {
+    windowMs: 60000;        // 1 minute
+    maxMessages: 100;       // 100 messages per minute
+    skipSuccessfulRequests: false;
+    penalty: 'temporary_mute'; // 5 minute mute
+  };
+  
+  roomJoin: {
+    windowMs: 300000;       // 5 minutes
+    maxJoins: 20;          // 20 room joins per 5 minutes
+    penalty: 'connection_throttle';
+  };
+  
+  fileUpload: {
+    windowMs: 300000;       // 5 minutes
+    maxUploads: 10;        // 10 file uploads per 5 minutes
+    penalty: 'upload_restriction';
+  };
+  
+  typing: {
+    windowMs: 60000;        // 1 minute
+    maxEvents: 50;         // 50 typing events per minute
+    penalty: 'typing_disabled';
   };
 }
+
+// Penalty System:
+// - Violations trigger temporary restrictions
+// - Progressive penalties for repeat offenders
+// - Automatic penalty removal after timeout
+// - Admin override capabilities
 ```
 
-### 9.2 Redis Caching Strategy
+### 8.3 Connection Management & Room System
 
-```yaml
-Cached Data:
-  User Sessions:
-    - Key: user:{userId}:session
-    - TTL: 24 hours
-    - Data: JWT payload, device info
-  
-  Online Status:
-    - Key: user:{userId}:online
-    - TTL: 5 minutes (refreshed on activity)
-    - Data: Last seen, active planets
-  
-  Typing Indicators:
-    - Key: planet:{planetId}:typing
-    - TTL: 5 seconds
-    - Data: Set of user IDs
-  
-  Last Read Messages:
-    - Key: user:{userId}:planet:{planetId}:lastRead
-    - TTL: 7 days
-    - Data: Message ID, timestamp
-  
-  Message Cache:
-    - Key: planet:{planetId}:messages:recent
-    - TTL: 1 hour
-    - Data: Last 50 messages
-```
-
-### 9.3 WebSocket Connection Management
-
+#### Intelligent Room Management:
 ```typescript
-// Connection pooling and room management
 interface WebSocketRooms {
-  // User automatically joins these rooms on connect
-  userRooms: [
-    `user:${userId}`,           // Personal notifications
-    `travel:${travelId}`,       // Travel-wide events
-    ...planetRooms              // Each joined planet
+  autoJoinRooms: [
+    `user:${userId}`,          // Personal notifications
+    `travel:${travelId}`,      // Travel-wide events
+    `planet:${planetId}:general` // Each authorized planet
   ];
   
-  // Dynamic room join/leave based on navigation
   dynamicRooms: {
-    onPlanetOpen: `planet:${planetId}:active`,
-    onPlanetClose: // Leave active room
-    onTyping: `planet:${planetId}:typing`,
+    onPlanetActive: `planet:${planetId}:active`;    // Active chatting
+    onTyping: `planet:${planetId}:typing`;          // Typing indicators
+    onPresence: `planet:${planetId}:presence`;      // User presence
   };
+  
+  adminRooms: [
+    'system:admin',            // System-wide admin events
+    'moderation:alerts'        // Moderation alerts
+  ];
 }
+
+// Connection Features:
+// - Automatic reconnection with exponential backoff
+// - Room permission validation on join
+// - Graceful degradation when Redis unavailable
+// - Connection pooling and load balancing
+// - Heartbeat monitoring with auto-disconnect
 ```
 
 ---
 
-## 📱 10. Mobile App Specific Flows
+## 📈 9. Analytics & Monitoring System
 
-### 10.1 Push Token Registration
+### 9.1 User Behavior Analytics
 
-```mermaid
-sequenceDiagram
-    participant MobileApp
-    participant AuthController
-    participant UserService
-    participant PushService
-    participant DB
-    
-    MobileApp->>FCM/APNs: Request push token
-    FCM/APNs-->>MobileApp: Push token
-    
-    MobileApp->>AuthController: POST /api/v1/auth/register-device
-    Note right of MobileApp: {pushToken, platform, deviceId}
-    
-    AuthController->>UserService: updateDeviceInfo()
-    UserService->>DB: Store/Update device
-    
-    UserService->>PushService: validateToken()
-    PushService->>FCM/APNs: Verify token
-    
-    UserService-->>MobileApp: Device registered
-```
-
-### 10.2 Background Sync
-
-Mobile apps sync data when returning from background:
-1. Check authentication status
-2. Fetch unread message count
-3. Update online status
-4. Sync recent messages
-5. Update notification badges
-
-### 10.3 Offline Mode
-
+#### Event Tracking System:
 ```yaml
-Offline Capabilities:
-  - View cached messages
-  - Queue outgoing messages
-  - Store draft messages
-  - Access downloaded files
-  
-On Reconnection:
-  - Send queued messages
-  - Sync message status
-  - Update read receipts
-  - Refresh planet list
+Authentication Events:
+  - user.signup: {provider, device, location}
+  - user.login: {provider, device, sessionDuration}
+  - user.logout: {duration, reason}
+  - token.refresh: {frequency, deviceInfo}
+
+Travel Events:
+  - travel.created: {hostId, memberCount, duration}
+  - travel.joined: {joinMethod, inviteCode, referrer}
+  - travel.left: {reason, timeSpent, messagesSent}
+  - travel.completed: {memberRetention, satisfaction}
+
+Messaging Events:
+  - message.sent: {type, length, hasAttachment, planetType}
+  - message.edited: {timeAfterSend, editCount}
+  - message.deleted: {timeAfterSend, reason}
+  - message.read: {timeToRead, deviceType}
+
+Engagement Events:
+  - app.opened: {frequency, timeOfDay, pushNotificationClicked}
+  - planet.viewed: {duration, messagesRead, participation}
+  - notification.clicked: {type, timeToClick, actionTaken}
+  - typing.started: {duration, completionRate, language}
+
+File Events:
+  - file.uploaded: {type, size, uploadTime, success}
+  - file.downloaded: {type, deviceType, networkType}
+  - file.shared: {shareMethod, recipientCount}
 ```
 
----
+### 9.2 System Health Monitoring
 
-## 🔄 11. Data Synchronization Flows
-
-### 11.1 Real-time Sync via WebSocket
-
+#### Comprehensive Health Checks:
 ```typescript
-// WebSocket events for real-time synchronization
-enum SyncEvents {
-  // Message events
-  'message:created',
-  'message:updated', 
-  'message:deleted',
-  'message:reaction:added',
-  'message:reaction:removed',
-  
-  // User events
-  'user:online',
-  'user:offline',
-  'user:typing',
-  'user:updated',
-  
-  // Planet events
-  'planet:updated',
-  'planet:member:added',
-  'planet:member:removed',
-  'planet:member:muted',
-  
-  // Travel events
-  'travel:updated',
-  'travel:member:joined',
-  'travel:member:left',
-  'travel:deleted',
-}
-```
-
-### 11.2 Conflict Resolution
-
-When multiple clients modify same data:
-1. **Last Write Wins**: For user settings, profile updates
-2. **Operational Transform**: For collaborative message editing
-3. **Server Authority**: For permissions, bans, critical data
-4. **Version Vectors**: For offline sync conflicts
-
----
-
-## 🎯 12. Admin Panel Flows
-
-### 12.1 System Administration
-
-Admin users (role: ADMIN) can:
-- View system metrics and health
-- Manage users (suspend, delete, restore)
-- View all travels and planets
-- Send system-wide notifications
-- Access audit logs
-- Configure system settings
-
-### 12.2 Moderation Tools
-
-```typescript
-interface ModerationActions {
-  // Content moderation
-  deleteMessage(messageId: number): Promise<void>;
-  bulkDeleteMessages(filters: MessageFilter): Promise<number>;
-  
-  // User moderation
-  suspendUser(userId: number, reason: string, duration?: number): Promise<void>;
-  banFromPlatform(userId: number, reason: string): Promise<void>;
-  
-  // Travel/Planet moderation
-  freezeTravel(travelId: number): Promise<void>;
-  deletePlanet(planetId: number): Promise<void>;
-  
-  // Reporting
-  viewReports(filters: ReportFilter): Promise<Report[]>;
-  resolveReport(reportId: number, action: string): Promise<void>;
-}
-```
-
----
-
-## 📈 13. Analytics & Monitoring Flows
-
-### 13.1 User Analytics Events
-
-```yaml
-Events Tracked:
-  Authentication:
-    - user.signup
-    - user.login
-    - user.logout
-    - token.refresh
-  
-  Travel:
-    - travel.created
-    - travel.joined
-    - travel.left
-    - travel.deleted
-  
-  Messaging:
-    - message.sent
-    - message.edited
-    - message.deleted
-    - file.uploaded
-  
-  Engagement:
-    - app.opened
-    - planet.viewed
-    - notification.clicked
-    - user.active (heartbeat)
-```
-
-### 13.2 System Monitoring
-
-```typescript
-// Health check endpoints
-GET /health           // Basic health
-GET /health/detailed  // Detailed system status
-
 interface SystemHealth {
   status: 'healthy' | 'degraded' | 'unhealthy';
   timestamp: Date;
+  version: string;
+  
   services: {
-    database: ServiceStatus;
-    redis: ServiceStatus;
-    storage: ServiceStatus;
-    websocket: ServiceStatus;
+    database: {
+      status: ServiceStatus;
+      connectionPool: {active: number, idle: number, waiting: number};
+      queryPerformance: {avgMs: number, slowQueries: number};
+      migrationStatus: string;
+    };
+    
+    redis: {
+      status: ServiceStatus;
+      memory: {used: string, peak: string, fragmentation: number};
+      connections: {clients: number, blocked: number};
+      keyspaceHits: number;
+    };
+    
+    storage: {
+      status: ServiceStatus;
+      cloudflareR2: {latency: number, errorRate: number};
+      uploadQueue: {pending: number, failed: number};
+      bandwidth: {upload: string, download: string};
+    };
+    
+    websocket: {
+      status: ServiceStatus;
+      connections: {total: number, authenticated: number};
+      rooms: {count: number, averageSize: number};
+      messageRate: {perSecond: number, peakPerSecond: number};
+    };
+    
+    notifications: {
+      status: ServiceStatus;
+      fcm: {successRate: number, latency: number};
+      email: {queueSize: number, deliveryRate: number};
+      websocket: {deliveryRate: number, connectionRate: number};
+    };
   };
+  
   metrics: {
-    activeUsers: number;
-    activeConnections: number;
-    messagesPerMinute: number;
-    avgResponseTime: number;
+    activeUsers: {current: number, peak24h: number, growth: number};
+    activeConnections: {websocket: number, database: number, redis: number};
+    messagesPerMinute: {current: number, average: number, peak: number};
+    avgResponseTime: {api: number, websocket: number, database: number};
+    errorRates: {api: number, websocket: number, notifications: number};
+    resourceUsage: {cpu: number, memory: number, disk: number, network: number};
   };
 }
+
+// Health Check Endpoints:
+// GET /health - Basic health check (response time < 100ms)
+// GET /health/detailed - Comprehensive status (authenticated, admin only)
+// GET /health/metrics - Prometheus-compatible metrics export
 ```
 
 ---
 
-## 🔧 14. Scheduled Tasks & Background Jobs
+## 🔧 10. Background Jobs & Scheduled Tasks
 
-### 14.1 Scheduled Tasks (Cron Jobs)
+### 10.1 Cron Job Schedule
 
+#### Automated Maintenance Tasks:
 ```yaml
-Scheduled Tasks:
-  Clean Expired Data:
-    - Schedule: "0 2 * * *" (Daily at 2 AM)
-    - Tasks:
-      - Delete expired notifications (>30 days)
-      - Clean failed file uploads (>7 days)
-      - Remove orphaned read receipts
+Daily Tasks (0 2 * * *):
+  expired_data_cleanup:
+    - notifications older than 30 days (except important)
+    - failed file uploads older than 7 days
+    - orphaned read receipts cleanup
+    - expired push tokens removal
+    - temporary file cleanup (Cloudflare R2)
   
-  Update Statistics:
-    - Schedule: "*/5 * * * *" (Every 5 minutes)
-    - Tasks:
-      - Update message counts
-      - Calculate active users
-      - Update travel statistics
-  
-  Send Scheduled Notifications:
-    - Schedule: "* * * * *" (Every minute)
-    - Tasks:
-      - Process scheduled notifications
-      - Send reminder notifications
-      - Digest emails
-  
-  Optimize Database:
-    - Schedule: "0 3 * * 0" (Weekly on Sunday at 3 AM)
-    - Tasks:
-      - Vacuum database
-      - Update statistics
-      - Rebuild indexes
+  analytics_aggregation:
+    - daily user activity summaries
+    - message volume statistics
+    - travel completion rates
+    - notification delivery rates
+    - system performance metrics
+
+Every 5 Minutes (*/5 * * * *):
+  real_time_updates:
+    - travel status auto-updates (INACTIVE ↔ ACTIVE)
+    - time restriction evaluations
+    - notification retry processing
+    - WebSocket connection cleanup
+    - cache warming for popular data
+
+Every Hour (0 * * * *):
+  optimization_tasks:
+    - database query optimization hints
+    - Redis memory optimization
+    - file storage cleanup
+    - search index rebuilding
+    - performance metric collection
+
+Weekly Tasks (0 3 * * 0):
+  deep_maintenance:
+    - database vacuum and reindexing
+    - full cache rebuild
+    - audit log archival
+    - security scan reports
+    - backup verification
+    - performance baseline updates
 ```
 
-### 14.2 Background Job Queue
+### 10.2 Background Job Queue
 
+#### Asynchronous Job Processing:
 ```typescript
-// Job types processed asynchronously
 enum JobType {
-  // File processing
-  IMAGE_OPTIMIZATION = 'image.optimize',
-  VIDEO_THUMBNAIL = 'video.thumbnail',
+  // File Processing
+  IMAGE_OPTIMIZATION = 'image.optimize',     // Auto-optimize large images
+  VIDEO_THUMBNAIL = 'video.thumbnail',       // Generate video thumbnails
+  FILE_VIRUS_SCAN = 'file.virus_scan',      // Security scanning
+  FILE_METADATA_EXTRACT = 'file.metadata',  // Extract file information
   
   // Notifications
-  PUSH_NOTIFICATION = 'notification.push',
-  EMAIL_NOTIFICATION = 'notification.email',
-  BULK_NOTIFICATION = 'notification.bulk',
+  PUSH_NOTIFICATION = 'notification.push',   // FCM delivery
+  EMAIL_NOTIFICATION = 'notification.email', // Email delivery
+  BULK_NOTIFICATION = 'notification.bulk',   // Mass notifications
+  NOTIFICATION_RETRY = 'notification.retry', // Failed delivery retry
   
-  // Data processing
-  EXPORT_USER_DATA = 'user.export',
-  DELETE_USER_DATA = 'user.delete',
-  MIGRATE_DATA = 'data.migrate',
+  // Data Processing
+  USER_DATA_EXPORT = 'user.export',         // GDPR data export
+  USER_DATA_DELETE = 'user.delete',         // Account deletion
+  MESSAGE_SEARCH_INDEX = 'message.index',   // Search optimization
+  ANALYTICS_AGGREGATE = 'analytics.process', // Data aggregation
   
-  // Analytics
-  GENERATE_REPORT = 'report.generate',
-  CALCULATE_METRICS = 'metrics.calculate',
+  // System Maintenance
+  CACHE_WARMING = 'cache.warm',             // Preload cache
+  DATABASE_OPTIMIZE = 'database.optimize',  // Query optimization
+  FILE_CLEANUP = 'file.cleanup',           // Storage cleanup
+  AUDIT_LOG_PROCESS = 'audit.process',     // Security audit
+  
+  // Travel Management
+  TRAVEL_STATUS_UPDATE = 'travel.status',   // Auto-activate/deactivate
+  TRAVEL_EXPIRY_NOTICE = 'travel.expiry',  // Expiry notifications
+  MEMBER_ACTIVITY_DIGEST = 'member.digest', // Activity summaries
+}
+
+// Job Priority System:
+enum JobPriority {
+  CRITICAL = 1,    // User-facing operations (notifications, messages)
+  HIGH = 2,        // File processing, real-time features
+  NORMAL = 3,      // Analytics, optimization
+  LOW = 4,         // Cleanup, maintenance
+  BULK = 5         // Mass operations, exports
 }
 ```
 
 ---
 
-## 🚨 15. Error Handling & Recovery Flows
+## 🎯 11. Development & Deployment
 
-### 15.1 Error Types & Handling
+### 11.1 API Development Standards
 
+#### CRUD Pattern Implementation:
 ```typescript
-// Custom business exceptions
-class BusinessException extends Error {
-  constructor(
-    public code: string,
-    public message: string,
-    public statusCode: number,
-    public details?: any
-  ) {}
-}
-
-// Error codes
-enum ErrorCode {
-  // Authentication
-  AUTH_INVALID_TOKEN = 'AUTH001',
-  AUTH_TOKEN_EXPIRED = 'AUTH002',
-  AUTH_UNAUTHORIZED = 'AUTH003',
+// Standard Controller Pattern using @foryourdev/nestjs-crud
+@Controller({ path: 'entities', version: '1' })
+@Crud({
+  entity: Entity,
+  only: ['index', 'show', 'create', 'update', 'destroy'],
+  allowedFilters: ['field1', 'field2', 'status', 'createdAt'],
+  allowedParams: ['field1', 'field2', 'relationId'],
+  allowedIncludes: ['relation1', 'relation2'],
+  routes: {
+    index: {
+      decorators: [UseGuards(AuthGuard)],
+      interceptors: [LoggingInterceptor],
+    },
+    show: {
+      decorators: [UseGuards(AuthGuard)],
+    },
+  },
+})
+export class EntityController {
+  constructor(public readonly crudService: EntityService) {}
   
-  // Travel
-  TRAVEL_NOT_FOUND = 'TRV001',
-  TRAVEL_ACCESS_DENIED = 'TRV002',
-  TRAVEL_ALREADY_MEMBER = 'TRV003',
-  
-  // Planet
-  PLANET_NOT_FOUND = 'PLT001',
-  PLANET_ACCESS_DENIED = 'PLT002',
-  PLANET_USER_MUTED = 'PLT003',
-  
-  // Message
-  MESSAGE_NOT_FOUND = 'MSG001',
-  MESSAGE_EDIT_TIMEOUT = 'MSG002',
-  MESSAGE_DELETE_DENIED = 'MSG003',
-  
-  // File
-  FILE_TOO_LARGE = 'FILE001',
-  FILE_TYPE_NOT_ALLOWED = 'FILE002',
-  FILE_UPLOAD_FAILED = 'FILE003',
+  // Custom endpoints
+  @Post(':id/custom-action')
+  @UseGuards(AuthGuard)
+  async customAction(@Param('id') id: string) {
+    // Custom business logic
+  }
 }
 ```
 
-### 15.2 Retry & Fallback Strategies
+### 11.2 Zero-Downtime Deployment Strategy
 
-```yaml
-Retry Strategies:
-  Database Operations:
-    - Max retries: 3
-    - Backoff: Exponential (100ms, 500ms, 2000ms)
-    - Fallback: Return cached data or error
-  
-  External Services:
-    - Push Notifications:
-      - Max retries: 5
-      - Backoff: Linear (1s)
-      - Fallback: Queue for later
-    
-    - File Storage:
-      - Max retries: 3
-      - Backoff: Exponential
-      - Fallback: Alternative storage
-  
-  WebSocket:
-    - Reconnection attempts: Infinite
-    - Backoff: Exponential with jitter
-    - Max backoff: 30 seconds
-```
-
-### 15.3 Graceful Degradation
-
-When services are unavailable:
-- **Database down**: Serve from Redis cache
-- **Redis down**: Disable real-time features, use DB only
-- **Storage down**: Queue uploads, serve cached files
-- **Push service down**: Fallback to email/in-app only
-- **WebSocket down**: Poll for updates via REST API
-
----
-
-## 📋 16. Migration & Upgrade Flows
-
-### 16.1 Database Migration Flow
-
-```bash
-# Migration commands
-yarn migration:generate MigrationName  # Generate from entity changes
-yarn migration:create MigrationName    # Create empty migration
-yarn migration:run                     # Run pending migrations
-yarn migration:revert                  # Revert last migration
-```
-
-### 16.2 Zero-Downtime Deployment
-
+#### Blue-Green Deployment Flow:
 ```mermaid
 sequenceDiagram
     participant LoadBalancer
-    participant OldVersion
-    participant NewVersion
+    participant BlueVersion
+    participant GreenVersion
     participant Database
+    participant HealthCheck
     
-    Note over LoadBalancer,Database: Step 1: Deploy new version
-    LoadBalancer->>OldVersion: Route 100% traffic
-    NewVersion->>Database: Run migrations (backward compatible)
+    Note over LoadBalancer,Database: Phase 1: Prepare Green Environment
+    LoadBalancer->>BlueVersion: Route 100% traffic
+    GreenVersion->>Database: Run backward-compatible migrations
+    GreenVersion->>HealthCheck: Validate green environment
     
-    Note over LoadBalancer,Database: Step 2: Gradual rollout
-    LoadBalancer->>OldVersion: Route 90% traffic
-    LoadBalancer->>NewVersion: Route 10% traffic
+    Note over LoadBalancer,Database: Phase 2: Gradual Traffic Shift
+    LoadBalancer->>BlueVersion: Route 90% traffic
+    LoadBalancer->>GreenVersion: Route 10% traffic
+    HealthCheck->>GreenVersion: Monitor error rates & performance
     
-    Note over LoadBalancer,Database: Step 3: Monitor & increase
-    LoadBalancer->>OldVersion: Route 50% traffic
-    LoadBalancer->>NewVersion: Route 50% traffic
+    Note over LoadBalancer,Database: Phase 3: Full Migration
+    LoadBalancer->>BlueVersion: Route 50% traffic
+    LoadBalancer->>GreenVersion: Route 50% traffic
+    HealthCheck->>GreenVersion: Validate stability
     
-    Note over LoadBalancer,Database: Step 4: Complete migration
-    LoadBalancer->>NewVersion: Route 100% traffic
-    OldVersion->>OldVersion: Shutdown gracefully
+    Note over LoadBalancer,Database: Phase 4: Completion
+    LoadBalancer->>GreenVersion: Route 100% traffic
+    BlueVersion->>BlueVersion: Graceful shutdown
+    Database->>Database: Run forward-only migrations
+```
+
+#### Deployment Safety Checks:
+```yaml
+Pre-deployment Validation:
+  - Database migration compatibility
+  - API backward compatibility
+  - WebSocket protocol compatibility
+  - File upload/storage compatibility
+  - Push notification format compatibility
+
+Rolling Deployment Strategy:
+  - Instance-by-instance replacement
+  - Health check validation at each step
+  - Automatic rollback on failure
+  - WebSocket connection preservation
+  - Active message queue preservation
+
+Post-deployment Verification:
+  - End-to-end functionality tests
+  - Performance regression testing
+  - Error rate monitoring
+  - User experience validation
+  - Critical path verification
 ```
 
 ---
 
-## 🎓 Best Practices & Guidelines
+## 📚 12. Technical Specifications
 
-### API Design Principles
-1. **RESTful conventions** with CRUD decorators
-2. **Version control** via URL (v1, v2)
-3. **Consistent error responses** with error codes
-4. **Pagination** for all list endpoints
-5. **Rate limiting** on all public endpoints
+### 12.1 Database Schema (Actual Implementation)
 
-### Security Guidelines
-1. **JWT authentication** for all protected routes
-2. **Role-based access control** (RBAC)
-3. **Input validation** using class-validator
-4. **SQL injection prevention** via TypeORM
-5. **XSS protection** through sanitization
-6. **File upload restrictions** by size and type
-
-### Performance Optimization
-1. **Database indexes** on frequently queried fields
-2. **Redis caching** for hot data
-3. **Cursor pagination** for large datasets
-4. **Lazy loading** for relations
-5. **Connection pooling** for DB and Redis
-6. **CDN** for static assets
-
-### Code Organization
-1. **Module-based** structure
-2. **Service layer** for business logic
-3. **Repository pattern** for data access
-4. **DTO validation** at controller level
-5. **Entity decorators** for validation
-6. **Consistent naming** conventions
-
----
-
-## 📚 Appendix
-
-### A. Database Schema Overview
-
+#### Entity Relationships:
 ```sql
--- Core entities and relationships
-users (1) ----< (N) travel_users
-users (1) ----< (N) planet_users  
-users (1) ----< (N) messages
-users (1) ----< (N) notifications
+-- Core Relationships
 users (1) ----< (1) profiles
+users (1) ----< (N) travel_users
+users (1) ----< (N) planet_users
+users (1) ----< (N) messages
+users (1) ----< (N) message_read_receipts
+users (1) ----< (N) notifications
 users (1) ----< (N) file_uploads
 
 travels (1) ----< (N) travel_users
@@ -1160,72 +1173,157 @@ travels (1) ----< (N) planets
 planets (1) ----< (N) planet_users
 planets (1) ----< (N) messages
 
-messages (1) ----< (N) read_receipts
+messages (1) ----< (N) message_read_receipts
+
+-- Indexes for Performance
+CREATE INDEX idx_travel_users_composite ON travel_users(travel_id, user_id, status);
+CREATE INDEX idx_planet_users_composite ON planet_users(planet_id, user_id, status);
+CREATE INDEX idx_messages_planet_created ON messages(planet_id, created_at DESC);
+CREATE INDEX idx_messages_search ON messages USING gin(searchable_text);
+CREATE INDEX idx_notifications_user_status ON notifications(user_id, status, created_at DESC);
+CREATE INDEX idx_read_receipts_message ON message_read_receipts(message_id, user_id);
 ```
 
-### B. Environment Variables
+### 12.2 Environment Configuration
 
+#### Production Environment Variables:
 ```env
-# Database
-DATABASE_URL=postgresql://user:pass@localhost:5432/connecto
+# Application
+NODE_ENV=production
+PORT=3000
+API_VERSION=v1
 
-# JWT
-JWT_SECRET=your-secret-key
+# Database
+DATABASE_URL=postgresql://user:password@host:5432/connecto_prod
+DATABASE_SSL=true
+DATABASE_POOL_SIZE=20
+DATABASE_CONNECTION_TIMEOUT=60000
+
+# JWT Security
+JWT_SECRET=your-super-secure-secret-key-32-characters-min
 JWT_ACCESS_TOKEN_EXPIRES_IN=15m
 JWT_REFRESH_TOKEN_EXPIRES_IN=7d
 
-# Redis
-REDIS_URL=redis://localhost:6379
+# Redis Cache
+REDIS_URL=redis://redis-host:6379
+REDIS_PASSWORD=your-redis-password
+REDIS_DB=0
+REDIS_MAX_CONNECTIONS=10
 
-# Storage (Cloudflare R2)
-CLOUDFLARE_R2_ACCOUNT_ID=
-CLOUDFLARE_R2_ACCESS_KEY_ID=
-CLOUDFLARE_R2_SECRET_ACCESS_KEY=
-CLOUDFLARE_R2_BUCKET_NAME=
-CLOUDFLARE_R2_PUBLIC_URL=
+# Cloudflare R2 Storage
+CLOUDFLARE_R2_ACCOUNT_ID=your-account-id
+CLOUDFLARE_R2_ACCESS_KEY_ID=your-access-key
+CLOUDFLARE_R2_SECRET_ACCESS_KEY=your-secret-key
+CLOUDFLARE_R2_BUCKET_NAME=connecto-files
+CLOUDFLARE_R2_PUBLIC_URL=https://files.connecto.app
 
-# Social Login
-GOOGLE_CLIENT_ID=
-APPLE_CLIENT_ID=
+# Social Authentication
+GOOGLE_CLIENT_ID=your-google-client-id
+APPLE_CLIENT_ID=your-apple-client-id
 
 # Push Notifications
-FCM_SERVER_KEY=
-FCM_SENDER_ID=
+FCM_SERVER_KEY=your-fcm-server-key
+FCM_SENDER_ID=your-fcm-sender-id
+
+# Email Service (Optional)
+SMTP_HOST=smtp.your-provider.com
+SMTP_PORT=587
+SMTP_USER=noreply@connecto.app
+SMTP_PASS=your-smtp-password
+
+# Monitoring & Analytics
+SENTRY_DSN=your-sentry-dsn
+NEW_RELIC_LICENSE_KEY=your-newrelic-key
+ANALYTICS_API_KEY=your-analytics-key
+
+# Security
+RATE_LIMIT_MAX=1000
+RATE_LIMIT_WINDOW_MS=900000
+CORS_ORIGINS=https://app.connecto.com,https://admin.connecto.com
 ```
 
-### C. API Rate Limits
+### 12.3 Performance Benchmarks
 
+#### System Performance Targets:
 ```yaml
-Rate Limits:
-  Anonymous:
-    - 10 requests per minute
+API Performance:
+  Response Time:
+    - 95th percentile: <200ms
+    - 99th percentile: <500ms
+    - Average: <100ms
   
-  Authenticated:
-    - 100 requests per minute
-    - 1000 requests per hour
+  Throughput:
+    - Messages per second: >1000
+    - API requests per second: >5000
+    - Concurrent WebSocket connections: >10000
   
-  WebSocket:
-    - 10 connections per user
-    - 100 messages per minute
-    - 5 typing events per minute
+  Error Rates:
+    - API error rate: <0.1%
+    - WebSocket error rate: <0.05%
+    - Notification delivery failure: <1%
+
+Database Performance:
+  Query Response:
+    - Simple queries: <10ms
+    - Complex queries: <100ms
+    - Aggregation queries: <500ms
   
-  File Upload:
-    - 10 uploads per minute
-    - 100 uploads per day
+  Connection Pool:
+    - Max connections: 20
+    - Connection timeout: 60s
+    - Idle timeout: 30s
+
+Cache Performance:
+  Redis Metrics:
+    - Hit rate: >95%
+    - Memory usage: <2GB
+    - Connection latency: <5ms
+  
+  Cache TTL Strategy:
+    - User sessions: 24h
+    - Message cache: 1h
+    - Unread counts: 7d
+    - Typing indicators: 5s
+
+File Upload Performance:
+  Upload Targets:
+    - 10MB file: <30s
+    - 100MB file: <5min
+    - 500MB file: <15min
+  
+  Processing:
+    - Image optimization: <10s
+    - Video thumbnail: <30s
+    - Virus scanning: <60s
 ```
 
 ---
 
-## 📝 Version History
+## 📝 Version History & Roadmap
 
-- **v1.0.0** (2024-01): Initial release
-- **v1.1.0** (2024-02): Added direct messaging
+### Version History:
+- **v1.0.0** (2024-01): Initial release with basic messaging
+- **v1.1.0** (2024-02): Added direct messaging and file uploads
 - **v1.2.0** (2024-03): WebSocket real-time features
-- **v1.3.0** (2024-04): File upload system
-- **v1.4.0** (2024-05): Push notifications
-- **v1.5.0** (2024-06): Simplified ban system, removed admin module
+- **v1.3.0** (2024-04): Advanced file upload system (chunked, 500MB)
+- **v1.4.0** (2024-05): Multi-channel push notifications
+- **v1.5.0** (2024-06): Simplified architecture (removed admin module, notification read tracking)
+- **v1.6.0** (2024-07): Advanced read receipts and typing indicators
+- **v1.7.0** (2024-08): Three-tier ban system and complex time restrictions
+- **v1.8.0** (2024-09): Enterprise analytics and monitoring
+- **v1.9.0** (2024-10): Performance optimizations and caching
+- **v2.0.0** (2024-11): Production-ready deployment
+
+### Upcoming Features (Roadmap):
+- **v2.1.0**: Advanced message reactions and threading
+- **v2.2.0**: Voice/video calling integration
+- **v2.3.0**: Advanced search with full-text indexing
+- **v2.4.0**: AI-powered content moderation
+- **v2.5.0**: Multi-language support and localization
+- **v3.0.0**: Microservices architecture migration
 
 ---
 
 *Last Updated: 2024-01-14*
-*Generated for Connecto NestJS Backend v1.5.0*
+*Generated from Connecto NestJS Backend v1.8.0*
+*Documentation reflects actual codebase implementation*
