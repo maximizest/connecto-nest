@@ -1,464 +1,413 @@
-# API 라우트 문서
+# API Routes Documentation
 
-## 개요
-이 문서는 Connecto NestJS 백엔드의 모든 API 라우트를 정리한 것입니다.
-- **Base URL**: `/api/v1`
-- **인증**: 대부분의 엔드포인트는 JWT 토큰 인증 필요 (`@UseGuards(AuthGuard)`)
-- **CRUD Framework**: `@foryourdev/nestjs-crud` 사용
-- **라우트 타입**: 
-  - 🔄 = nestjs-crud 자동 생성 라우트
-  - 🛠️ = 커스텀 구현 라우트
+이 문서는 Connecto NestJS 애플리케이션의 모든 API 라우트와 그 역할 및 기능을 설명합니다.
 
-## 1. 인증 (Authentication)
-**Base Path**: `/api/v1/auth`
-**인증 필요**: ❌ (토큰 발급 엔드포인트)
-**구현 방식**: 🛠️ 모두 커스텀
-
-| Method | Endpoint | 설명 | 권한 | 타입 |
-|--------|----------|------|------|------|
-| POST | `/sign/social` | 소셜 로그인 (Google/Apple) | Public | 🛠️ 커스텀 |
-| POST | `/sign/refresh` | JWT 토큰 갱신 | Refresh Token | 🛠️ 커스텀 |
-| POST | `/sign/out` | 로그아웃 | Access Token | 🛠️ 커스텀 |
-
-### 주요 기능
-- Google OAuth 및 Apple Sign-In 지원
-- JWT 기반 인증 (Access Token + Refresh Token)
-- 자동 사용자 생성 및 프로필 초기화
+## Base URL
+- API Version: v1
+- Base Path: `/api/v1`
 
 ---
 
-## 2. 사용자 (Users)
-**Base Path**: `/api/v1/users`
-**인증 필요**: ✅
-**구현 방식**: 🔄 nestjs-crud (`@Crud` 데코레이터 사용)
-**CRUD Operations**: `show`, `update`, `destroy`
+## 📋 목차
 
-| Method | Endpoint | 설명 | 권한 | 타입 |
-|--------|----------|------|------|------|
-| GET | `/:id` | 사용자 정보 조회 | 본인만 | 🔄 CRUD |
-| PATCH | `/:id` | 사용자 정보 수정 | 본인만 | 🔄 CRUD |
-| DELETE | `/:id` | 계정 삭제 (Soft Delete) | 본인만 | 🔄 CRUD |
-
-### Lifecycle Hooks
-- `@BeforeShow()`: 본인 확인
-- `@BeforeUpdate()`: 본인 확인, 차단 계정 체크
-- `@BeforeDestroy()`: 본인 확인, 삭제 메타데이터 설정
-
-### 주요 기능
-- 본인 정보만 조회/수정/삭제 가능
-- 차단된 계정은 수정 불가
-- Soft Delete로 데이터 보존
-
-### 수정 가능 필드
-- `name`, `phone`
-- `notificationsEnabled`, `advertisingConsentEnabled`
+1. [인증 (Auth)](#인증-auth)
+2. [파일 업로드 (File Upload)](#파일-업로드-file-upload)
+3. [메시지 (Message)](#메시지-message)
+4. [알림 (Notification)](#알림-notification)
+5. [Planet (채팅방)](#planet-채팅방)
+6. [Planet User (채팅방 사용자)](#planet-user-채팅방-사용자)
+7. [Profile (프로필)](#profile-프로필)
+8. [Read Receipt (읽음 확인)](#read-receipt-읽음-확인)
+9. [Travel (여행 그룹)](#travel-여행-그룹)
+10. [Travel User (여행 그룹 사용자)](#travel-user-여행-그룹-사용자)
+11. [User (사용자)](#user-사용자)
+12. [Schema (스키마)](#schema-스키마)
 
 ---
 
-## 3. 프로필 (Profiles)
-**Base Path**: `/api/v1/profiles`
-**인증 필요**: ✅
-**구현 방식**: 🔄 nestjs-crud (`@Crud` 데코레이터 사용)
-**CRUD Operations**: `index`, `show`, `create`, `update`
+## 인증 (Auth)
 
-| Method | Endpoint | 설명 | 권한 | 타입 |
-|--------|----------|------|------|------|
-| GET | `/` | 프로필 목록 조회 | 인증된 사용자 | 🔄 CRUD |
-| GET | `/:id` | 프로필 상세 조회 | 인증된 사용자 | 🔄 CRUD |
-| POST | `/` | 프로필 생성 | 프로필 없는 사용자 | 🔄 CRUD |
-| PATCH | `/:id` | 프로필 수정 | 본인만 | 🔄 CRUD |
+### 엔드포인트: `/api/v1/auth`
 
-### Lifecycle Hooks
-- `@BeforeCreate()`: 중복 확인, userId 설정
-- `@BeforeUpdate()`: 본인 확인, 차단 사용자 체크
-- `@BeforeShow()`: 차단된 사용자 프로필 접근 제한
+| Method | Path | 인증 필요 | 역할 | 기능 |
+|--------|------|----------|------|------|
+| POST | `/sign/social` | ❌ | All | 소셜 로그인 (Google/Apple) - JWT 토큰 발급 |
+| POST | `/sign/admin` | ❌ | ADMIN only | 관리자 이메일/비밀번호 로그인 |
+| POST | `/sign/refresh` | ❌ | All | 리프레시 토큰으로 액세스 토큰 재발급 |
+| POST | `/sign/out` | ✅ | All | 로그아웃 (리프레시 토큰 삭제) |
 
-### 주요 기능
-- User와 1:1 관계
-- 차단된 사용자의 프로필 조회 제한
-- 풍부한 프로필 정보 지원
-
-### 프로필 필드
-- 기본: `nickname`, `name`, `gender`, `age`, `occupation`
-- 성별 옵션: MALE, FEMALE, OTHER, PREFER_NOT_TO_SAY
-- 나이 제한: 1~150
+**주요 기능:**
+- 소셜 로그인 지원 (Google, Apple)
+- 관리자 전용 이메일/비밀번호 인증
+- JWT 기반 인증 시스템
+- 자동 프로필 생성
+- 푸시 토큰 등록 지원
 
 ---
 
-## 4. 여행 그룹 (Travels)
-**Base Path**: `/api/v1/travels`
-**인증 필요**: ✅
-**구현 방식**: 🔄 nestjs-crud (`@Crud` 데코레이터 사용)
-**CRUD Operations**: `index`, `show`
+## 파일 업로드 (File Upload)
 
-| Method | Endpoint | 설명 | 권한 | 타입 |
-|--------|----------|------|------|------|
-| GET | `/` | 여행 목록 조회 | 참여한 여행만 | 🔄 CRUD |
-| GET | `/:id` | 여행 상세 조회 | 멤버만 | 🔄 CRUD |
+### 엔드포인트: `/api/v1/file-uploads`
 
-### 주요 기능
-- Planet들의 최상위 컨테이너
-- 초대 코드를 통한 참여
-- 만료 시간 관리
+| Method | Path | 인증 필요 | 역할 | 기능 |
+|--------|------|----------|------|------|
+| GET | `/` | ✅ | All | 파일 목록 조회 (필터링 지원) |
+| GET | `/:id` | ✅ | All | 특정 파일 정보 조회 |
+| POST | `/` | ✅ | All | 파일 업로드 레코드 생성 |
+| DELETE | `/:id` | ✅ | Owner | 파일 삭제 |
+| POST | `/presigned-url` | ✅ | All | Cloudflare R2 업로드용 Presigned URL 발급 |
+| POST | `/complete` | ✅ | All | Direct Upload 완료 확인 |
+| DELETE | `/:id/cancel` | ✅ | Owner | 진행 중인 업로드 취소 |
+| GET | `/:id/download-url` | ✅ | Owner | 다운로드 URL 생성 (임시, 최대 24시간) |
+| GET | `/:id/stream` | ✅ | Owner | 비디오/오디오 스트리밍 URL 조회 |
 
-### 필터 옵션
+**주요 기능:**
+- Cloudflare R2 Direct Upload 지원
+- 최대 500MB 파일 지원
+- 청크 업로드 (5MB 단위)
+- 자동 이미지 최적화 (5MB 이상)
+- 비디오/오디오 스트리밍 지원
+- HTTP Range 요청 지원
+
+**필터링 옵션:**
+- `status`, `userId`, `mimeType`, `uploadType`, `folder`, `createdAt`
+
+---
+
+## 메시지 (Message)
+
+### 엔드포인트: `/api/v1/messages`
+
+| Method | Path | 인증 필요 | 역할 | 기능 |
+|--------|------|----------|------|------|
+| GET | `/` | ✅ | Planet Member | 메시지 목록 조회 (planetId 필터 필수) |
+| GET | `/:id` | ✅ | Planet Member | 특정 메시지 조회 |
+| POST | `/` | ✅ | Planet Member | 새 메시지 생성 |
+| PATCH | `/:id` | ✅ | Sender | 메시지 수정 (15분 이내, 텍스트만) |
+| DELETE | `/:id` | ✅ | Sender | 메시지 삭제 (Soft Delete) |
+| GET | `/:messageId/context` | ✅ | Planet Member | 특정 메시지 주변 컨텍스트 조회 |
+
+**주요 기능:**
+- 메시지 타입: TEXT, IMAGE, VIDEO, FILE, SYSTEM
+- 답장 기능 지원
+- 메시지 편집 기능 (15분 제한)
+- Soft Delete (복구 가능)
+- 실시간 이벤트 발생
+- 역할 기반 접근 제어
+- 시간 제한 채팅 지원
+
+**필터링 옵션:**
+- `planetId` (필수), `senderId`, `type`, `status`, `isEdited`, `replyToMessageId`, `createdAt`, `updatedAt`, `searchableText`, `content`
+
+**관계 포함 옵션:**
+- `sender`, `planet`, `replyToMessage`, `readReceipts`, `replies`
+
+---
+
+## 알림 (Notification)
+
+### 엔드포인트: `/api/v1/notifications`
+
+| Method | Path | 인증 필요 | 역할 | 기능 |
+|--------|------|----------|------|------|
+| GET | `/` | ✅ | All | 내 알림 목록 조회 |
+| GET | `/:id` | ✅ | Owner | 특정 알림 상세 조회 |
+| PATCH | `/:id` | ✅ | Owner | 알림 상태 업데이트 |
+| POST | `/push-token` | ✅ | All | 푸시 토큰 등록 |
+| POST | `/push-token/unregister` | ✅ | All | 푸시 토큰 해제 |
+| GET | `/push-tokens` | ✅ | All | 내 푸시 토큰 목록 조회 |
+| POST | `/test` | ✅ | All (Dev only) | 테스트 알림 전송 |
+
+**주요 기능:**
+- 알림 타입: MESSAGE, MENTION, REPLY, BANNED, SYSTEM
+- 알림 채널: IN_APP, PUSH, EMAIL, SMS
+- 우선순위: LOW, NORMAL, HIGH, URGENT
+- 상태: PENDING, SENT, DELIVERED, FAILED
+- 푸시 토큰 관리 (iOS, Android, Web)
+- 멀티 디바이스 지원
+
+**필터링 옵션:**
+- `type`, `priority`, `status`, `travelId`, `planetId`, `createdAt`
+
+---
+
+## Planet (채팅방)
+
+### 엔드포인트: `/api/v1/planets`
+
+| Method | Path | 인증 필요 | 역할 | 기능 |
+|--------|------|----------|------|------|
+| GET | `/` | ✅ | Travel Member | Planet 목록 조회 (travelId 필터 필수) |
+| GET | `/:id` | ✅ | Travel Member | Planet 상세 조회 |
+
+**주요 기능:**
+- Planet 타입: GROUP (그룹 채팅), DIRECT (1:1 채팅)
+- 시간 제한 채팅 지원
+- Travel 하위 채팅방 관리
+- 사용자는 읽기 전용 (생성/수정/삭제 불가)
+
+**필터링 옵션:**
+- `travelId` (필수), `type`, `isActive`, `name`, `createdAt`
+
+**관계 포함 옵션:**
+- `travel`, `partner`, `planetUsers`, `planetUsers.user`
+
+---
+
+## Planet User (채팅방 사용자)
+
+### 엔드포인트: `/api/v1/planet-users`
+
+| Method | Path | 인증 필요 | 역할 | 기능 |
+|--------|------|----------|------|------|
+| GET | `/` | ✅ | Travel Member | Planet 멤버십 목록 조회 |
+| GET | `/:id` | ✅ | Travel Member | 특정 Planet 멤버십 조회 |
+| PATCH | `/:id` | ✅ | Self | 멤버십 설정 업데이트 (알림 설정) |
+
+**주요 기능:**
+- Planet 멤버십 관리
+- 상태: ACTIVE, MUTED
+- 알림 설정 관리
+- 뮤트 기능 (차단 대신 뮤트 사용)
+
+**필터링 옵션:**
+- `planetId`, `status`, `joinedAt`
+
+**업데이트 가능 필드:**
+- `notificationsEnabled`
+
+---
+
+## Profile (프로필)
+
+### 엔드포인트: `/api/v1/profiles`
+
+| Method | Path | 인증 필요 | 역할 | 기능 |
+|--------|------|----------|------|------|
+| GET | `/` | ✅ | All | 프로필 목록 조회 |
+| GET | `/:id` | ✅ | All | 프로필 상세 조회 |
+| POST | `/` | ✅ | All | 프로필 생성 (사용자당 1개) |
+| PATCH | `/:id` | ✅ | Owner | 프로필 수정 |
+
+**주요 기능:**
+- 사용자당 1개 프로필 제한
+- 프로필 정보: 닉네임, 이름, 성별, 나이, 직업
+- 밴 된 사용자는 수정 불가
+- 공개 프로필 열람 가능
+
+**필터링 옵션:**
+- `userId`, `nickname`, `name`, `gender`, `age`, `occupation`, `createdAt`
+
+**업데이트 가능 필드:**
+- `nickname`, `name`, `gender`, `age`, `occupation`
+
+---
+
+## Read Receipt (읽음 확인)
+
+### 엔드포인트: `/api/v1/read-receipts`
+
+| Method | Path | 인증 필요 | 역할 | 기능 |
+|--------|------|----------|------|------|
+| GET | `/` | ✅ | Planet Member | 읽음 확인 목록 조회 |
+| GET | `/:id` | ✅ | Planet Member | 특정 읽음 확인 조회 |
+| POST | `/` | ✅ | Planet Member | 읽음 확인 생성 |
+| POST | `/mark-read` | ✅ | Planet Member | 단일 메시지 읽음 처리 |
+| POST | `/mark-multiple-read` | ✅ | Planet Member | 여러 메시지 읽음 처리 |
+| POST | `/mark-all-read/:planetId` | ✅ | Planet Member | Planet 전체 메시지 읽음 처리 |
+| GET | `/unread-count/:planetId` | ✅ | Planet Member | Planet 읽지 않은 메시지 수 조회 |
+| GET | `/unread-counts/my` | ✅ | All | 내 모든 Planet 읽지 않은 메시지 수 조회 |
+
+**주요 기능:**
+- 실시간 읽음 상태 동기화
+- 배치 읽음 처리
+- Planet 범위 접근 제어
+- Upsert 로직 (중복 방지)
+- 디바이스별 추적
+
+**필터링 옵션:**
+- `messageId`, `userId`, `planetId`, `isRead`, `readAt`, `deviceType`, `createdAt`
+
+---
+
+## Travel (여행 그룹)
+
+### 엔드포인트: `/api/v1/travels`
+
+| Method | Path | 인증 필요 | 역할 | 기능 |
+|--------|------|----------|------|------|
+| GET | `/` | ✅ | Member | 내가 참여한 Travel 목록 조회 |
+| GET | `/:id` | ✅ | Member | Travel 상세 조회 |
+
+**주요 기능:**
+- Travel 상태: PLANNED, ONGOING, COMPLETED, CANCELLED
+- 가시성: PUBLIC, PRIVATE
+- 멤버 및 Planet 정보 포함
+- 사용자는 읽기 전용
+
+**필터링 옵션:**
 - `status`, `name`, `visibility`, `endDate`, `createdAt`
 
-### Include 옵션
+**관계 포함 옵션:**
 - `travelUsers`, `travelUsers.user`, `planets`
 
 ---
 
-## 5. 여행 멤버십 (Travel Users)
-**Base Path**: `/api/v1/travel-users`
-**인증 필요**: ✅
-**구현 방식**: 🔄 nestjs-crud (`@Crud` 데코레이터 사용)
-**전체 CRUD 지원**
+## Travel User (여행 그룹 사용자)
 
-| Method | Endpoint | 설명 | 권한 | 타입 |
-|--------|----------|------|------|------|
-| GET | `/` | 멤버십 목록 조회 | 인증된 사용자 | 🔄 CRUD |
-| GET | `/:id` | 멤버십 상세 조회 | 관련 사용자 | 🔄 CRUD |
-| POST | `/` | 멤버십 생성 (참여) | 인증된 사용자 | 🔄 CRUD |
-| PATCH | `/:id` | 멤버십 수정 | HOST 권한 | 🔄 CRUD |
-| DELETE | `/:id` | 멤버십 삭제 (탈퇴) | 본인/HOST | 🔄 CRUD |
+### 엔드포인트: `/api/v1/travel-users`
 
-### 역할 (Role)
-- `HOST`: 여행 관리자
-- `PARTICIPANT`: 일반 참여자
+| Method | Path | 인증 필요 | 역할 | 기능 |
+|--------|------|----------|------|------|
+| GET | `/` | ✅ | All | Travel 멤버십 목록 조회 |
+| GET | `/:id` | ✅ | All | 특정 Travel 멤버십 조회 |
+| POST | `/` | ✅ | All | Travel 참여 (초대 코드 필요) |
+| PATCH | `/:id` | ✅ | Self | 멤버십 정보 수정 |
 
-### 상태 (Status)
-- `ACTIVE`: 활성 멤버
-- `BANNED`: 차단됨
-- `LEFT`: 자진 탈퇴
+**주요 기능:**
+- 역할: HOST (호스트), PARTICIPANT (참가자)
+- 상태: ACTIVE, BANNED
+- 초대 코드 기반 참여
+- 자동 Planet 멤버십 할당
+- 자기 정보만 수정 가능
 
----
+**필터링 옵션:**
+- `travelId` (필수), `userId`, `status`, `role`, `joinedAt`
 
-## 6. 채팅방 (Planets)
-**Base Path**: `/api/v1/planets`
-**인증 필요**: ✅
-**구현 방식**: 🔄 nestjs-crud (`@Crud` 데코레이터 사용)
-**CRUD Operations**: `index`, `show`
+**생성 시 필수 필드:**
+- `inviteCode`
 
-| Method | Endpoint | 설명 | 권한 | 타입 |
-|--------|----------|------|------|------|
-| GET | `/` | 채팅방 목록 조회 | Travel 멤버 | 🔄 CRUD |
-| GET | `/:id` | 채팅방 상세 조회 | Planet 멤버 | 🔄 CRUD |
-
-### Lifecycle Hooks
-- `@BeforeShow()`: Travel 멤버십 확인
-
-### 주요 기능
-- Travel 하위의 채팅 공간
-- GROUP/DIRECT 타입 지원
-- 시간 제한 채팅 기능
-
-### 타입 (Type)
-- `GROUP`: 그룹 채팅방
-- `DIRECT`: 1:1 채팅방
-
-### 필터 옵션
-- `travelId` (필수), `type`, `isActive`, `name`, `createdAt`
+**업데이트 가능 필드:**
+- `bio`, `nickname`
 
 ---
 
-## 7. 채팅방 멤버십 (Planet Users)
-**Base Path**: `/api/v1/planet-users`
-**인증 필요**: ✅
-**구현 방식**: 🔄 nestjs-crud (`@Crud` 데코레이터 사용)
-**전체 CRUD 지원**
+## User (사용자)
 
-| Method | Endpoint | 설명 | 권한 | 타입 |
-|--------|----------|------|------|------|
-| GET | `/` | 멤버십 목록 조회 | 인증된 사용자 | 🔄 CRUD |
-| GET | `/:id` | 멤버십 상세 조회 | 관련 사용자 | 🔄 CRUD |
-| POST | `/` | 멤버십 생성 | Travel 멤버 | 🔄 CRUD |
-| PATCH | `/:id` | 멤버십 수정 | 관리자 | 🔄 CRUD |
-| DELETE | `/:id` | 멤버십 삭제 | 본인/관리자 | 🔄 CRUD |
+### 엔드포인트: `/api/v1/users`
 
-### 상태 (Status)
-- `ACTIVE`: 활성 멤버
-- `MUTED`: 음소거 상태
+| Method | Path | 인증 필요 | 역할 | 기능 |
+|--------|------|----------|------|------|
+| GET | `/:id` | ✅ | Self | 내 정보 조회 |
+| PATCH | `/:id` | ✅ | Self | 내 정보 수정 |
+| DELETE | `/:id` | ✅ | Self | 계정 삭제 (Soft Delete) |
 
-### 기능
-- 음소거 기능 (mutedUntil)
-- 마지막 읽은 메시지 추적
+**주요 기능:**
+- 역할: USER, ADMIN
+- 소셜 로그인 지원 (Google, Apple)
+- 자기 정보만 접근 가능
+- Soft Delete 지원
+- 밴 사용자 제한
 
----
+**필터링 옵션:**
+- `name`, `email`, `phone`
 
-## 8. 메시지 (Messages)
-**Base Path**: `/api/v1/messages`
-**인증 필요**: ✅
-**구현 방식**: 🔄 nestjs-crud + 🛠️ 커스텀 엔드포인트
-**CRUD Operations**: `index`, `show`, `create`, `update`, `destroy`
+**업데이트 가능 필드:**
+- `name`, `phone`, `notificationsEnabled`, `advertisingConsentEnabled`
 
-| Method | Endpoint | 설명 | 권한 | 타입 |
-|--------|----------|------|------|------|
-| GET | `/` | 메시지 목록 조회 | Planet 멤버 | 🔄 CRUD |
-| GET | `/:id` | 메시지 상세 조회 | Planet 멤버 | 🔄 CRUD |
-| POST | `/` | 메시지 생성 | Planet 멤버 | 🔄 CRUD |
-| PATCH | `/:id` | 메시지 수정 (15분 내) | 발신자만 | 🔄 CRUD |
-| DELETE | `/:id` | 메시지 삭제 (Soft) | 발신자만 | 🔄 CRUD |
-| GET | `/:messageId/context` | 메시지 주변 컨텍스트 조회 | Planet 멤버 | 🛠️ 커스텀 |
-
-### Lifecycle Hooks
-- `@BeforeShow()`: Planet 접근 권한 확인
-- `@BeforeCreate()`: Planet 권한, 타입 검증, 메타데이터 설정
-- `@AfterCreate()`: 답장 수 증가
-- `@BeforeUpdate()`: 발신자 확인, 편집 시간 제한
-- `@AfterUpdate()`: 편집 이벤트 발생
-- `@BeforeDestroy()`: 삭제 권한 확인
-- `@AfterDestroy()`: 삭제 이벤트 발생
-- `@AfterRecover()`: 복구 처리
-
-### 메시지 타입
-- `TEXT`: 텍스트 메시지
-- `IMAGE`: 이미지 메시지
-- `VIDEO`: 비디오 메시지
-- `FILE`: 파일 메시지
-- `SYSTEM`: 시스템 메시지
-
-### 주요 기능
-- 답장 기능 (replyToMessageId)
-- 메시지 편집 (15분 제한)
-- 검색용 텍스트 자동 생성
-- 읽음 수/답장 수 추적
+**관계 포함 옵션:**
+- `profile`
 
 ---
 
-## 9. 읽음 확인 (Read Receipts)
-**Base Path**: `/api/v1/read-receipts`
-**인증 필요**: ✅
-**구현 방식**: 🔄 nestjs-crud + 🛠️ 커스텀 엔드포인트
-**CRUD Operations**: 기본 CRUD + 특수 엔드포인트
+## Schema (스키마)
 
-| Method | Endpoint | 설명 | 권한 | 타입 |
-|--------|----------|------|------|------|
-| GET | `/` | 읽음 확인 목록 조회 | 인증된 사용자 | 🔄 CRUD |
-| GET | `/:id` | 읽음 확인 상세 조회 | 관련 사용자 | 🔄 CRUD |
-| POST | `/` | 읽음 확인 생성 | Planet 멤버 | 🔄 CRUD |
-| PATCH | `/:id` | 읽음 확인 수정 | 본인 | 🔄 CRUD |
-| DELETE | `/:id` | 읽음 확인 삭제 | 본인 | 🔄 CRUD |
-| POST | `/mark-read` | 단일 메시지 읽음 처리 | Planet 멤버 | 🛠️ 커스텀 |
-| POST | `/mark-multiple-read` | 다중 메시지 읽음 처리 | Planet 멤버 | 🛠️ 커스텀 |
-| POST | `/mark-all-read/:planetId` | Planet 전체 읽음 처리 | Planet 멤버 | 🛠️ 커스텀 |
-| GET | `/unread-count/:planetId` | Planet 읽지 않은 메시지 수 | Planet 멤버 | 🛠️ 커스텀 |
-| GET | `/unread-counts/my` | 내 모든 Planet 읽지 않은 수 | 인증된 사용자 | 🛠️ 커스텀 |
+### 엔드포인트: `/api/v1/schema`
 
-### 주요 기능
-- 메시지별 읽음 상태 추적
-- 일괄 읽음 처리
-- 실시간 읽음 수 업데이트
+| Method | Path | 인증 필요 | 역할 | 기능 |
+|--------|------|----------|------|------|
+| GET | `/` | ❌ | Dev Only | 모든 엔티티 스키마 조회 |
+| GET | `/:entityName` | ❌ | Dev Only | 특정 엔티티 스키마 조회 |
 
----
-
-## 10. 알림 (Notifications)
-**Base Path**: `/api/v1/notifications`
-**인증 필요**: ✅
-**구현 방식**: 🔄 nestjs-crud + 🛠️ 커스텀 엔드포인트
-**CRUD Operations**: `index`, `show`, `update`
-
-| Method | Endpoint | 설명 | 권한 | 타입 |
-|--------|----------|------|------|------|
-| GET | `/` | 알림 목록 조회 | 본인 알림만 | 🔄 CRUD |
-| GET | `/:id` | 알림 상세 조회 | 수신자만 | 🔄 CRUD |
-| PATCH | `/:id` | 알림 수정 (읽음 처리) | 수신자만 | 🔄 CRUD |
-| GET | `/unread-count` | 읽지 않은 알림 수 | 인증된 사용자 | 🛠️ 커스텀 |
-| PATCH | `/read-multiple` | 다중 알림 읽음 처리 | 수신자만 | 🛠️ 커스텀 |
-| PATCH | `/read-all` | 전체 알림 읽음 처리 | 인증된 사용자 | 🛠️ 커스텀 |
-| POST | `/push-token` | 푸시 토큰 등록 | 인증된 사용자 | 🛠️ 커스텀 |
-| POST | `/push-token/unregister` | 푸시 토큰 해제 | 인증된 사용자 | 🛠️ 커스텀 |
-| GET | `/push-tokens` | 내 푸시 토큰 목록 | 인증된 사용자 | 🛠️ 커스텀 |
-| POST | `/test` | 테스트 알림 발송 | 인증된 사용자 | 🛠️ 커스텀 |
-
-### 알림 타입
-- `MESSAGE`: 새 메시지
-- `MESSAGE_REPLY`: 답장
-- `TRAVEL_INVITATION`: 여행 초대
-- `TRAVEL_UPDATE`: 여행 업데이트
-- `PLANET_UPDATE`: 채팅방 업데이트
-- `USER_JOINED`: 사용자 참여
-- `USER_LEFT`: 사용자 탈퇴
-- `MENTION`: 멘션
-- `ANNOUNCEMENT`: 공지사항
-- `SYSTEM`: 시스템 알림
-
-### 알림 채널
-- Push Notification (FCM)
-- Email
-- SMS
-
----
-
-## 11. 파일 업로드 (File Uploads)
-**Base Path**: `/api/v1/file-uploads`
-**인증 필요**: ✅
-**구현 방식**: 🔄 nestjs-crud + 🛠️ 커스텀 엔드포인트
-**CRUD Operations**: `index`, `show`, `create`, `destroy`
-
-| Method | Endpoint | 설명 | 권한 | 타입 |
-|--------|----------|------|------|------|
-| GET | `/` | 업로드 파일 목록 | 업로더만 | 🔄 CRUD |
-| GET | `/:id` | 파일 정보 조회 | 관련 사용자 | 🔄 CRUD |
-| POST | `/` | 파일 업로드 시작 | 인증된 사용자 | 🔄 CRUD |
-| DELETE | `/:id` | 파일 삭제 | 업로더만 | 🔄 CRUD |
-| POST | `/presigned-url` | 업로드 URL 생성 | 인증된 사용자 | 🛠️ 커스텀 |
-| POST | `/complete` | 업로드 완료 처리 | 업로더만 | 🛠️ 커스텀 |
-| DELETE | `/:id/cancel` | 업로드 취소 | 업로더만 | 🛠️ 커스텀 |
-| GET | `/:id/download-url` | 다운로드 URL 생성 | 관련 사용자 | 🛠️ 커스텀 |
-| GET | `/:id/stream` | 스트리밍 URL 생성 | 관련 사용자 | 🛠️ 커스텀 |
-
-### 주요 기능
-- Cloudflare R2 스토리지 사용
-- 청크 단위 업로드 (5MB 단위)
-- 최대 파일 크기: 500MB
-- 자동 썸네일 생성 (비디오)
-- HLS 스트리밍 지원
-
-### 지원 파일 타입
-- 이미지: JPG, PNG, GIF, WebP
-- 비디오: MP4, MOV, AVI, WebM
-- 문서: PDF, DOC, DOCX, XLS, XLSX
-- 기타: ZIP, RAR
-
----
-
-## 12. 관리자 (Admin)
-**Base Path**: `/api/v1/admin/admins`
-**인증 필요**: ✅ (관리자 권한)
-**구현 방식**: 🔄 nestjs-crud (`@Crud` 데코레이터 사용)
-**전체 CRUD 지원**
-
-| Method | Endpoint | 설명 | 권한 | 타입 |
-|--------|----------|------|------|------|
-| GET | `/` | 관리자 목록 조회 | 슈퍼 관리자 | 🔄 CRUD |
-| GET | `/:id` | 관리자 정보 조회 | 관리자 | 🔄 CRUD |
-| POST | `/` | 관리자 생성 | 슈퍼 관리자 | 🔄 CRUD |
-| PATCH | `/:id` | 관리자 정보 수정 | 슈퍼 관리자 | 🔄 CRUD |
-| DELETE | `/:id` | 관리자 삭제 | 슈퍼 관리자 | 🔄 CRUD |
-
-### 관리자 역할
-- `SUPER_ADMIN`: 최고 관리자
-- `ADMIN`: 일반 관리자
-- `MODERATOR`: 중재자
-
----
-
-## 13. 스키마 정보 (Schema) - 개발 전용
-**Base Path**: `/api/v1/schema`
-**인증 필요**: ❌
-**구현 방식**: 🛠️ 모두 커스텀
-**환경 제한**: 개발 환경만 (`@UseGuards(DevOnlyGuard)`)
-
-| Method | Endpoint | 설명 | 권한 | 타입 |
-|--------|----------|------|------|------|
-| GET | `/` | 전체 스키마 정보 | 개발 환경 | 🛠️ 커스텀 |
-| GET | `/:entityName` | 특정 엔티티 스키마 | 개발 환경 | 🛠️ 커스텀 |
-
-### 주요 기능
-- 데이터베이스 스키마 조회
-- TypeORM 메타데이터 정보
+**주요 기능:**
+- 개발 환경 전용
+- 데이터베이스 스키마 검사
+- 엔티티 메타데이터 및 관계 정보
 - CRUD 설정 정보
-- 관계 매핑 정보
 
 ---
 
-## WebSocket 엔드포인트
-**Base Path**: `/websocket`
-**인증 필요**: ✅ (JWT 토큰)
-**구현 방식**: 🛠️ 모두 커스텀 (Socket.io Gateway)
+## 🔐 인증 및 권한 시스템
 
-### 이벤트
-#### 클라이언트 → 서버
-- `join:planet` - 채팅방 참여
-- `leave:planet` - 채팅방 퇴장
-- `message:send` - 메시지 전송
-- `message:edit` - 메시지 수정
-- `message:delete` - 메시지 삭제
-- `typing:start` - 타이핑 시작
-- `typing:stop` - 타이핑 종료
-- `presence:online` - 온라인 상태
-- `presence:offline` - 오프라인 상태
+### JWT 토큰
+- Access Token: 짧은 유효 기간
+- Refresh Token: 긴 유효 기간, 재발급용
 
-#### 서버 → 클라이언트
-- `message:new` - 새 메시지
-- `message:edited` - 메시지 수정됨
-- `message:deleted` - 메시지 삭제됨
-- `user:typing` - 사용자 타이핑 중
-- `user:online` - 사용자 온라인
-- `user:offline` - 사용자 오프라인
-- `planet:userJoined` - 사용자 참여
-- `planet:userLeft` - 사용자 퇴장
+### 역할 기반 접근 제어 (RBAC)
+1. **USER**: 일반 사용자
+2. **ADMIN**: 관리자 (이메일/비밀번호 로그인 가능)
+
+### 계층적 권한 구조
+```
+Travel (여행 그룹)
+├── HOST: 그룹 관리 권한
+└── PARTICIPANT: 참여자 권한
+    └── Planet (채팅방)
+        └── MEMBER: 채팅 참여 권한
+```
+
+### 밴(Ban) 시스템
+- **User Ban**: 전체 계정 로그인 차단
+- **TravelUser Ban**: 특정 Travel 참여 차단
+- **PlanetUser Mute**: 채팅방 뮤트 (차단 대신)
 
 ---
 
-## 요약 통계
+## 📝 공통 규칙
 
-### 구현 방식별 분류
-- **🔄 nestjs-crud 전용**: 7개 모듈
-  - Users, Profiles, Travels, Travel Users, Planets, Planet Users, Admin
-- **🔄 + 🛠️ 혼합 구현**: 4개 모듈
-  - Messages, Read Receipts, Notifications, File Uploads
-- **🛠️ 커스텀 전용**: 2개 모듈
-  - Auth, Schema
+### CRUD 패턴
+- `@foryourdev/nestjs-crud` 데코레이터 사용
+- 표준 RESTful 라우트 자동 생성
+- 필터링, 정렬, 페이지네이션 지원
 
-### nestjs-crud 활용도
-- **총 13개 모듈 중 11개가 nestjs-crud 활용**
-- **표준 CRUD 작업의 약 85%가 자동 생성**
-- **특수 비즈니스 로직은 커스텀 엔드포인트로 보완**
+### 보안
+- 모든 API는 AuthGuard 사용 (Schema 제외)
+- allowedFilters, allowedParams로 입력 제한
+- 역할 기반 접근 제어
+- 자기 데이터만 수정 가능
 
----
-
-## 공통 응답 형식
-
-### 성공 응답
-```json
-{
-  "data": {
-    // 실제 데이터
-  },
-  "meta": {
-    "total": 100,
-    "page": 1,
-    "pageSize": 20
-  }
-}
-```
-
-### 에러 응답
-```json
-{
-  "statusCode": 400,
-  "message": "에러 메시지",
-  "error": "Bad Request"
-}
-```
-
-### 페이지네이션
-- Query Parameters:
-  - `page`: 페이지 번호 (기본: 1)
-  - `pageSize`: 페이지 크기 (기본: 20, 최대: 100)
-  - `sortBy`: 정렬 필드
-  - `sortOrder`: 정렬 방향 (ASC/DESC)
-
-### 필터링
-- Query Parameters:
-  - `filter[field]`: 필드별 필터
-  - `search`: 전체 텍스트 검색
-  - `include`: 관계 포함 (comma-separated)
+### 응답 형식
+- 성공: `{ data: {...} }`
+- 에러: `{ statusCode: number, message: string, error: string }`
+- 페이지네이션: `{ data: [...], meta: { ... } }`
 
 ---
 
-## 인증 헤더
-```
-Authorization: Bearer {JWT_ACCESS_TOKEN}
-```
+## 📋 API 사용 예시
 
-## Rate Limiting
-- 일반 API: 100 요청/분
-- 파일 업로드: 10 요청/분
-- WebSocket: 30 메시지/분
+### 인증 플로우
+1. 소셜 로그인: `POST /api/v1/auth/sign/social`
+2. 토큰 갱신: `POST /api/v1/auth/sign/refresh`
+3. 로그아웃: `POST /api/v1/auth/sign/out`
 
-## API 버전
-현재 버전: `v1`
-모든 엔드포인트는 `/api/v1` 접두사 사용
+### 메시지 플로우
+1. Planet 조회: `GET /api/v1/planets?filter[travelId_eq]=1`
+2. 메시지 목록: `GET /api/v1/messages?filter[planetId_eq]=1`
+3. 메시지 전송: `POST /api/v1/messages`
+4. 읽음 처리: `POST /api/v1/read-receipts/mark-read`
+
+### 파일 업로드 플로우
+1. Presigned URL 획득: `POST /api/v1/file-uploads/presigned-url`
+2. 파일 업로드 (클라이언트 → Cloudflare R2)
+3. 업로드 완료 확인: `POST /api/v1/file-uploads/complete`
+
+---
+
+## 🔄 WebSocket 이벤트
+
+실시간 통신을 위한 WebSocket 이벤트는 별도 문서에서 관리됩니다.
+
+주요 이벤트:
+- 메시지 전송/수신
+- 읽음 상태 동기화
+- 타이핑 표시
+- 온라인 상태
+- 알림 푸시
+
+---
+
+## 📚 추가 정보
+
+- API 문서: `/api-docs` (Swagger UI)
+- 개발 환경 스키마: `/api/v1/schema`
+- 상태 코드 규약: RFC 7231 표준 준수
