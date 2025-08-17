@@ -199,17 +199,6 @@ export class FileProcessingFailedException extends UnprocessableEntityException 
   }
 }
 
-export class VideoProcessingFailedException extends UnprocessableEntityException {
-  constructor(reason?: string) {
-    super(
-      reason
-        ? `비디오 처리에 실패했습니다: ${reason}`
-        : '비디오 처리에 실패했습니다.',
-      'VIDEO_PROCESSING_FAILED',
-    );
-  }
-}
-
 /**
  * 사용자 관련 예외
  */

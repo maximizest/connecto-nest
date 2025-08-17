@@ -39,9 +39,9 @@ export enum UserRole {
 }
 
 @Entity('users')
-@Index(['socialId', 'provider'], { 
+@Index(['socialId', 'provider'], {
   unique: true,
-  where: '"socialId" IS NOT NULL AND "provider" IS NOT NULL' // 소셜 로그인 사용자만
+  where: '"socialId" IS NOT NULL AND "provider" IS NOT NULL', // 소셜 로그인 사용자만
 }) // 소셜 ID + 제공자 조합 고유
 // 복합 인덱스 - 성능 향상
 @Index(['isBanned']) // 밴된 사용자 조회
@@ -52,11 +52,11 @@ export class User extends BaseEntity {
   /**
    * 소셜 로그인 정보 (일반 사용자용)
    */
-  @Column({ 
-    type: 'varchar', 
-    length: 255, 
+  @Column({
+    type: 'varchar',
+    length: 255,
     nullable: true,
-    comment: '소셜 로그인 고유 ID (ADMIN은 null)' 
+    comment: '소셜 로그인 고유 ID (ADMIN은 null)',
   })
   @IsOptional()
   @IsString()
@@ -325,7 +325,7 @@ export class User extends BaseEntity {
       if (this.socialId || this.provider) {
         throw new Error('ADMIN 계정은 소셜 로그인을 사용할 수 없습니다.');
       }
-    } 
+    }
     // 일반 사용자는 소셜 로그인 정보 필수
     else {
       if (!this.socialId || !this.provider) {

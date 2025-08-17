@@ -7,10 +7,7 @@ import { FileUpload } from './file-upload.entity';
 import { FileUploadService } from './file-upload.service';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([FileUpload, User]),
-    StorageModule
-  ],
+  imports: [TypeOrmModule.forFeature([FileUpload, User]), StorageModule],
   providers: [FileUploadService],
   controllers: [FileUploadController],
   exports: [FileUploadService],

@@ -28,7 +28,6 @@ import {
   CurrentUser,
   CurrentUserData,
 } from '../../../../common/decorators/current-user.decorator';
-import { STORAGE_SETTINGS } from '../../../../config/storage.config';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { StorageService } from '../../../storage/storage.service';
 import { User } from '../../../user/user.entity';
@@ -38,7 +37,6 @@ import {
   FileUploadType,
 } from '../../file-upload.entity';
 import { FileUploadService } from '../../file-upload.service';
-import { CompleteUploadDto } from '../../dto/complete-upload.dto';
 import { PresignedUrlRequestDto } from '../../dto/presigned-url-request.dto';
 
 /**
@@ -299,7 +297,6 @@ export class FileUploadController {
       );
     }
   }
-
 
   /**
    * 이미지 자동 최적화

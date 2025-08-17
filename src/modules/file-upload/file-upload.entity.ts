@@ -1,5 +1,4 @@
 import {
-  IsBoolean,
   IsDateString,
   IsEnum,
   IsJSON,
@@ -63,7 +62,6 @@ export class FileUpload extends BaseEntity {
   @JoinColumn({ name: 'user_id' })
   user?: User;
 
-
   /**
    * 파일 기본 정보
    */
@@ -109,7 +107,6 @@ export class FileUpload extends BaseEntity {
   @Index() // 상태별 조회
   status: FileUploadStatus;
 
-
   /**
    * 추가 정보
    */
@@ -129,13 +126,10 @@ export class FileUpload extends BaseEntity {
   @IsOptional()
   publicUrl?: string;
 
-
   @Column({ type: 'json', nullable: true, comment: '추가 메타데이터' })
   @IsJSON()
   @IsOptional()
   metadata?: Record<string, any>;
-
-
 
   @CreateDateColumn({ comment: '생성 시간' })
   @IsDateString()
@@ -166,7 +160,6 @@ export class FileUpload extends BaseEntity {
   failUpload(): void {
     this.status = FileUploadStatus.FAILED;
   }
-
 
   /**
    * 업로드 상태 확인 메서드들

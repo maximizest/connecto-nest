@@ -1,5 +1,4 @@
 import {
-  IsBoolean,
   IsDateString,
   IsEnum,
   IsJSON,
@@ -134,7 +133,6 @@ export class Notification extends BaseEntity {
   @Index() // 상태별 필터링
   status: NotificationStatus;
 
-
   /**
    * 관련 엔티티 참조
    */
@@ -262,7 +260,6 @@ export class Notification extends BaseEntity {
     customData?: Record<string, any>;
   };
 
-
   /**
    * 시간 정보
    */
@@ -280,7 +277,6 @@ export class Notification extends BaseEntity {
   /**
    * 비즈니스 로직 메서드
    */
-
 
   /**
    * 알림 전송 완료 처리

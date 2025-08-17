@@ -245,7 +245,6 @@ export class FileUploadService extends CrudService<FileUpload> {
     return updatedUpload;
   }
 
-
   /**
    * Direct Upload URL 생성
    */
@@ -271,5 +270,4 @@ export class FileUploadService extends CrudService<FileUpload> {
       type: 'file',
     };
   }
-
 }

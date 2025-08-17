@@ -23,7 +23,7 @@ import { Repository } from 'typeorm';
 
 import { Message } from '../message/message.entity';
 import { NotificationService } from '../notification/notification.service';
-import { Planet, PlanetStatus } from '../planet/planet.entity';
+import { Planet } from '../planet/planet.entity';
 import { MessageReadReceipt } from '../read-receipt/read-receipt.entity';
 import { ReadReceiptService } from '../read-receipt/read-receipt.service';
 import { User } from '../user/user.entity';
@@ -1306,12 +1306,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // 알림 조회만 수행 (읽음 처리는 제거됨)
       // NotificationService에 findOne이 private이므로 getUserNotifications 사용
-      const { notifications } = await this.notificationService.getUserNotifications(
-        client.user.id,
-        { limit: 1 },
-      );
-      
-      const notification = notifications.find(n => n.id === notificationId);
+      const { notifications } =
+        await this.notificationService.getUserNotifications(client.user.id, {
+          limit: 1,
+        });
+
+      const notification = notifications.find((n) => n.id === notificationId);
       if (!notification || notification.userId !== client.user.id) {
         throw new Error('알림을 찾을 수 없습니다.');
       }

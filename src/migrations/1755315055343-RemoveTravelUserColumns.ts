@@ -10,7 +10,7 @@ export class RemoveTravelUserColumns1755315055343
     await queryRunner.query(
       `ALTER TABLE "travel_users" DROP CONSTRAINT IF EXISTS "FK_e36689e9fa9ee4a76542e12017e"`,
     );
-    
+
     await queryRunner.query(
       `DROP INDEX IF EXISTS "public"."IDX_a1e52a4cae3da00380d2665d4b"`,
     );
@@ -29,7 +29,7 @@ export class RemoveTravelUserColumns1755315055343
 
     // 컬럼이 존재하는 경우에만 삭제
     const columns = await queryRunner.query(
-      `SELECT column_name FROM information_schema.columns WHERE table_name = 'travel_users' AND table_schema = 'public'`
+      `SELECT column_name FROM information_schema.columns WHERE table_name = 'travel_users' AND table_schema = 'public'`,
     );
     const columnNames = columns.map((c: any) => c.column_name);
 
@@ -39,7 +39,9 @@ export class RemoveTravelUserColumns1755315055343
       );
     }
     if (columnNames.includes('leftat')) {
-      await queryRunner.query(`ALTER TABLE "travel_users" DROP COLUMN "leftAt"`);
+      await queryRunner.query(
+        `ALTER TABLE "travel_users" DROP COLUMN "leftAt"`,
+      );
     }
     if (columnNames.includes('invitedby')) {
       await queryRunner.query(

@@ -5,16 +5,7 @@ import {
   Crud,
   crudResponse,
 } from '@foryourdev/nestjs-crud';
-import {
-  Body,
-  Controller,
-  Get,
-  Logger,
-  Param,
-  Patch,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Logger, Post, UseGuards } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -127,12 +118,9 @@ export class NotificationController {
   // GET /api/v1/notifications?filter[userId_eq]={currentUserId}&filter[type_in]=MESSAGE,TRAVEL&filter[status_eq]=DELIVERED
   // @BeforeCreate/@BeforeUpdate 훅에서 userId 필터링을 자동으로 처리합니다.
 
-
   // 알림 상세 조회는 @Crud show 라우트를 사용합니다.
   // GET /api/v1/notifications/:id?include=triggerUser,travel,planet
   // @BeforeCreate/@BeforeUpdate 훅에서 userId 권한 확인을 자동으로 처리합니다.
-
-
 
   /**
    * 푸시 토큰 등록 API

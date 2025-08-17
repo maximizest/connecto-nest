@@ -29,16 +29,11 @@ import {
   PlanetUser,
   PlanetUserStatus,
 } from '../../../planet-user/planet-user.entity';
-import {
-  Planet,
-  PlanetType,
-  PlanetStatus,
-} from '../../../planet/planet.entity';
+import { Planet, PlanetType } from '../../../planet/planet.entity';
 import {
   TravelUser,
   TravelUserStatus,
 } from '../../../travel-user/travel-user.entity';
-import { Travel } from '../../../travel/travel.entity';
 import { User } from '../../../user/user.entity';
 import { Message, MessageType } from '../../message.entity';
 import { MessageService } from '../../message.service';

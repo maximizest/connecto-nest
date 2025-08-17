@@ -345,12 +345,7 @@ export class NotificationService extends CrudService<Notification> {
     hasMore: boolean;
   }> {
     try {
-      const {
-        page = 1,
-        limit = 20,
-        types,
-        priorities,
-      } = options;
+      const { page = 1, limit = 20, types, priorities } = options;
 
       const queryBuilder = this.repository
         .createQueryBuilder('notification')
@@ -359,7 +354,6 @@ export class NotificationService extends CrudService<Notification> {
         .leftJoinAndSelect('notification.travel', 'travel')
         .leftJoinAndSelect('notification.planet', 'planet')
         .orderBy('notification.createdAt', 'DESC');
-
 
       if (types && types.length > 0) {
         queryBuilder.andWhere('notification.type IN (:...types)', { types });
@@ -388,10 +382,6 @@ export class NotificationService extends CrudService<Notification> {
       throw error;
     }
   }
-
-
-
-
 
   /**
    * 만료된 알림 정리

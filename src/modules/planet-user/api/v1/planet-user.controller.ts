@@ -9,7 +9,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthGuard } from '../../../../guards/auth.guard';
-import { PlanetUser, PlanetUserStatus } from '../../planet-user.entity';
+import { PlanetUser } from '../../planet-user.entity';
 import { PlanetUserService } from '../../planet-user.service';
 import { Planet } from '../../../planet/planet.entity';
 import {

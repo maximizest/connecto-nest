@@ -7,7 +7,6 @@ import {
   SearchPaginationResponseDto,
 } from '../../../common/dto/pagination.dto';
 import { RedisService } from '../../cache/redis.service';
-import { Planet } from '../../planet/planet.entity';
 import { Message, MessageType } from '../message.entity';
 import { CursorData } from '../types/cursor-data.interface';
 
