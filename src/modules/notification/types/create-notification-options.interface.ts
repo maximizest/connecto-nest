@@ -1,8 +1,6 @@
-import {
-  NotificationChannel,
-  NotificationPriority,
-  NotificationType,
-} from '../notification.entity';
+import { NotificationChannel } from '../enums/notification-channel.enum';
+import { NotificationPriority } from '../enums/notification-priority.enum';
+import { NotificationType } from '../enums/notification-type.enum';
 
 /**
  * 알림 생성 옵션

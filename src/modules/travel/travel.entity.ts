@@ -9,23 +9,8 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-
-/**
- * Travel 상태
- */
-export enum TravelStatus {
-  INACTIVE = 'inactive', // 비활성 (계획 중, 취소됨, 완료됨 등)
-  ACTIVE = 'active', // 활성 (진행 중)
-  // 만료 여부는 endDate와 현재 시간 비교로 판단
-}
-
-/**
- * Travel 공개 설정
- */
-export enum TravelVisibility {
-  PUBLIC = 'public', // 누구나 참여 가능 (초대코드 불필요)
-  INVITE_ONLY = 'invite_only', // 초대코드 필요
-}
+import { TravelStatus } from './enums/travel-status.enum';
+import { TravelVisibility } from './enums/travel-visibility.enum';
 
 @Entity('travels')
 // 복합 인덱스 - 성능 향상

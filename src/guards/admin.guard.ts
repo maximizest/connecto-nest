@@ -8,7 +8,8 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { CurrentUserData } from '../common/decorators/current-user.decorator';
-import { User, UserRole } from '../modules/user/user.entity';
+import { User } from '../modules/user/user.entity';
+import { UserRole } from '../modules/user/enums/user-role.enum';
 
 @Injectable()
 export class AdminGuard implements CanActivate {

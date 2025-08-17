@@ -1,8 +1,6 @@
-import {
-  RateLimitAction,
-  RateLimitConfig,
-  RateLimitScope,
-} from '../types/rate-limit.types';
+import { RateLimitConfig } from '../types/rate-limit.types';
+import { RateLimitAction } from '../enums/rate-limit-action.enum';
+import { RateLimitScope } from '../enums/rate-limit-scope.enum';
 
 /**
  * Rate Limiting 상수 정의

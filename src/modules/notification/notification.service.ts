@@ -7,13 +7,11 @@ import { RedisService } from '../cache/redis.service';
 import { Planet } from '../planet/planet.entity';
 import { Travel } from '../travel/travel.entity';
 import { User } from '../user/user.entity';
-import {
-  Notification,
-  NotificationChannel,
-  NotificationPriority,
-  NotificationStatus,
-  NotificationType,
-} from './notification.entity';
+import { Notification } from './notification.entity';
+import { NotificationChannel } from './enums/notification-channel.enum';
+import { NotificationPriority } from './enums/notification-priority.enum';
+import { NotificationStatus } from './enums/notification-status.enum';
+import { NotificationType } from './enums/notification-type.enum';
 import { BulkNotificationOptions } from './types/bulk-notification-options.interface';
 import { CreateNotificationOptions } from './types/create-notification-options.interface';
 

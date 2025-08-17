@@ -1,5 +1,6 @@
 import { ExecutionContext } from '@nestjs/common';
-import { RateLimitAction, RateLimitScope } from './rate-limit.types';
+import { RateLimitAction } from '../enums/rate-limit-action.enum';
+import { RateLimitScope } from '../enums/rate-limit-scope.enum';
 
 /**
  * Rate Limit 메타데이터 인터페이스

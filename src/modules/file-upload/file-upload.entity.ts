@@ -21,22 +21,8 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../user/user.entity';
-
-/**
- * 파일 업로드 상태
- */
-export enum FileUploadStatus {
-  PENDING = 'pending', // 업로드 대기
-  COMPLETED = 'completed', // 완료
-  FAILED = 'failed', // 실패
-}
-
-/**
- * 업로드 타입
- */
-export enum FileUploadType {
-  DIRECT = 'direct', // Direct Upload (Presigned URL)
-}
+import { FileUploadStatus } from './enums/file-upload-status.enum';
+import { FileUploadType } from './enums/file-upload-type.enum';
 
 /**
  * 파일 업로드 추적 엔티티

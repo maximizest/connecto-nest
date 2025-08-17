@@ -20,14 +20,7 @@ import {
 } from 'typeorm';
 import { Planet } from '../planet/planet.entity';
 import { User } from '../user/user.entity';
-
-/**
- * Planet 참여 상태
- */
-export enum PlanetUserStatus {
-  ACTIVE = 'active', // 활성 참여
-  BANNED = 'banned', // 차단됨
-}
+import { PlanetUserStatus } from './enums/planet-user-status.enum';
 
 @Entity('planet_users')
 @Unique(['planetId', 'userId']) // Planet당 사용자는 하나의 레코드만

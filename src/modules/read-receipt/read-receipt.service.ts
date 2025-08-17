@@ -3,15 +3,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Message } from '../message/message.entity';
-import {
-  PlanetUser,
-  PlanetUserStatus,
-} from '../planet-user/planet-user.entity';
-import { Planet, PlanetType, PlanetStatus } from '../planet/planet.entity';
-import {
-  TravelUser,
-  TravelUserStatus,
-} from '../travel-user/travel-user.entity';
+import { PlanetUser } from '../planet-user/planet-user.entity';
+import { PlanetUserStatus } from '../planet-user/enums/planet-user-status.enum';
+import { Planet } from '../planet/planet.entity';
+import { PlanetType } from '../planet/enums/planet-type.enum';
+import { PlanetStatus } from '../planet/enums/planet-status.enum';
+import { TravelUser } from '../travel-user/travel-user.entity';
+import { TravelUserStatus } from '../travel-user/enums/travel-user-status.enum';
 import { MessageReadReceipt } from './read-receipt.entity';
 import { PlanetReadStatus } from './types/planet-read-status.interface';
 

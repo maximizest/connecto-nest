@@ -31,11 +31,9 @@ import {
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { StorageService } from '../../../storage/storage.service';
 import { User } from '../../../user/user.entity';
-import {
-  FileUpload,
-  FileUploadStatus,
-  FileUploadType,
-} from '../../file-upload.entity';
+import { FileUpload } from '../../file-upload.entity';
+import { FileUploadStatus } from '../../enums/file-upload-status.enum';
+import { FileUploadType } from '../../enums/file-upload-type.enum';
 import { FileUploadService } from '../../file-upload.service';
 import { PresignedUrlRequestDto } from '../../dto/presigned-url-request.dto';
 

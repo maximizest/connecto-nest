@@ -10,14 +10,14 @@ import {
 } from '../constants/rate-limit.constants';
 import {
   DynamicRateLimitConfig,
-  RateLimitAction,
   RateLimitConfig,
   RateLimitExceeded,
   RateLimitKeyInfo,
   RateLimitResult,
-  RateLimitScope,
   RateLimitStats,
 } from '../types/rate-limit.types';
+import { RateLimitAction } from '../enums/rate-limit-action.enum';
+import { RateLimitScope } from '../enums/rate-limit-scope.enum';
 
 @Injectable()
 export class RateLimitService {

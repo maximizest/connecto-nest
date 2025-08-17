@@ -1,5 +1,5 @@
 import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { SocialProvider } from '../../user/user.entity';
+import { SocialProvider } from '../../user/enums/social-provider.enum';
 
 export class SocialSigninDto {
   @IsEnum(SocialProvider, {

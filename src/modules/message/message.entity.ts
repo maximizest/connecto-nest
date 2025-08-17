@@ -28,28 +28,8 @@ import { Planet } from '../planet/planet.entity';
 import { User } from '../user/user.entity';
 import { FileMetadata } from './types/file-metadata.interface';
 import { SystemMessageMetadata } from './types/system-message-metadata.interface';
-
-/**
- * 메시지 타입
- */
-export enum MessageType {
-  TEXT = 'text', // 텍스트
-  IMAGE = 'image', // 이미지
-  VIDEO = 'video', // 비디오
-  FILE = 'file', // 파일
-  SYSTEM = 'system', // 시스템 메시지
-}
-
-/**
- * 메시지 상태
- */
-export enum MessageStatus {
-  SENT = 'sent', // 전송됨
-  DELIVERED = 'delivered', // 전달됨
-  READ = 'read', // 읽음
-  FAILED = 'failed', // 전송 실패
-  DELETED = 'deleted', // 삭제됨
-}
+import { MessageType } from './enums/message-type.enum';
+import { MessageStatus } from './enums/message-status.enum';
 
 @Entity('messages')
 // 복합 인덱스 - 성능 향상

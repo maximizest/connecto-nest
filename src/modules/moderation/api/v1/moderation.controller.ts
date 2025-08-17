@@ -18,11 +18,10 @@ import { validateBanPermission } from '../../../../common/helpers/role-based-per
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { Planet } from '../../../planet/planet.entity';
 import { Travel } from '../../../travel/travel.entity';
-import {
-  TravelUser,
-  TravelUserStatus,
-} from '../../../travel-user/travel-user.entity';
-import { User, UserRole } from '../../../user/user.entity';
+import { TravelUser } from '../../../travel-user/travel-user.entity';
+import { TravelUserStatus } from '../../../travel-user/enums/travel-user-status.enum';
+import { User } from '../../../user/user.entity';
+import { UserRole } from '../../../user/enums/user-role.enum';
 
 /**
  * Moderation API Controller (v1)

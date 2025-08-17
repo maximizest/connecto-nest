@@ -4,16 +4,15 @@ import { Server } from 'socket.io';
 import { Repository } from 'typeorm';
 import { validateRoleBasedPlanetAccess } from '../../../common/helpers/role-based-permission.helper';
 
-import {
-  PlanetUser,
-  PlanetUserStatus,
-} from '../../planet-user/planet-user.entity';
-import { Planet, PlanetType, PlanetStatus } from '../../planet/planet.entity';
-import {
-  TravelUser,
-  TravelUserStatus,
-} from '../../travel-user/travel-user.entity';
-import { Travel, TravelStatus } from '../../travel/travel.entity';
+import { PlanetUser } from '../../planet-user/planet-user.entity';
+import { PlanetUserStatus } from '../../planet-user/enums/planet-user-status.enum';
+import { Planet } from '../../planet/planet.entity';
+import { PlanetType } from '../../planet/enums/planet-type.enum';
+import { PlanetStatus } from '../../planet/enums/planet-status.enum';
+import { TravelUser } from '../../travel-user/travel-user.entity';
+import { TravelUserStatus } from '../../travel-user/enums/travel-user-status.enum';
+import { Travel } from '../../travel/travel.entity';
+import { TravelStatus } from '../../travel/enums/travel-status.enum';
 import { AuthenticatedSocket } from '../types/authenticated-socket.interface';
 import { RoomInfo } from '../types/room-info.interface';
 import { UserRoom } from '../types/user-room.interface';

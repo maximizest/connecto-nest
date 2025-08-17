@@ -18,33 +18,9 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Travel } from '../travel/travel.entity';
-
-/**
- * Planet 타입 (채팅방 유형)
- */
-export enum PlanetType {
-  GROUP = 'group', // 단체 채팅
-  DIRECT = 'direct', // 1:1 채팅
-  ANNOUNCEMENT = 'announcement', // 공지사항
-}
-
-/**
- * Planet 상태
- */
-export enum PlanetStatus {
-  ACTIVE = 'active', // 활성
-  INACTIVE = 'inactive', // 비활성
-}
-
-/**
- * 시간 제한 타입
- */
-export enum TimeRestrictionType {
-  NONE = 'none', // 제한 없음
-  DAILY = 'daily', // 매일 특정 시간
-  WEEKLY = 'weekly', // 매주 특정 요일
-  CUSTOM = 'custom', // 사용자 정의
-}
+import { PlanetType } from './enums/planet-type.enum';
+import { PlanetStatus } from './enums/planet-status.enum';
+import { TimeRestrictionType } from './enums/time-restriction-type.enum';
 
 /**
  * 시간 제한 설정 인터페이스

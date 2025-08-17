@@ -3,11 +3,9 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { StorageService } from '../storage/storage.service';
-import {
-  FileUpload,
-  FileUploadStatus,
-  FileUploadType,
-} from './file-upload.entity';
+import { FileUpload } from './file-upload.entity';
+import { FileUploadStatus } from './enums/file-upload-status.enum';
+import { FileUploadType } from './enums/file-upload-type.enum';
 
 @Injectable()
 export class FileUploadService extends CrudService<FileUpload> {

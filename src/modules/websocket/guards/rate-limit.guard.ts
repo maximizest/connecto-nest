@@ -10,7 +10,8 @@ import { WsException } from '@nestjs/websockets';
 import { RateLimitService } from '../services/rate-limit.service';
 import { AuthenticatedSocket } from '../types/authenticated-socket.interface';
 import { RateLimitMetadata } from '../types/rate-limit-metadata.interface';
-import { RateLimitAction, RateLimitScope } from '../types/rate-limit.types';
+import { RateLimitAction } from '../enums/rate-limit-action.enum';
+import { RateLimitScope } from '../enums/rate-limit-scope.enum';
 
 /**
  * WebSocket Rate Limiting Guard

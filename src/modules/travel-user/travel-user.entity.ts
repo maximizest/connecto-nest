@@ -19,22 +19,8 @@ import {
 } from 'typeorm';
 import { Travel } from '../travel/travel.entity';
 import { User } from '../user/user.entity';
-
-/**
- * Travel 내 사용자 역할
- */
-export enum TravelUserRole {
-  HOST = 'host', // 호스트
-  PARTICIPANT = 'participant', // 참가자
-}
-
-/**
- * 가입 상태
- */
-export enum TravelUserStatus {
-  ACTIVE = 'active', // 활성 (참여 중)
-  BANNED = 'banned', // 정지
-}
+import { TravelUserRole } from './enums/travel-user-role.enum';
+import { TravelUserStatus } from './enums/travel-user-status.enum';
 
 @Entity('travel_users')
 @Unique(['travelId', 'userId']) // Travel당 사용자는 하나의 레코드만

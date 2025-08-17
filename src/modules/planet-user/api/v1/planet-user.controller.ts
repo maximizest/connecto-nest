@@ -12,10 +12,8 @@ import { AuthGuard } from '../../../../guards/auth.guard';
 import { PlanetUser } from '../../planet-user.entity';
 import { PlanetUserService } from '../../planet-user.service';
 import { Planet } from '../../../planet/planet.entity';
-import {
-  TravelUser,
-  TravelUserStatus,
-} from '../../../travel-user/travel-user.entity';
+import { TravelUser } from '../../../travel-user/travel-user.entity';
+import { TravelUserStatus } from '../../../travel-user/enums/travel-user-status.enum';
 import { User } from '../../../user/user.entity';
 
 /**

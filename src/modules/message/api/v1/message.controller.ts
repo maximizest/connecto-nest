@@ -29,17 +29,15 @@ import {
   validateChatPermission,
 } from '../../../../common/helpers/role-based-permission.helper';
 import { AuthGuard } from '../../../../guards/auth.guard';
-import {
-  PlanetUser,
-  PlanetUserStatus,
-} from '../../../planet-user/planet-user.entity';
-import { Planet, PlanetType } from '../../../planet/planet.entity';
-import {
-  TravelUser,
-  TravelUserStatus,
-} from '../../../travel-user/travel-user.entity';
+import { PlanetUser } from '../../../planet-user/planet-user.entity';
+import { PlanetUserStatus } from '../../../planet-user/enums/planet-user-status.enum';
+import { Planet } from '../../../planet/planet.entity';
+import { PlanetType } from '../../../planet/enums/planet-type.enum';
+import { TravelUser } from '../../../travel-user/travel-user.entity';
+import { TravelUserStatus } from '../../../travel-user/enums/travel-user-status.enum';
 import { User } from '../../../user/user.entity';
-import { Message, MessageType } from '../../message.entity';
+import { Message } from '../../message.entity';
+import { MessageType } from '../../enums/message-type.enum';
 import { MessageService } from '../../message.service';
 import { MessagePaginationService } from '../../services/message-pagination.service';
 

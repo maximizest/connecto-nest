@@ -20,48 +20,10 @@ import {
 import { Planet } from '../planet/planet.entity';
 import { Travel } from '../travel/travel.entity';
 import { User } from '../user/user.entity';
-
-/**
- * 알림 타입 - 단순화된 5가지 핵심 타입
- */
-export enum NotificationType {
-  MESSAGE = 'message', // 새 메시지
-  MENTION = 'mention', // 메시지에서 멘션
-  REPLY = 'reply', // 메시지 답글
-  BANNED = 'banned', // 사용자 차단
-  SYSTEM = 'system', // 시스템 공지/점검/업데이트
-}
-
-/**
- * 알림 우선순위
- */
-export enum NotificationPriority {
-  LOW = 'low', // 낮음
-  NORMAL = 'normal', // 보통
-  HIGH = 'high', // 높음
-  URGENT = 'urgent', // 긴급
-}
-
-/**
- * 알림 상태 - 자동 업데이트만
- */
-export enum NotificationStatus {
-  PENDING = 'pending', // 대기 중
-  SENT = 'sent', // 전송됨
-  DELIVERED = 'delivered', // 배달됨
-  FAILED = 'failed', // 실패
-}
-
-/**
- * 알림 채널
- */
-export enum NotificationChannel {
-  IN_APP = 'in_app', // 인앱 알림
-  PUSH = 'push', // 푸시 알림
-  EMAIL = 'email', // 이메일
-  SMS = 'sms', // SMS (미래 확장)
-  WEBSOCKET = 'websocket', // WebSocket 실시간 알림
-}
+import { NotificationType } from './enums/notification-type.enum';
+import { NotificationPriority } from './enums/notification-priority.enum';
+import { NotificationStatus } from './enums/notification-status.enum';
+import { NotificationChannel } from './enums/notification-channel.enum';
 
 @Entity('notifications')
 // 복합 인덱스

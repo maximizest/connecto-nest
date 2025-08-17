@@ -15,22 +15,17 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthGuard } from '../../../../guards/auth.guard';
-import {
-  PlanetUser,
-  PlanetUserStatus,
-} from '../../../planet-user/planet-user.entity';
-import {
-  Planet,
-  PlanetType,
-  PlanetStatus,
-} from '../../../planet/planet.entity';
-import { Travel, TravelStatus } from '../../../travel/travel.entity';
+import { PlanetUser } from '../../../planet-user/planet-user.entity';
+import { PlanetUserStatus } from '../../../planet-user/enums/planet-user-status.enum';
+import { Planet } from '../../../planet/planet.entity';
+import { PlanetType } from '../../../planet/enums/planet-type.enum';
+import { PlanetStatus } from '../../../planet/enums/planet-status.enum';
+import { Travel } from '../../../travel/travel.entity';
+import { TravelStatus } from '../../../travel/enums/travel-status.enum';
 import { User } from '../../../user/user.entity';
-import {
-  TravelUser,
-  TravelUserRole,
-  TravelUserStatus,
-} from '../../travel-user.entity';
+import { TravelUser } from '../../travel-user.entity';
+import { TravelUserRole } from '../../enums/travel-user-role.enum';
+import { TravelUserStatus } from '../../enums/travel-user-status.enum';
 import { TravelUserService } from '../../travel-user.service';
 
 /**

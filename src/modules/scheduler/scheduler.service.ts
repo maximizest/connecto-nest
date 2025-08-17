@@ -3,10 +3,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThan, Repository } from 'typeorm';
 import { RedisService } from '../cache/redis.service';
-import {
-  FileUpload,
-  FileUploadStatus,
-} from '../file-upload/file-upload.entity';
+import { FileUpload } from '../file-upload/file-upload.entity';
+import { FileUploadStatus } from '../file-upload/enums/file-upload-status.enum';
 import { StorageService } from '../storage/storage.service';
 import { SchedulerStats } from './types/scheduler-stats.interface';
 

@@ -8,7 +8,9 @@ import {
   ERROR_MESSAGES,
   SECURITY_CONSTANTS,
 } from 'src/common/constants/app.constants';
-import { SocialProvider, User, UserRole } from '../user/user.entity';
+import { User } from '../user/user.entity';
+import { SocialProvider } from '../user/enums/social-provider.enum';
+import { UserRole } from '../user/enums/user-role.enum';
 import { JwtPayload } from './types/jwt-payload.interface';
 import { SocialUserInfo } from './types/social-user-info.interface';
 import { TokenPair } from './types/token-pair.interface';

@@ -18,16 +18,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { User } from '../user/user.entity';
-
-/**
- * 성별
- */
-export enum Gender {
-  MALE = 'male',
-  FEMALE = 'female',
-  OTHER = 'other',
-  PREFER_NOT_TO_SAY = 'prefer_not_to_say',
-}
+import { Gender } from './enums/gender.enum';
 
 /**
  * 사용자 프로필 엔티티

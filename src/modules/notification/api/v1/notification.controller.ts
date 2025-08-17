@@ -15,13 +15,11 @@ import {
 import { getCurrentUserIdFromContext } from '../../../../common/helpers/current-user.helper';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { User } from '../../../user/user.entity';
-import {
-  Notification,
-  NotificationChannel,
-  NotificationPriority,
-  NotificationStatus,
-  NotificationType,
-} from '../../notification.entity';
+import { Notification } from '../../notification.entity';
+import { NotificationChannel } from '../../enums/notification-channel.enum';
+import { NotificationPriority } from '../../enums/notification-priority.enum';
+import { NotificationStatus } from '../../enums/notification-status.enum';
+import { NotificationType } from '../../enums/notification-type.enum';
 import { NotificationService } from '../../notification.service';
 import { PushNotificationService } from '../../services/push-notification.service';
 

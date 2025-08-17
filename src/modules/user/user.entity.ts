@@ -20,23 +20,8 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-
-/**
- * 소셜 로그인 제공자
- */
-export enum SocialProvider {
-  GOOGLE = 'google',
-  APPLE = 'apple',
-}
-
-/**
- * 사용자 역할
- */
-export enum UserRole {
-  ADMIN = 'admin', // 관리자
-  HOST = 'host', // 호스트 (여행 생성 가능)
-  USER = 'user', // 일반 사용자
-}
+import { SocialProvider } from './enums/social-provider.enum';
+import { UserRole } from './enums/user-role.enum';
 
 @Entity('users')
 @Index(['socialId', 'provider'], {

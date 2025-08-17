@@ -1,14 +1,12 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
-import { Planet, PlanetType } from '../../modules/planet/planet.entity';
-import {
-  PlanetUser,
-  PlanetUserStatus,
-} from '../../modules/planet-user/planet-user.entity';
-import {
-  TravelUser,
-  TravelUserStatus,
-} from '../../modules/travel-user/travel-user.entity';
-import { User, UserRole } from '../../modules/user/user.entity';
+import { Planet } from '../../modules/planet/planet.entity';
+import { PlanetType } from '../../modules/planet/enums/planet-type.enum';
+import { PlanetUser } from '../../modules/planet-user/planet-user.entity';
+import { PlanetUserStatus } from '../../modules/planet-user/enums/planet-user-status.enum';
+import { TravelUser } from '../../modules/travel-user/travel-user.entity';
+import { TravelUserStatus } from '../../modules/travel-user/enums/travel-user-status.enum';
+import { User } from '../../modules/user/user.entity';
+import { UserRole } from '../../modules/user/enums/user-role.enum';
 
 /**
  * 역할 기반 권한 헬퍼
