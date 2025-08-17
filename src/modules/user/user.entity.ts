@@ -157,6 +157,58 @@ export class User extends BaseEntity {
   @Index() // 벤 상태 필터링
   isBanned: boolean;
 
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    comment: '계정 정지 시간',
+  })
+  @IsOptional()
+  @IsDateString()
+  bannedAt?: Date;
+
+  @Column({
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+    comment: '계정 정지 사유',
+  })
+  @IsOptional()
+  @IsString()
+  bannedReason?: string;
+
+  @Column({
+    type: 'int',
+    nullable: true,
+    comment: '계정을 정지시킨 관리자 ID',
+  })
+  @IsOptional()
+  bannedBy?: number;
+
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    comment: '계정 정지 해제 예정 시간',
+  })
+  @IsOptional()
+  @IsDateString()
+  bannedUntil?: Date;
+
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    comment: '마지막 강제 로그아웃 시간',
+  })
+  @IsOptional()
+  @IsDateString()
+  lastForcedLogout?: Date;
+
+  @Column({
+    type: 'int',
+    default: 0,
+    comment: '세션 버전 (강제 로그아웃 시 증가)',
+  })
+  sessionVersion: number;
+
   /**
    * 메타데이터
    */

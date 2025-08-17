@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ENV_KEYS } from '../../common/constants/app.constants';
 import { RedisModule } from '../cache/redis.module';
 import { Message } from '../message/message.entity';
@@ -16,8 +17,12 @@ import { ReadReceiptModule } from '../read-receipt/read-receipt.module';
 import { TravelUser } from '../travel-user/travel-user.entity';
 import { Travel } from '../travel/travel.entity';
 import { User } from '../user/user.entity';
+import { AuthModule } from '../auth/auth.module';
 // import { TypingController } from './api/v1/typing.controller'; // 컨트롤러 제거됨
 import { ChatGateway } from './chat.gateway';
+import { EnhancedWebSocketGateway } from './websocket.gateway';
+import { WebSocketService } from './websocket.service';
+import { ConnectionManagerService } from './services/connection-manager.service';
 import { WebSocketRateLimitGuard } from './guards/rate-limit.guard';
 import { WebSocketAuthGuard } from './guards/websocket-auth.guard';
 import { RateLimitService } from './services/rate-limit.service';
@@ -29,6 +34,8 @@ import { WebSocketRoomService } from './services/websocket-room.service';
   imports: [
     RedisModule,
     ReadReceiptModule,
+    AuthModule, // TokenBlacklistService, SessionManagerService 사용
+    EventEmitterModule.forRoot(),
     TypeOrmModule.forFeature([
       User,
       Travel,
@@ -55,6 +62,9 @@ import { WebSocketRoomService } from './services/websocket-room.service';
   controllers: [], // TypingController 제거됨
   providers: [
     ChatGateway,
+    EnhancedWebSocketGateway,
+    WebSocketService,
+    ConnectionManagerService,
     WebSocketAuthGuard,
     WebSocketRateLimitGuard,
     WebSocketRoomService,
@@ -67,6 +77,9 @@ import { WebSocketRoomService } from './services/websocket-room.service';
   ],
   exports: [
     ChatGateway,
+    EnhancedWebSocketGateway,
+    WebSocketService,
+    ConnectionManagerService,
     WebSocketRoomService,
     WebSocketBroadcastService,
     RateLimitService,
