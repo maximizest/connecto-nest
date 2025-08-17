@@ -14,7 +14,6 @@ import { MessageReadReceipt } from '../modules/read-receipt/read-receipt.entity'
 import { TravelUser } from '../modules/travel-user/travel-user.entity';
 import { Travel } from '../modules/travel/travel.entity';
 import { User } from '../modules/user/user.entity';
-import { VideoProcessing } from '../modules/video-processing/video-processing.entity';
 
 // 테스트 환경 검증 함수를 별도로 임포트하지 않고 여기서 정의
 const validateTestDatabaseConfig = (): void => {
@@ -50,7 +49,6 @@ export const ENTITIES = [
   MessageReadReceipt,
   Notification,
   FileUpload,
-  VideoProcessing,
 ];
 
 /**

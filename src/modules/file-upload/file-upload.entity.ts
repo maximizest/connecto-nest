@@ -140,6 +140,47 @@ export class FileUpload extends BaseEntity {
   @IsOptional()
   publicUrl?: string;
 
+  @Column({ type: 'text', nullable: true, comment: '썸네일 URL (이미지/비디오)' })
+  @IsString()
+  @IsOptional()
+  thumbnailUrl?: string;
+
+  @Column({ 
+    type: 'varchar', 
+    length: 100, 
+    nullable: true, 
+    comment: 'Cloudflare Media ID (Stream UID 또는 Images ID)' 
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  cloudflareMediaId?: string;
+
+  @Column({ 
+    type: 'enum',
+    enum: ['r2', 'stream', 'images'],
+    default: 'r2',
+    comment: '미디어 저장 위치' 
+  })
+  @IsString()
+  mediaStorage: 'r2' | 'stream' | 'images';
+
+  @Column({ type: 'json', nullable: true, comment: '미디어 변형 URLs (이미지 variants, 비디오 스트리밍 URLs)' })
+  @IsJSON()
+  @IsOptional()
+  mediaVariants?: {
+    // Cloudflare Images variants
+    thumbnail?: string;
+    small?: string;
+    medium?: string;
+    large?: string;
+    // Cloudflare Stream URLs
+    hls?: string;
+    dash?: string;
+    // 추가 썸네일들
+    additionalThumbnails?: string[];
+  };
+
   @Column({ type: 'json', nullable: true, comment: '추가 메타데이터' })
   @IsJSON()
   @IsOptional()
