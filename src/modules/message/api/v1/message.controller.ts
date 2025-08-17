@@ -24,6 +24,10 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CursorPaginationResponseDto } from '../../../../common/dto/pagination.dto';
+import {
+  validateRoleBasedPlanetAccess,
+  validateChatPermission,
+} from '../../../../common/helpers/role-based-permission.helper';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import {
   PlanetUser,
@@ -157,8 +161,8 @@ export class MessageController {
       throw new NotFoundException('메시지를 찾을 수 없습니다.');
     }
 
-    // Planet 접근 권한 확인
-    await this.validatePlanetAccess(message.planetId, user.id);
+    // Planet 접근 권한 확인 (역할 기반)
+    await validateRoleBasedPlanetAccess(message.planetId, user.id);
 
     return params;
   }
@@ -173,8 +177,16 @@ export class MessageController {
     // 사용자 정보 설정
     body.senderId = user.id;
 
-    // Planet 존재 및 권한 확인
-    const planet = await this.validatePlanetAccess(body.planetId, user.id);
+    // Planet 존재 및 권한 확인 (역할 기반)
+    const planet = await validateRoleBasedPlanetAccess(body.planetId, user.id);
+
+    // 채팅 권한 확인 (벤 상태 포함)
+    const chatPermission = await validateChatPermission(user.id, body.planetId);
+    if (!chatPermission.canChat) {
+      throw new ForbiddenException(
+        `채팅 권한이 없습니다: ${chatPermission.reason}`,
+      );
+    }
 
     // Planet 시간 제한 확인
     if (planet.timeRestriction && !planet.isChatAllowed()) {
@@ -295,8 +307,8 @@ export class MessageController {
   async beforeDestroy(entity: Message, context: any): Promise<Message> {
     const user = context.request?.user;
 
-    // Planet 접근 권한 확인
-    await this.validatePlanetAccess(entity.planetId, user.id);
+    // Planet 접근 권한 확인 (역할 기반)
+    await validateRoleBasedPlanetAccess(entity.planetId, user.id);
 
     // 삭제 권한 확인 (발신자만)
     if (!entity.canDelete(user.id)) {
@@ -351,54 +363,7 @@ export class MessageController {
     return entity;
   }
 
-  /**
-   * Planet 접근 권한 검증
-   */
-  private async validatePlanetAccess(
-    planetId: number,
-    userId: number,
-  ): Promise<Planet> {
-    const planet = await Planet.findOne({
-      where: { id: planetId },
-      relations: ['travel'],
-    });
-
-    if (!planet) {
-      throw new NotFoundException('Planet을 찾을 수 없습니다.');
-    }
-
-    // INACTIVE 상태에서도 메시지 조회는 가능 (메시지 전송은 isChatAllowed()에서 차단됨)
-
-    // Travel 만료 확인
-    if (planet.travel.isExpired()) {
-      throw new ForbiddenException('만료된 Travel의 Planet입니다.');
-    }
-
-    // Planet 타입별 권한 확인
-    if (planet.type === PlanetType.GROUP) {
-      const travelUser = await TravelUser.findOne({
-        where: {
-          userId,
-          travelId: planet.travelId,
-          status: TravelUserStatus.ACTIVE,
-        },
-      });
-
-      if (!travelUser) {
-        throw new ForbiddenException('Travel 멤버만 접근할 수 있습니다.');
-      }
-    } else if (planet.type === PlanetType.DIRECT) {
-      const planetUser = await PlanetUser.findOne({
-        where: { userId, planetId: planet.id, status: PlanetUserStatus.ACTIVE },
-      });
-
-      if (!planetUser) {
-        throw new ForbiddenException('1:1 Planet 접근 권한이 없습니다.');
-      }
-    }
-
-    return planet;
-  }
+  // validatePlanetAccess 메서드는 role-based-permission.helper.ts의 validateRoleBasedPlanetAccess로 대체되었습니다.
 
   /**
    * 메시지 타입별 검증

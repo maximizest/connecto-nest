@@ -19,6 +19,7 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { validateRoleBasedPlanetAccess } from '../../../../common/helpers/role-based-permission.helper';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { Message } from '../../../message/message.entity';
 import { Planet } from '../../../planet/planet.entity';
@@ -365,8 +366,8 @@ export class ReadReceiptController {
     const user: User = req.user;
 
     try {
-      // Planet 접근 권한 확인
-      await this.validatePlanetAccess(planetId, user.id);
+      // Planet 접근 권한 확인 (역할 기반)
+      await validateRoleBasedPlanetAccess(planetId, user.id);
 
       // 모든 메시지 읽음 처리
       const result = await this.crudService.markAllMessagesAsReadInPlanet(
@@ -428,8 +429,8 @@ export class ReadReceiptController {
     const user: User = req.user;
 
     try {
-      // Planet 접근 권한 확인
-      await this.validatePlanetAccess(planetId, user.id);
+      // Planet 접근 권한 확인 (역할 기반)
+      await validateRoleBasedPlanetAccess(planetId, user.id);
 
       const unreadCount = await this.crudService.getUnreadCountInPlanet(
         planetId,
@@ -516,30 +517,11 @@ export class ReadReceiptController {
       throw new NotFoundException('메시지를 찾을 수 없습니다.');
     }
 
-    // Planet 접근 권한 확인
-    await this.validatePlanetAccess(message.planetId, userId);
+    // Planet 접근 권한 확인 (역할 기반)
+    await validateRoleBasedPlanetAccess(message.planetId, userId);
 
     return message;
   }
 
-  /**
-   * Planet 접근 권한 검증
-   */
-  private async validatePlanetAccess(
-    planetId: number,
-    userId: number,
-  ): Promise<Planet> {
-    const planet = await this.planetRepository.findOne({
-      where: { id: planetId },
-      relations: ['travel'],
-    });
-
-    if (!planet) {
-      throw new NotFoundException('Planet을 찾을 수 없습니다.');
-    }
-
-    // 실제 권한 확인 로직은 기존 Message 컨트롤러와 동일하게 구현
-    // 여기서는 간단히 생략하고 기본 검증만 수행
-    return planet;
-  }
+  // validatePlanetAccess 메서드는 role-based-permission.helper.ts의 validateRoleBasedPlanetAccess로 대체되었습니다.
 }

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Server } from 'socket.io';
 import { Repository } from 'typeorm';
+import { validateRoleBasedPlanetAccess } from '../../../common/helpers/role-based-permission.helper';
 
 import {
   PlanetUser,
@@ -265,7 +266,7 @@ export class WebSocketRoomService {
   }
 
   /**
-   * 룸 권한 확인
+   * 룸 권한 확인 (역할 기반)
    */
   private async checkRoomPermission(
     userId: number,
@@ -286,28 +287,16 @@ export class WebSocketRoomService {
 
         return travelUser?.travel?.status === TravelStatus.ACTIVE || false;
       } else if (type === 'planet') {
-        const planetUser = await this.planetUserRepository.findOne({
-          where: {
-            userId,
-            planetId: entityId,
-            status: PlanetUserStatus.ACTIVE,
-          },
-          relations: ['planet'],
-        });
-
-        if (
-          !planetUser?.planet ||
-          planetUser.planet.status !== PlanetStatus.ACTIVE
-        ) {
+        // Planet 룸의 경우 역할 기반 권한 확인 사용
+        try {
+          await validateRoleBasedPlanetAccess(entityId, userId);
+          return true;
+        } catch (error) {
+          this.logger.debug(
+            `User ${userId} does not have permission for planet ${entityId}: ${error.message}`,
+          );
           return false;
         }
-
-        // 1:1 Planet의 경우 추가 권한 확인 (활성 상태만 채팅 가능)
-        if (planetUser.planet.type === PlanetType.DIRECT) {
-          return planetUser.isActiveParticipant();
-        }
-
-        return true;
       }
 
       return false;

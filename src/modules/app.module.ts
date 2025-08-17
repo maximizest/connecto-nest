@@ -17,6 +17,7 @@ import { CacheModule } from './cache/cache.module';
 import { RedisModule } from './cache/redis.module';
 import { FileUploadModule } from './file-upload/file-upload.module';
 import { MessageModule } from './message/message.module';
+import { ModerationModule } from './moderation/moderation.module';
 import { NotificationModule } from './notification/notification.module';
 import { PlanetUserModule } from './planet-user/planet-user.module';
 import { PlanetModule } from './planet/planet.module';
@@ -73,6 +74,7 @@ modules.push(PlanetModule);
 modules.push(PlanetUserModule);
 modules.push(MessageModule);
 modules.push(ReadReceiptModule);
+modules.push(ModerationModule);
 modules.push(WebSocketModule);
 
 @Module({
