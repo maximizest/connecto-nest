@@ -1332,12 +1332,12 @@ graph TD
 
 ### 19.2 Report API 엔드포인트
 
-| 메서드 | 경로 | 설명 | 권한 |
-|--------|------|------|------|
-| GET | /api/v1/reports | 본인 신고 목록 조회 | 인증 필요 |
-| GET | /api/v1/reports/:id | 본인 신고 상세 조회 | 인증 필요 |
-| POST | /api/v1/reports | 신고 생성 | 인증 필요 |
-| DELETE | /api/v1/reports/:id | 신고 취소 (PENDING만) | 인증 필요 |
+| 메서드 | 경로 | 설명 | 권한 | 구현 상태 |
+|--------|------|------|------|----------|
+| GET | /api/v1/reports | 본인 신고 목록 조회 | 인증 필요 | ✅ 구현됨 |
+| GET | /api/v1/reports/:id | 본인 신고 상세 조회 | 인증 필요 | ✅ 구현됨 |
+| POST | /api/v1/reports | 신고 생성 | 인증 필요 | ✅ 구현됨 |
+| DELETE | /api/v1/reports/:id | 신고 취소 (PENDING만) | 인증 필요 | ✅ 구현됨 |
 
 ### 19.3 신고 유형 및 컨텍스트
 
@@ -1366,7 +1366,35 @@ graph TD
 | Planet 사용자 | Planet 음소거 (PlanetUser muteUntil) |
 | Message | 메시지 삭제 또는 숨김 처리 |
 
-### 19.5 응답 형식
+### 19.5 신고 검증 규칙
+
+#### 자기 신고 방지
+- 사용자는 자기 자신을 신고할 수 없음
+- 시도 시 BadRequestException 발생
+
+#### 중복 신고 방지
+- 동일한 컨텍스트에서 동일한 대상에 대한 PENDING 상태 신고가 있으면 중복으로 간주
+- 중복 신고 시 "이미 신고한 내용입니다" 에러 반환
+
+#### 컨텍스트별 권한 검증
+- **Travel**: 신고자가 해당 Travel의 TravelUser여야 함
+- **Planet**: 신고자가 해당 Planet의 PlanetUser여야 함
+- **Message**: 신고자가 메시지가 속한 Planet의 멤버여야 함
+- **User Profile**: 별도 권한 제한 없음
+
+### 19.6 구현 아키텍처
+
+#### Active Record 패턴
+- Repository 패턴 대신 TypeORM의 Active Record 패턴 사용
+- Entity가 BaseEntity를 상속받아 직접 DB 작업 수행
+- 예: `Report.findOne()`, `report.save()`, `report.remove()`
+
+#### @foryourdev/nestjs-crud 통합
+- 표준 CRUD 작업을 자동화
+- 필터링, 정렬, 페이지네이션 자동 지원
+- BeforeShow, BeforeCreate 등 훅을 통한 권한 검증
+
+### 19.7 응답 형식
 
 모든 Report API는 `crudResponse` 함수를 사용하여 표준화된 응답 형식을 반환:
 
@@ -1385,14 +1413,21 @@ graph TD
     "messageId": null,
     "evidenceUrls": [],
     "metadata": null,
-    "createdAt": "2025-08-19T00:00:00Z",
-    "updatedAt": "2025-08-19T00:00:00Z"
+    "createdAt": "2025-01-19T00:00:00Z",
+    "updatedAt": "2025-01-19T00:00:00Z"
   },
   "meta": {
     "total": 1
   }
 }
 ```
+
+### 19.8 데이터베이스 스키마
+
+#### Report 테이블
+- 인덱스: `reporterId + status`, `reportedUserId + status`, `status + createdAt`, `travelId + status`, `planetId + status`
+- 외래 키: reporter → users, reportedUser → users, travel → travels, planet → planets, message → messages
+- 관리자 전용 필드: `reviewedBy`, `adminNotes` (`@Exclude()` 데코레이터로 일반 사용자에게 숨김)
 
 ---
 
