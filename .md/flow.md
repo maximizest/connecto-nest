@@ -792,7 +792,7 @@ graph TD
     L -->|No| N[요청 허용]
 ```
 
-### 10.3 WebSocket 연결 관리 (Dual Gateway System)
+### 10.3 WebSocket 연결 관리 (Dual Gateway System + Redis Adapter)
 
 #### EnhancedWebSocketGateway (인증 및 연결 관리)
 ```mermaid
@@ -816,27 +816,50 @@ graph TD
     L -->|No| N[ConnectionManager.registerConnection]
     
     N --> O[연결 등록]
-    O --> P[Heartbeat 설정 25초]
+    O --> P[Redis Adapter 설정]
+    P --> Q[멀티 레플리카 동기화]
+    Q --> R[Heartbeat 설정 25초]
 ```
 
-#### ChatGateway (채팅 기능)
+#### ChatGateway (채팅 기능 + Redis Adapter)
 ```mermaid
 graph TD
-    A[인증된 연결] --> B[채팅 이벤트 수신]
-    B --> C{Rate Limit 확인}
+    A[인증된 연결] --> B[Redis Adapter 초기화]
+    B --> C[채팅 이벤트 수신]
+    C --> D{Rate Limit 확인}
     
-    C -->|초과| D[Rate Limit 에러]
-    C -->|통과| E{이벤트 타입}
+    D -->|초과| E[Rate Limit 에러]
+    D -->|통과| F{이벤트 타입}
     
-    E -->|joinRoom| F[Room 참여]
-    E -->|sendMessage| G[메시지 전송]
-    E -->|typing| H[타이핑 표시]
-    E -->|readMessage| I[읽음 처리]
+    F -->|joinRoom| G[Room 참여]
+    F -->|sendMessage| H[메시지 전송]
+    F -->|typing| I[타이핑 표시]
+    F -->|readMessage| J[읽음 처리]
     
-    F --> J[WebSocketRoomService]
-    G --> K[WebSocketBroadcastService]
-    H --> L[TypingIndicatorService]
-    I --> M[ReadReceiptService]
+    G --> K[WebSocketRoomService]
+    H --> L[Redis Pub/Sub 브로드캐스트]
+    I --> M[TypingIndicatorService]
+    J --> N[ReadReceiptService]
+    
+    L --> O[모든 레플리카 동기화]
+    O --> P[WebSocketBroadcastService]
+```
+
+#### Redis Adapter 멀티 레플리카 동작
+```mermaid
+graph TD
+    A[클라이언트 A - 레플리카 1] --> B[메시지 전송]
+    B --> C[Redis Pub/Sub]
+    
+    C --> D[레플리카 1 처리]
+    C --> E[레플리카 2 동기화]
+    C --> F[레플리카 3 동기화]
+    
+    E --> G[클라이언트 B - 레플리카 2]
+    F --> H[클라이언트 C - 레플리카 3]
+    
+    G --> I[메시지 수신]
+    H --> J[메시지 수신]
 ```
 
 ---
@@ -1036,17 +1059,21 @@ graph TD
     D --> F[ConnectionManagerService]
     D --> G[TokenBlacklistService]
     D --> H[SessionManagerService]
+    D --> R[RedisAdapterService]
     
     E --> I[WebSocketRoomService]
     E --> J[WebSocketBroadcastService]
     E --> K[TypingIndicatorService]
     E --> L[RateLimitService]
+    E --> R
     
     I --> M[Redis Pub/Sub]
     J --> M
     K --> M
+    R --> M
     
-    M --> N[실시간 동기화]
+    M --> N[멀티 레플리카 동기화]
+    N --> O[모든 서버 인스턴스]
 ```
 
 ### 15.2 WebSocket 서비스 역할
@@ -1060,6 +1087,7 @@ graph TD
 | RateLimitService | 속도 제한 | 액션별 Rate Limiting |
 | TokenBlacklistService | 토큰 블랙리스트 | 무효화된 토큰 관리, 강제 로그아웃 지원 |
 | SessionManagerService | 세션 관리 | 사용자 세션 추적, TTL 관리 |
+| **RedisAdapterService** | **멀티 레플리카 동기화** | **Socket.io Redis Adapter 관리, 서버 간 이벤트 전파** |
 
 ### 15.3 기타 핵심 서비스
 

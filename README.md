@@ -410,6 +410,54 @@ yarn test:docs
 
 생성된 문서는 `/api-docs` 엔드포인트에서 확인할 수 있습니다.
 
+## 🚂 Railway 배포
+
+### 멀티 레플리카 지원
+이 애플리케이션은 Railway에서 2개 이상의 레플리카로 배포 시 자동으로 동기화됩니다.
+
+#### 주요 기능
+- **WebSocket 클러스터링**: Socket.io Redis Adapter를 통한 자동 메시지 동기화
+- **분산 스케줄러**: Redis 기반 분산 락으로 중복 실행 방지
+- **세션 관리**: Redis 기반 중앙 집중식 세션 스토어
+- **캐시 동기화**: 모든 레플리카에서 동일한 캐시 접근
+
+#### Railway 환경 변수 설정
+```env
+# Redis (Railway Redis 플러그인 사용)
+REDIS_URL=${{Redis.REDIS_URL}}
+
+# 레플리카 설정 (Railway 자동 스케일링)
+RAILWAY_REPLICA_ID=${{RAILWAY_REPLICA_ID}}
+PORT=${{PORT}}
+
+# 기타 필수 환경 변수는 위와 동일
+```
+
+#### Railway 배포 명령어
+```bash
+# Railway CLI 설치
+npm install -g @railway/cli
+
+# Railway 프로젝트 연결
+railway link
+
+# 배포 (자동으로 빌드 및 마이그레이션 실행)
+railway up
+
+# 레플리카 수 조정 (Railway 대시보드에서도 가능)
+railway scale --replicas 2
+```
+
+#### 배포 시 자동 실행되는 작업
+1. **빌드**: `yarn build`
+2. **마이그레이션**: `yarn migration:run`
+3. **서버 시작**: `yarn start:prod`
+
+#### 모니터링
+- WebSocket 연결 상태: `/health/websocket`
+- Redis Adapter 상태: `/health/redis-adapter`
+- 스케줄러 락 상태: `/health/scheduler`
+
 ## 🔒 보안 고려사항
 
 - 모든 API는 JWT 인증 필요 (`AuthGuard`)

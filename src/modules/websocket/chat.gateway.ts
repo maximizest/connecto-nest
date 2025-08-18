@@ -14,6 +14,7 @@ import {
   MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
@@ -51,6 +52,7 @@ import { ReadMessageDto } from './dto/read-message.dto';
 import { RestoreMessageDto } from './dto/restore-message.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
+import { RedisAdapterService } from './services/redis-adapter.service';
 
 // WebSocket 예외 필터
 @Injectable()
@@ -82,7 +84,7 @@ class WebSocketExceptionFilter {
   namespace: '/chat',
   transports: ['websocket', 'polling'],
 })
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
 
   private readonly logger = new Logger(ChatGateway.name);
@@ -96,6 +98,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly notificationService: NotificationService,
     private readonly eventEmitter: EventEmitter2,
     private readonly readReceiptService: ReadReceiptService,
+    private readonly redisAdapterService: RedisAdapterService,
     @InjectRepository(Planet)
     private readonly planetRepository: Repository<Planet>,
     @InjectRepository(Message)
@@ -105,6 +108,24 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
   ) {}
+
+  /**
+   * Gateway 초기화 - Redis Adapter 설정
+   */
+  async afterInit(server: Server): Promise<void> {
+    this.logger.log('ChatGateway initializing...');
+    
+    // Redis Adapter 설정 (멀티 레플리카 지원)
+    try {
+      await this.redisAdapterService.setupAdapter(server);
+      this.logger.log('Redis adapter configured for multi-replica support');
+    } catch (error) {
+      this.logger.error('Failed to setup Redis adapter:', error);
+      // Redis Adapter 실패해도 단일 서버로 동작 가능
+    }
+    
+    this.logger.log('ChatGateway initialized successfully');
+  }
 
   /**
    * 클라이언트 연결 처리

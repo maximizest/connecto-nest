@@ -29,6 +29,7 @@ import { RateLimitService } from './services/rate-limit.service';
 import { TypingIndicatorService } from './services/typing-indicator.service';
 import { WebSocketBroadcastService } from './services/websocket-broadcast.service';
 import { WebSocketRoomService } from './services/websocket-room.service';
+import { RedisAdapterService } from './services/redis-adapter.service';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { WebSocketRoomService } from './services/websocket-room.service';
     WebSocketBroadcastService,
     RateLimitService,
     TypingIndicatorService,
+    RedisAdapterService, // Redis Adapter 서비스 추가
     NotificationService,
     PushNotificationService,
     Reflector,
@@ -84,6 +86,7 @@ import { WebSocketRoomService } from './services/websocket-room.service';
     WebSocketBroadcastService,
     RateLimitService,
     TypingIndicatorService,
+    RedisAdapterService, // Redis Adapter 서비스 export
   ],
 })
 export class WebSocketModule {}

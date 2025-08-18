@@ -19,12 +19,14 @@ import { TokenBlacklistService } from '../auth/services/token-blacklist.service'
 import { SessionManagerService } from '../auth/services/session-manager.service';
 import { WebSocketService } from './websocket.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { RedisAdapterService } from './services/redis-adapter.service';
 
 /**
  * Enhanced WebSocket Gateway
  * 
  * WebSocket 연결 관리 및 실시간 통신 처리
  * 토큰 블랙리스트 확인 및 강제 연결 종료 지원
+ * Redis Adapter를 통한 멀티 레플리카 지원
  */
 @WebSocketGateway({
   cors: {
@@ -49,6 +51,7 @@ export class EnhancedWebSocketGateway
     private readonly sessionManager: SessionManagerService,
     private readonly webSocketService: WebSocketService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly redisAdapterService: RedisAdapterService,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
   ) {}
@@ -56,8 +59,17 @@ export class EnhancedWebSocketGateway
   /**
    * Gateway 초기화
    */
-  afterInit(server: Server): void {
-    this.logger.log('WebSocket Gateway initialized');
+  async afterInit(server: Server): Promise<void> {
+    this.logger.log('WebSocket Gateway initializing...');
+    
+    // Redis Adapter 설정 (멀티 레플리카 지원)
+    try {
+      await this.redisAdapterService.setupAdapter(server);
+      this.logger.log('Redis adapter configured for multi-replica support');
+    } catch (error) {
+      this.logger.error('Failed to setup Redis adapter:', error);
+      // Redis Adapter 실패해도 단일 서버로 동작 가능
+    }
     
     // 서버 설정
     server.setMaxListeners(100);
@@ -72,6 +84,8 @@ export class EnhancedWebSocketGateway
       clearInterval(pingInterval);
       this.connectionManager.cleanup();
     });
+    
+    this.logger.log('WebSocket Gateway initialized successfully');
   }
 
   /**
