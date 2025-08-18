@@ -14,6 +14,14 @@
 8. [사용자 차단/신고 플로우 (Moderation)](#8-사용자-차단신고-플로우-moderation)
 9. [강제 로그아웃 플로우](#9-강제-로그아웃-플로우)
 10. [세션 관리 플로우](#10-세션-관리-플로우)
+11. [실시간 상태 관리 플로우](#11-실시간-상태-관리-플로우)
+12. [에러 처리 플로우](#12-에러-처리-플로우)
+13. [성능 최적화 플로우](#13-성능-최적화-플로우)
+14. [보안 플로우](#14-보안-플로우)
+15. [WebSocket 서비스 아키텍처](#15-websocket-서비스-아키텍처)
+16. [Moderation 플로우 (권한 기반 벤 시스템)](#16-moderation-플로우-권한-기반-벤-시스템)
+17. [멀티 레플리카 배포 플로우](#17-멀티-레플리카-배포-플로우)
+18. [Rate Limiting 시스템 (현재 비활성화)](#18-rate-limiting-시스템-현재-비활성화)
 
 ---
 
@@ -1088,18 +1096,21 @@ graph TD
 | TokenBlacklistService | 토큰 블랙리스트 | 무효화된 토큰 관리, 강제 로그아웃 지원 |
 | SessionManagerService | 세션 관리 | 사용자 세션 추적, TTL 관리 |
 | **RedisAdapterService** | **멀티 레플리카 동기화** | **Socket.io Redis Adapter 관리, 서버 간 이벤트 전파** |
+| **DistributedEventService** | **분산 이벤트 처리** | **EventEmitter2 이벤트를 모든 레플리카에 전파** |
+| **DistributedCacheService** | **분산 캐시 동기화** | **캐시 무효화를 모든 레플리카에 동기화** |
+| **ReplicaAwareLoggingInterceptor** | **레플리카 인식 로깅** | **레플리카 ID를 모든 로그에 포함** |
 
 ### 15.3 기타 핵심 서비스
 
 | 서비스 | 모듈 | 역할 | 주요 기능 |
 |---------|------|------|----------|
 | StorageService | storage | 파일 저장소 | Cloudflare R2 통합, 파일 업로드/다운로드 |
-| RedisService | cache | 캐싱 | Redis 기반 캐싱, Pub/Sub |
+| RedisService | cache | 캐싱 | Redis 기반 캐싱, Pub/Sub, 분산 락 |
 | PushNotificationService | notification | 푸시 알림 | FCM 기반 푸시 알림 전송 |
 | MessagePaginationService | message | 메시지 페이징 | 커서 기반 페이지네이션 |
 | CrudMetadataService | schema | CRUD 메타데이터 | 엔티티 CRUD 설정 관리 |
 | SecurityValidationService | schema | 보안 검증 | 엔티티 보안 규칙 검증 |
-| SchedulerService | scheduler | 스케줄링 | 배치 작업, 정기 작업 관리 |
+| SchedulerService | scheduler | 스케줄링 | 배치 작업, 정기 작업 관리 (Redis 락으로 중복 실행 방지) |
 
 ---
 
@@ -1152,9 +1163,104 @@ graph TD
 
 ---
 
-## 17. Rate Limiting 시스템
+## 17. 멀티 레플리카 배포 플로우
 
-### 17.1 WebSocket Rate Limiting
+### 17.1 레플리카 간 동기화 아키텍처
+
+```mermaid
+graph TD
+    A[Railway 로드 밸런서] --> B[레플리카 1]
+    A --> C[레플리카 2]
+    A --> D[레플리카 N]
+    
+    B --> E[Redis Cluster]
+    C --> E
+    D --> E
+    
+    E --> F[Pub/Sub 채널]
+    E --> G[캐시 저장소]
+    E --> H[세션 저장소]
+    E --> I[분산 락]
+    
+    F --> J[WebSocket 이벤트 동기화]
+    F --> K[EventEmitter 이벤트 동기화]
+    F --> L[캐시 무효화 동기화]
+    
+    B --> M[PostgreSQL]
+    C --> M
+    D --> M
+```
+
+### 17.2 WebSocket 멀티 레플리카 동작
+
+```mermaid
+graph TD
+    A[클라이언트 A] --> B[레플리카 1]
+    C[클라이언트 B] --> D[레플리카 2]
+    
+    B --> E[메시지 전송]
+    E --> F[Redis Adapter]
+    F --> G[Redis Pub/Sub]
+    
+    G --> H[레플리카 1 브로드캐스트]
+    G --> I[레플리카 2 브로드캐스트]
+    
+    H --> J[로컬 클라이언트에게 전송]
+    I --> K[로컬 클라이언트에게 전송]
+    
+    J --> A
+    K --> C
+```
+
+### 17.3 스케줄러 중복 실행 방지
+
+```mermaid
+graph TD
+    A[스케줄 작업 트리거] --> B{Redis 락 획득 시도}
+    
+    B -->|레플리카 1 성공| C[작업 실행]
+    B -->|레플리카 2 실패| D[스킵]
+    B -->|레플리카 N 실패| E[스킵]
+    
+    C --> F[작업 완료]
+    F --> G[락 해제]
+    
+    D --> H[다음 스케줄 대기]
+    E --> H
+```
+
+### 17.4 분산 환경 서비스 동작
+
+| 기능 | 문제점 | 해결 방법 | 구현 |
+|------|--------|----------|------|
+| WebSocket 메시지 | 다른 레플리카 클라이언트에게 전달 안됨 | Redis Adapter | RedisAdapterService |
+| 스케줄러 | 모든 레플리카에서 중복 실행 | Redis 분산 락 | SchedulerService (기존) |
+| EventEmitter | 로컬 이벤트만 처리 | Redis Pub/Sub 전파 | DistributedEventService |
+| 캐시 무효화 | 다른 레플리카 캐시 유지 | 분산 캐시 무효화 | DistributedCacheService |
+| 로깅 | 레플리카 구분 불가 | 레플리카 ID 포함 | ReplicaAwareLoggingInterceptor |
+| Rate Limiting | 제거됨 (현재 사용 안함) | - | - |
+
+### 17.5 환경 변수 설정
+
+```bash
+# Railway 자동 설정
+RAILWAY_REPLICA_ID=replica-abc123  # 자동 할당
+RAILWAY_ENVIRONMENT=production
+RAILWAY_SERVICE_NAME=connecto-nest
+
+# Redis 설정 (필수)
+REDIS_URL=redis://user:pass@redis-host:6379
+
+# 기타 필수 설정
+DATABASE_URL=postgresql://...
+JWT_SECRET=...
+```
+
+---
+
+## 18. Rate Limiting 시스템 (현재 비활성화)
+
+### 18.1 WebSocket Rate Limiting
 
 ```mermaid
 graph TD
@@ -1178,7 +1284,9 @@ graph TD
     J --> L[정상 처리]
 ```
 
-### 17.2 Rate Limit 설정
+### 18.2 Rate Limit 설정 (현재 비활성화)
+
+> **참고**: Rate Limiting 기능은 현재 제거된 상태입니다. 필요시 재구현 가능합니다.
 
 | 액션 | 제한 | 시간 창 | 설명 |
 |------|------|---------|------|
