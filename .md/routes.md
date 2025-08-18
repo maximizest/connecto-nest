@@ -331,7 +331,7 @@
 **벤 레벨:**
 - **플랫폼 벤**: User.isBanned = true (전체 서비스 접근 차단)
 - **Travel 벤**: TravelUser.status = 'BANNED' (해당 Travel 참여 차단)
-- **Planet 벤**: PlanetUser에서 mute 시스템 사용 (별도 벤 없음)
+- **Planet 차단**: PlanetUser.status = 'BANNED' (해당 Planet에서 활동 차단)
 
 ---
 

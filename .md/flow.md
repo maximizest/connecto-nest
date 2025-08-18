@@ -618,20 +618,20 @@ graph TD
     J --> K[로그인 차단]
 ```
 
-### 8.3 Planet 레벨 뮤트 (MUTE 기능)
+### 8.3 Planet 레벨 차단 (BANNED 상태)
 
 ```mermaid
 graph TD
     A[채팅방 내 사용자] --> B[사용자 프로필 클릭]
-    B --> C[뮤트 옵션]
+    B --> C[차단 옵션]
 
     C --> D[PATCH /api/v1/planet-users/:id]
-    D --> E[status MUTED 설정]
+    D --> E[status BANNED 설정]
 
-    E --> F{뮤트 효과}
+    E --> F{차단 효과}
     F -->|메시지| G[메시지 전송 불가]
     F -->|알림| H[알림 수신 안함]
-    F -->|표시| I[뮤트 아이콘 표시]
+    F -->|표시| I[차단 아이콘 표시]
 
     G --> J[에러 메시지 표시]
 ```
@@ -1089,10 +1089,10 @@ graph TD
     
     C --> F[플랫폼 벤]
     C --> G[Travel 벤]
-    C --> H[Planet 뮤트]
+    C --> H[Planet 차단]
     
     D --> I[Travel 벤 - HOST인 경우]
-    D --> J[Planet 뮤트 - Travel 내]
+    D --> J[Planet 차단 - Travel 내]
     
     E --> K[권한 없음 에러]
 ```
