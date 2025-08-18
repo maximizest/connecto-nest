@@ -1463,11 +1463,6 @@ graph TD
     
     C --> G[Planet C<br/>채팅방]
     C --> H[Planet D<br/>채팅방]
-    
-    style A fill:#f9f,stroke:#333,stroke-width:2px
-    style B fill:#bbf,stroke:#333,stroke-width:2px
-    style C fill:#bbf,stroke:#333,stroke-width:2px
-    style D fill:#bbf,stroke:#333,stroke-width:2px
 ```
 
 ### 20.3 데이터베이스 스키마
