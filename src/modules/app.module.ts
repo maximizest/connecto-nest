@@ -5,7 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
-import { ThrottlerModule } from '@nestjs/throttler';
+// import { ThrottlerModule } from '@nestjs/throttler'; // Rate Limiting 사용 안함
 import { TEST_DATABASE_CONFIG } from '../config/database-test.config';
 import {
   DATABASE_CONFIG,
@@ -35,7 +35,7 @@ import { TravelModule } from './travel/travel.module';
 import { UserModule } from './user/user.module';
 import { WebSocketModule } from './websocket/websocket.module';
 import { ReplicaAwareLoggingInterceptor } from '../common/interceptors/replica-aware-logging.interceptor';
-import { DistributedThrottlerGuard } from '../common/guards/distributed-throttler.guard';
+// import { DistributedThrottlerGuard } from '../common/guards/distributed-throttler.guard'; // Rate Limiting 사용 안함
 
 const NODE_ENV = process.env.NODE_ENV;
 // 기본 모듈 설정
@@ -51,12 +51,7 @@ const modules: any[] = [
     process.env.NODE_ENV === 'test' ? TEST_DATABASE_CONFIG : DATABASE_CONFIG,
   ),
   ScheduleModule.forRoot(),
-  ThrottlerModule.forRoot([
-    {
-      ttl: 60000, // 1분
-      limit: 100, // 1분당 100개 요청 (기본값)
-    },
-  ]),
+  // ThrottlerModule 제거 - Rate Limiting 사용 안함
   EventsModule, // 분산 이벤트 모듈 추가
 ];
 
@@ -99,11 +94,11 @@ modules.push(WebSocketModule);
       provide: APP_INTERCEPTOR,
       useClass: ReplicaAwareLoggingInterceptor,
     },
-    // 분산 Rate Limiting Guard
-    {
-      provide: APP_GUARD,
-      useClass: DistributedThrottlerGuard,
-    },
+    // Rate Limiting 사용 안함
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: DistributedThrottlerGuard,
+    // },
   ],
 })
 export class AppModule implements OnModuleInit {
