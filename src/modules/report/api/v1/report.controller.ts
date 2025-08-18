@@ -15,10 +15,11 @@ import {
   Logger,
   NotFoundException,
   Query,
-  Request,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '../../../../guards/auth.guard';
+import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
+import { getCurrentUserFromContext } from '../../../../common/helpers/current-user.helper';
 import { User } from '../../../user/user.entity';
 import { Report, ReportContext, ReportStatus } from '../../report.entity';
 import { ReportService } from '../../report.service';
@@ -105,13 +106,7 @@ export class ReportController {
    * index 액션을 오버라이드하여 필터 적용
    */
   @Get()
-  async index(@Request() req: any, @Query() query: any): Promise<any> {
-    const user: User = req.user;
-
-    if (!user) {
-      throw new ForbiddenException('인증이 필요합니다.');
-    }
-
+  async index(@CurrentUser() user: User, @Query() query: any): Promise<any> {
     // 본인이 신고한 내역만 조회하도록 필터 강제 설정
     query.filters = query.filters || {};
     query.filters.reporterId = user.id;
@@ -135,11 +130,7 @@ export class ReportController {
    */
   @BeforeShow()
   async beforeShow(params: any, context: any): Promise<any> {
-    const user: User = context.request?.user;
-
-    if (!user) {
-      throw new ForbiddenException('인증이 필요합니다.');
-    }
+    const user = getCurrentUserFromContext(context);
 
     // 신고 조회 - Active Record 패턴 사용
     const report = await Report.findOne({
@@ -159,11 +150,7 @@ export class ReportController {
    */
   @BeforeCreate()
   async beforeCreate(params: any, context: any): Promise<any> {
-    const user: User = context.request?.user;
-
-    if (!user) {
-      throw new ForbiddenException('인증이 필요합니다.');
-    }
+    const user = getCurrentUserFromContext(context);
 
     // 신고자 설정
     params.data.reporterId = user.id;
@@ -222,11 +209,7 @@ export class ReportController {
    */
   @BeforeDestroy()
   async beforeDestroy(params: any, context: any): Promise<any> {
-    const user: User = context.request?.user;
-
-    if (!user) {
-      throw new ForbiddenException('인증이 필요합니다.');
-    }
+    const user = getCurrentUserFromContext(context);
 
     // 신고 조회 - Active Record 패턴 사용
     const report = await Report.findOne({
