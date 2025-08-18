@@ -1297,6 +1297,105 @@ graph TD
 
 ---
 
+## 19. 사용자 신고 시스템 (Report System)
+
+### 19.1 신고 플로우
+
+```mermaid
+graph TD
+    A[사용자가 신고하기 선택] --> B{신고 컨텍스트}
+    B -->|Travel| C[Travel 참여 확인]
+    B -->|Planet| D[Planet 참여 확인]
+    B -->|Message| E[Message 접근 권한 확인]
+    B -->|User Profile| F[직접 신고 가능]
+    
+    C --> G{권한 확인}
+    D --> G
+    E --> G
+    F --> G
+    
+    G -->|권한 있음| H[신고 정보 입력]
+    G -->|권한 없음| I[403 에러]
+    
+    H --> J[중복 신고 확인]
+    J -->|중복| K[이미 신고됨 알림]
+    J -->|신규| L[신고 생성]
+    
+    L --> M[신고 상태: PENDING]
+    M --> N[신고 목록에 추가]
+    
+    N --> O{관리자 처리}
+    O -->|검토 중| P[상태: REVIEWING]
+    O -->|해결됨| Q[상태: RESOLVED]
+    O -->|거부됨| R[상태: REJECTED]
+```
+
+### 19.2 Report API 엔드포인트
+
+| 메서드 | 경로 | 설명 | 권한 |
+|--------|------|------|------|
+| GET | /api/v1/reports | 본인 신고 목록 조회 | 인증 필요 |
+| GET | /api/v1/reports/:id | 본인 신고 상세 조회 | 인증 필요 |
+| POST | /api/v1/reports | 신고 생성 | 인증 필요 |
+| DELETE | /api/v1/reports/:id | 신고 취소 (PENDING만) | 인증 필요 |
+
+### 19.3 신고 유형 및 컨텍스트
+
+#### 신고 유형 (ReportType)
+- `SPAM`: 스팸
+- `HARASSMENT`: 괴롭힘
+- `INAPPROPRIATE_CONTENT`: 부적절한 콘텐츠
+- `VIOLENCE`: 폭력
+- `HATE_SPEECH`: 혐오 발언
+- `FRAUD`: 사기
+- `PRIVACY_VIOLATION`: 개인정보 침해
+- `OTHER`: 기타
+
+#### 신고 컨텍스트 (ReportContext)
+- `TRAVEL`: Travel 내에서의 활동
+- `PLANET`: Planet 내에서의 활동
+- `MESSAGE`: 특정 메시지
+- `USER_PROFILE`: 사용자 프로필
+
+### 19.4 신고 처리 후 조치
+
+| 신고 대상 | 가능한 조치 |
+|-----------|------------|
+| User | 계정 정지 (isBanned) |
+| Travel 사용자 | Travel 추방 (TravelUser status: BANNED) |
+| Planet 사용자 | Planet 음소거 (PlanetUser muteUntil) |
+| Message | 메시지 삭제 또는 숨김 처리 |
+
+### 19.5 응답 형식
+
+모든 Report API는 `crudResponse` 함수를 사용하여 표준화된 응답 형식을 반환:
+
+```json
+{
+  "data": {
+    "id": 1,
+    "reporterId": 123,
+    "reportedUserId": 456,
+    "type": "HARASSMENT",
+    "context": "PLANET",
+    "description": "신고 사유",
+    "status": "PENDING",
+    "travelId": null,
+    "planetId": 789,
+    "messageId": null,
+    "evidenceUrls": [],
+    "metadata": null,
+    "createdAt": "2025-08-19T00:00:00Z",
+    "updatedAt": "2025-08-19T00:00:00Z"
+  },
+  "meta": {
+    "total": 1
+  }
+}
+```
+
+---
+
 ## 📝 플로우 다이어그램 범례
 
 - **사각형**: 프로세스 또는 액션

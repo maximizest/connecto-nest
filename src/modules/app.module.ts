@@ -24,6 +24,7 @@ import { MessageModule } from './message/message.module';
 import { ModerationModule } from './moderation/moderation.module';
 import { NotificationModule } from './notification/notification.module';
 import { PlanetUserModule } from './planet-user/planet-user.module';
+import { ReportModule } from './report/report.module';
 import { PlanetModule } from './planet/planet.module';
 import { ProfileModule } from './profile/profile.module';
 import { ReadReceiptModule } from './read-receipt/read-receipt.module';
@@ -84,6 +85,7 @@ modules.push(PlanetUserModule);
 modules.push(MessageModule);
 modules.push(ReadReceiptModule);
 modules.push(ModerationModule);
+modules.push(ReportModule);
 modules.push(WebSocketModule);
 
 @Module({

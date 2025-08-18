@@ -11,6 +11,7 @@ import { PlanetUser } from '../modules/planet-user/planet-user.entity';
 import { Planet } from '../modules/planet/planet.entity';
 import { Profile } from '../modules/profile/profile.entity';
 import { MessageReadReceipt } from '../modules/read-receipt/read-receipt.entity';
+import { Report } from '../modules/report/report.entity';
 import { TravelUser } from '../modules/travel-user/travel-user.entity';
 import { Travel } from '../modules/travel/travel.entity';
 import { User } from '../modules/user/user.entity';
@@ -49,6 +50,7 @@ export const ENTITIES = [
   MessageReadReceipt,
   Notification,
   FileUpload,
+  Report, // 사용자 신고 기능
 ];
 
 /**
