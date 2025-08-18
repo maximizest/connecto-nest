@@ -115,11 +115,11 @@ export class AppModule implements OnModuleInit {
     validateJwtConfig();
     validateRedisConfig();
     validateStorageConfig();
-    
+
     // 레플리카 정보 로깅
     const replicaId = process.env.RAILWAY_REPLICA_ID || 'single-instance';
     this.logger.log(`🔄 Running as replica: ${replicaId}`);
-    
+
     this.logger.log('✅ All configurations validated successfully!');
   }
 }

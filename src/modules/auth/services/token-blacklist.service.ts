@@ -5,7 +5,7 @@ import Redis from 'ioredis';
 
 /**
  * Token Blacklist Service
- * 
+ *
  * JWT 토큰 블랙리스트 관리 서비스
  * Redis를 사용하여 무효화된 토큰을 추적합니다.
  */
@@ -21,17 +21,23 @@ export class TokenBlacklistService {
   /**
    * 특정 토큰을 블랙리스트에 추가
    */
-  async blacklistToken(token: string, userId: number, reason: string): Promise<void> {
+  async blacklistToken(
+    token: string,
+    userId: number,
+    reason: string,
+  ): Promise<void> {
     try {
-      const decoded = this.jwtService.decode(token) as any;
+      const decoded = this.jwtService.decode(token);
       if (!decoded || !decoded.exp) {
-        this.logger.warn(`Invalid token format for blacklisting: userId=${userId}`);
+        this.logger.warn(
+          `Invalid token format for blacklisting: userId=${userId}`,
+        );
         return;
       }
 
       const now = Math.floor(Date.now() / 1000);
       const expiry = decoded.exp - now;
-      
+
       if (expiry > 0) {
         const key = `blacklist:token:${token}`;
         const value = JSON.stringify({
@@ -41,10 +47,15 @@ export class TokenBlacklistService {
         });
 
         await this.redis.setex(key, expiry, value);
-        this.logger.log(`Token blacklisted: userId=${userId}, reason=${reason}, expiry=${expiry}s`);
+        this.logger.log(
+          `Token blacklisted: userId=${userId}, reason=${reason}, expiry=${expiry}s`,
+        );
       }
     } catch (error) {
-      this.logger.error(`Failed to blacklist token: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to blacklist token: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -58,7 +69,10 @@ export class TokenBlacklistService {
       const result = await this.redis.get(key);
       return !!result;
     } catch (error) {
-      this.logger.error(`Failed to check token blacklist: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to check token blacklist: ${error.message}`,
+        error.stack,
+      );
       return false; // 에러 시 안전하게 false 반환
     }
   }
@@ -76,17 +90,22 @@ export class TokenBlacklistService {
 
       // 7일간 유지 (refresh token의 최대 유효기간)
       await this.redis.setex(key, 86400 * 7, value);
-      
+
       // 사용자의 모든 활성 토큰 무효화 플래그 설정
       await this.redis.setex(
         `blacklist:user:${userId}:all`,
         86400 * 7,
-        new Date().toISOString()
+        new Date().toISOString(),
       );
 
-      this.logger.log(`All sessions blacklisted for user: userId=${userId}, reason=${reason}`);
+      this.logger.log(
+        `All sessions blacklisted for user: userId=${userId}, reason=${reason}`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to blacklist user sessions: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to blacklist user sessions: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -100,7 +119,10 @@ export class TokenBlacklistService {
       const result = await this.redis.get(key);
       return !!result;
     } catch (error) {
-      this.logger.error(`Failed to check user blacklist: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to check user blacklist: ${error.message}`,
+        error.stack,
+      );
       return false;
     }
   }
@@ -114,7 +136,10 @@ export class TokenBlacklistService {
       const result = await this.redis.get(key);
       return result ? JSON.parse(result) : null;
     } catch (error) {
-      this.logger.error(`Failed to get blacklist info: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to get blacklist info: ${error.message}`,
+        error.stack,
+      );
       return null;
     }
   }
@@ -128,7 +153,10 @@ export class TokenBlacklistService {
       const result = await this.redis.get(key);
       return result ? JSON.parse(result) : null;
     } catch (error) {
-      this.logger.error(`Failed to get user blacklist info: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to get user blacklist info: ${error.message}`,
+        error.stack,
+      );
       return null;
     }
   }
@@ -140,11 +168,14 @@ export class TokenBlacklistService {
     try {
       await this.redis.del(
         `blacklist:user:${userId}`,
-        `blacklist:user:${userId}:all`
+        `blacklist:user:${userId}:all`,
       );
       this.logger.log(`User removed from blacklist: userId=${userId}`);
     } catch (error) {
-      this.logger.error(`Failed to remove from blacklist: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to remove from blacklist: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }

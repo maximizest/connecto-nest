@@ -10,7 +10,7 @@ import { tap } from 'rxjs/operators';
 
 /**
  * 레플리카 인식 로깅 인터셉터
- * 
+ *
  * 로그에 레플리카 ID를 포함하여 어느 인스턴스에서 발생한 로그인지 추적
  */
 @Injectable()
@@ -43,7 +43,7 @@ export class ReplicaAwareLoggingInterceptor implements NestInterceptor {
         },
         error: (error) => {
           const responseTime = Date.now() - now;
-          
+
           // 에러 로그 (레플리카 ID 포함)
           this.logger.error(
             `[${this.replicaId}] ${method} ${url} - ${error.status || 500} - ${responseTime}ms - ${error.message}`,

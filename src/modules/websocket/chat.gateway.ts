@@ -84,7 +84,9 @@ class WebSocketExceptionFilter {
   namespace: '/chat',
   transports: ['websocket', 'polling'],
 })
-export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+export class ChatGateway
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer() server: Server;
 
   private readonly logger = new Logger(ChatGateway.name);
@@ -114,7 +116,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
    */
   async afterInit(server: Server): Promise<void> {
     this.logger.log('ChatGateway initializing...');
-    
+
     // Redis Adapter 설정 (멀티 레플리카 지원)
     try {
       await this.redisAdapterService.setupAdapter(server);
@@ -123,7 +125,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       this.logger.error('Failed to setup Redis adapter:', error);
       // Redis Adapter 실패해도 단일 서버로 동작 가능
     }
-    
+
     this.logger.log('ChatGateway initialized successfully');
   }
 

@@ -24,7 +24,7 @@ import { CurrentUser } from '../../../../common/decorators/current-user.decorato
 
 /**
  * Admin Controller
- * 
+ *
  * 관리자 전용 API
  * 강제 로그아웃, 사용자 차단, 세션 관리 등
  */
@@ -75,17 +75,18 @@ export class AdminController {
       }
 
       this.logger.log(
-        `Force logout initiated: targetUserId=${userId}, adminId=${admin.id}, reason=${body.reason}`
+        `Force logout initiated: targetUserId=${userId}, adminId=${admin.id}, reason=${body.reason}`,
       );
 
       // 1. 모든 세션 무효화
-      const invalidatedSessions = await this.sessionManager.invalidateUserSessions(
-        userId,
-        body.reason
-      );
+      const invalidatedSessions =
+        await this.sessionManager.invalidateUserSessions(userId, body.reason);
 
       // 2. 사용자의 모든 토큰 블랙리스트 추가
-      await this.tokenBlacklistService.blacklistUserSessions(userId, body.reason);
+      await this.tokenBlacklistService.blacklistUserSessions(
+        userId,
+        body.reason,
+      );
 
       // 3. 강제 로그아웃 이벤트 발생 (WebSocket 연결 종료)
       this.eventEmitter.emit('user.force.logout', {
@@ -135,7 +136,8 @@ export class AdminController {
   @HttpCode(HttpStatus.OK)
   async banUser(
     @Param('userId', ParseIntPipe) userId: number,
-    @Body() body: {
+    @Body()
+    body: {
       reason: string;
       duration?: number; // 차단 기간 (일 단위)
       message?: string;
@@ -172,7 +174,7 @@ export class AdminController {
       }
 
       this.logger.log(
-        `User ban initiated: targetUserId=${userId}, adminId=${admin.id}, reason=${body.reason}`
+        `User ban initiated: targetUserId=${userId}, adminId=${admin.id}, reason=${body.reason}`,
       );
 
       // 1. 사용자 차단 상태 업데이트
@@ -192,7 +194,7 @@ export class AdminController {
       await this.forceLogout(
         userId,
         { reason: `차단: ${body.reason}`, message: body.message },
-        admin
+        admin,
       );
 
       // 3. 차단 이벤트 발생
@@ -266,7 +268,7 @@ export class AdminController {
       }
 
       this.logger.log(
-        `User unban initiated: targetUserId=${userId}, adminId=${admin.id}, reason=${body.reason}`
+        `User unban initiated: targetUserId=${userId}, adminId=${admin.id}, reason=${body.reason}`,
       );
 
       // 1. 차단 상태 해제
@@ -324,7 +326,8 @@ export class AdminController {
   ): Promise<any> {
     try {
       const sessions = await this.sessionManager.getUserSessions(userId);
-      const connectionCount = this.connectionManager.getUserConnectionCount(userId);
+      const connectionCount =
+        this.connectionManager.getUserConnectionCount(userId);
 
       return {
         success: true,
@@ -336,7 +339,10 @@ export class AdminController {
         },
       };
     } catch (error) {
-      this.logger.error(`Get user sessions failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `Get user sessions failed: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -363,7 +369,10 @@ export class AdminController {
         },
       };
     } catch (error) {
-      this.logger.error(`Get session stats failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `Get session stats failed: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -379,7 +388,15 @@ export class AdminController {
     try {
       const [users, total] = await this.userRepository.findAndCount({
         where: { isBanned: true },
-        select: ['id', 'email', 'name', 'bannedAt', 'bannedReason', 'bannedBy', 'bannedUntil'],
+        select: [
+          'id',
+          'email',
+          'name',
+          'bannedAt',
+          'bannedReason',
+          'bannedBy',
+          'bannedUntil',
+        ],
         order: { bannedAt: 'DESC' },
         skip: (page - 1) * limit,
         take: limit,
@@ -396,7 +413,10 @@ export class AdminController {
         },
       };
     } catch (error) {
-      this.logger.error(`Get banned users failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `Get banned users failed: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -413,12 +433,12 @@ export class AdminController {
   ): Promise<any> {
     try {
       this.logger.log(
-        `Device force disconnect: deviceId=${deviceId}, adminId=${admin.id}, reason=${body.reason}`
+        `Device force disconnect: deviceId=${deviceId}, adminId=${admin.id}, reason=${body.reason}`,
       );
 
       const disconnected = await this.connectionManager.forceDisconnectDevice(
         deviceId,
-        body.reason
+        body.reason,
       );
 
       // 감사 로그 기록
@@ -442,7 +462,10 @@ export class AdminController {
         },
       };
     } catch (error) {
-      this.logger.error(`Device disconnect failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `Device disconnect failed: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }

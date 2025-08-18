@@ -5,7 +5,7 @@ import { Reflector } from '@nestjs/core';
 
 /**
  * 분산 Rate Limiting Guard
- * 
+ *
  * Redis를 사용하여 모든 레플리카에서 공유되는 Rate Limit 구현
  */
 @Injectable()
@@ -24,7 +24,13 @@ export class DistributedThrottlerGuard extends ThrottlerGuard {
         ],
       },
       {
-        async increment(key: string, ttl: number, limit: number, blockDuration: number, throttlerName: string) {
+        async increment(
+          key: string,
+          ttl: number,
+          limit: number,
+          blockDuration: number,
+          throttlerName: string,
+        ) {
           return {
             totalHits: 1,
             timeToExpire: ttl,
@@ -43,23 +49,25 @@ export class DistributedThrottlerGuard extends ThrottlerGuard {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse();
-    
+
     // Get throttle options from decorator or use defaults
-    const limit = this.reflector.getAllAndOverride<number>('throttle:limit', [
-      context.getHandler(),
-      context.getClass(),
-    ]) || 100;
-    
-    const ttl = this.reflector.getAllAndOverride<number>('throttle:ttl', [
-      context.getHandler(),
-      context.getClass(),
-    ]) || 60;
+    const limit =
+      this.reflector.getAllAndOverride<number>('throttle:limit', [
+        context.getHandler(),
+        context.getClass(),
+      ]) || 100;
+
+    const ttl =
+      this.reflector.getAllAndOverride<number>('throttle:ttl', [
+        context.getHandler(),
+        context.getClass(),
+      ]) || 60;
 
     const key = this.generateKey(context, request);
 
     // Redis에서 현재 카운트 조회
     const current = await this.redisService.incr(key);
-    
+
     // 첫 요청인 경우 TTL 설정
     if (current === 1) {
       await this.redisService.expire(key, ttl);
@@ -71,7 +79,10 @@ export class DistributedThrottlerGuard extends ThrottlerGuard {
     // Response headers 설정
     response.header('X-RateLimit-Limit', limit);
     response.header('X-RateLimit-Remaining', Math.max(0, limit - current));
-    response.header('X-RateLimit-Reset', new Date(Date.now() + ttlRemaining * 1000).toISOString());
+    response.header(
+      'X-RateLimit-Reset',
+      new Date(Date.now() + ttlRemaining * 1000).toISOString(),
+    );
 
     // Rate Limit 초과 체크
     if (current > limit) {
@@ -90,7 +101,7 @@ export class DistributedThrottlerGuard extends ThrottlerGuard {
     const userId = request.user?.id || 'anonymous';
     const handler = context.getHandler().name;
     const className = context.getClass().name;
-    
+
     return `rate-limit:${className}:${handler}:${userId}:${ip}`;
   }
 }

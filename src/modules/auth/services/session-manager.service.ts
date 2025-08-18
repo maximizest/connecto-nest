@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Session Manager Service
- * 
+ *
  * 사용자 세션 관리 서비스
  * Redis를 사용하여 활성 세션을 추적하고 관리합니다.
  */
@@ -30,7 +30,7 @@ export class SessionManagerService {
       ipAddress?: string;
       userAgent?: string;
       platform?: string;
-    }
+    },
   ): Promise<string> {
     try {
       const sessionId = uuidv4();
@@ -50,27 +50,32 @@ export class SessionManagerService {
       await this.redis.setex(
         `session:${sessionId}`,
         86400,
-        JSON.stringify(sessionData)
+        JSON.stringify(sessionData),
       );
 
       // 사용자별 세션 목록에 추가
       await this.redis.sadd(`user:${userId}:sessions`, sessionId);
-      
+
       // 디바이스별 세션 매핑
       if (deviceId) {
         await this.redis.set(
           `device:${deviceId}:session`,
           sessionId,
           'EX',
-          86400
+          86400,
         );
       }
 
-      this.logger.log(`Session created: sessionId=${sessionId}, userId=${userId}, deviceId=${deviceId}`);
-      
+      this.logger.log(
+        `Session created: sessionId=${sessionId}, userId=${userId}, deviceId=${deviceId}`,
+      );
+
       return sessionId;
     } catch (error) {
-      this.logger.error(`Failed to create session: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to create session: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -82,19 +87,18 @@ export class SessionManagerService {
     try {
       const sessionKey = `session:${sessionId}`;
       const sessionData = await this.redis.get(sessionKey);
-      
+
       if (sessionData) {
         const session = JSON.parse(sessionData);
         session.lastActivity = new Date().toISOString();
-        
-        await this.redis.setex(
-          sessionKey,
-          86400,
-          JSON.stringify(session)
-        );
+
+        await this.redis.setex(sessionKey, 86400, JSON.stringify(session));
       }
     } catch (error) {
-      this.logger.error(`Failed to update session activity: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to update session activity: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
@@ -104,25 +108,30 @@ export class SessionManagerService {
   async invalidateSession(sessionId: string): Promise<void> {
     try {
       const sessionData = await this.redis.get(`session:${sessionId}`);
-      
+
       if (sessionData) {
         const session = JSON.parse(sessionData);
-        
+
         // 세션 삭제
         await this.redis.del(`session:${sessionId}`);
-        
+
         // 사용자 세션 목록에서 제거
         await this.redis.srem(`user:${session.userId}:sessions`, sessionId);
-        
+
         // 디바이스 세션 매핑 제거
         if (session.deviceId) {
           await this.redis.del(`device:${session.deviceId}:session`);
         }
-        
-        this.logger.log(`Session invalidated: sessionId=${sessionId}, userId=${session.userId}`);
+
+        this.logger.log(
+          `Session invalidated: sessionId=${sessionId}, userId=${session.userId}`,
+        );
       }
     } catch (error) {
-      this.logger.error(`Failed to invalidate session: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to invalidate session: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -130,32 +139,35 @@ export class SessionManagerService {
   /**
    * 사용자의 모든 세션 무효화
    */
-  async invalidateUserSessions(userId: number, reason?: string): Promise<number> {
+  async invalidateUserSessions(
+    userId: number,
+    reason?: string,
+  ): Promise<number> {
     try {
       const sessions = await this.redis.smembers(`user:${userId}:sessions`);
       let invalidatedCount = 0;
-      
+
       for (const sessionId of sessions) {
         const sessionData = await this.redis.get(`session:${sessionId}`);
-        
+
         if (sessionData) {
           const session = JSON.parse(sessionData);
-          
+
           // 세션 삭제
           await this.redis.del(`session:${sessionId}`);
-          
+
           // 디바이스 세션 매핑 제거
           if (session.deviceId) {
             await this.redis.del(`device:${session.deviceId}:session`);
           }
-          
+
           invalidatedCount++;
         }
       }
-      
+
       // 사용자 세션 목록 삭제
       await this.redis.del(`user:${userId}:sessions`);
-      
+
       // 이벤트 발생 (WebSocket 연결 종료용)
       this.eventEmitter.emit('user.sessions.invalidated', {
         userId,
@@ -163,12 +175,17 @@ export class SessionManagerService {
         invalidatedCount,
         timestamp: new Date(),
       });
-      
-      this.logger.log(`All sessions invalidated: userId=${userId}, count=${invalidatedCount}, reason=${reason}`);
-      
+
+      this.logger.log(
+        `All sessions invalidated: userId=${userId}, count=${invalidatedCount}, reason=${reason}`,
+      );
+
       return invalidatedCount;
     } catch (error) {
-      this.logger.error(`Failed to invalidate user sessions: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to invalidate user sessions: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -180,17 +197,20 @@ export class SessionManagerService {
     try {
       const sessionIds = await this.redis.smembers(`user:${userId}:sessions`);
       const sessions: any[] = [];
-      
+
       for (const sessionId of sessionIds) {
         const sessionData = await this.redis.get(`session:${sessionId}`);
         if (sessionData) {
           sessions.push(JSON.parse(sessionData));
         }
       }
-      
+
       return sessions;
     } catch (error) {
-      this.logger.error(`Failed to get user sessions: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to get user sessions: ${error.message}`,
+        error.stack,
+      );
       return [];
     }
   }
@@ -215,10 +235,13 @@ export class SessionManagerService {
     try {
       const sessionId = await this.redis.get(`device:${deviceId}:session`);
       if (!sessionId) return null;
-      
+
       return this.getSession(sessionId);
     } catch (error) {
-      this.logger.error(`Failed to get device session: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to get device session: ${error.message}`,
+        error.stack,
+      );
       return null;
     }
   }
@@ -231,21 +254,25 @@ export class SessionManagerService {
       const pattern = 'session:*';
       const keys = await this.redis.keys(pattern);
       let cleanedCount = 0;
-      
+
       for (const key of keys) {
         const ttl = await this.redis.ttl(key);
-        if (ttl === -2) { // 키가 존재하지 않음
+        if (ttl === -2) {
+          // 키가 존재하지 않음
           const sessionId = key.replace('session:', '');
           await this.invalidateSession(sessionId);
           cleanedCount++;
         }
       }
-      
+
       if (cleanedCount > 0) {
         this.logger.log(`Cleaned up ${cleanedCount} expired sessions`);
       }
     } catch (error) {
-      this.logger.error(`Failed to cleanup expired sessions: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to cleanup expired sessions: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
@@ -260,28 +287,31 @@ export class SessionManagerService {
     try {
       const pattern = 'session:*';
       const keys = await this.redis.keys(pattern);
-      
+
       const users = new Set<number>();
       const deviceTypes: Record<string, number> = {};
-      
+
       for (const key of keys) {
         const sessionData = await this.redis.get(key);
         if (sessionData) {
           const session = JSON.parse(sessionData);
           users.add(session.userId);
-          
+
           const platform = session.platform || 'unknown';
           deviceTypes[platform] = (deviceTypes[platform] || 0) + 1;
         }
       }
-      
+
       return {
         totalSessions: keys.length,
         uniqueUsers: users.size,
         deviceTypes,
       };
     } catch (error) {
-      this.logger.error(`Failed to get session stats: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to get session stats: ${error.message}`,
+        error.stack,
+      );
       return {
         totalSessions: 0,
         uniqueUsers: 0,

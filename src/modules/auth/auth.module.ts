@@ -27,13 +27,13 @@ import { SessionManagerService } from './services/session-manager.service';
         expiresIn: process.env[ENV_KEYS.JWT_ACCESS_TOKEN_EXPIRES_IN] || '1h',
       },
     }),
-    
+
     // Redis 모듈
     RedisModule.forRoot({
       type: 'single',
       url: process.env.REDIS_URL || 'redis://localhost:6379',
     }),
-    
+
     // Event Emitter 모듈
     EventEmitterModule.forRoot(),
   ],

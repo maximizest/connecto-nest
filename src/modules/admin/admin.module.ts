@@ -17,11 +17,7 @@ import { AdminGuard } from '../../guards/admin.guard';
     WebSocketModule, // ConnectionManagerService 사용
   ],
   controllers: [AdminController],
-  providers: [
-    ConnectionManagerService,
-    EnhancedAuthGuard,
-    AdminGuard,
-  ],
+  providers: [ConnectionManagerService, EnhancedAuthGuard, AdminGuard],
   exports: [],
 })
 export class AdminModule {}

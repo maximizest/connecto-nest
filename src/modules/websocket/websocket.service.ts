@@ -5,7 +5,7 @@ import { User } from '../user/user.entity';
 
 /**
  * WebSocket Service
- * 
+ *
  * WebSocket 관련 비즈니스 로직 처리
  */
 @Injectable()
@@ -20,15 +20,23 @@ export class WebSocketService {
   /**
    * 사용자 온라인 상태 업데이트
    */
-  async updateUserOnlineStatus(userId: number, isOnline: boolean): Promise<void> {
+  async updateUserOnlineStatus(
+    userId: number,
+    isOnline: boolean,
+  ): Promise<void> {
     try {
       await this.userRepository.update(userId, {
         updatedAt: new Date(),
       });
-      
-      this.logger.log(`User online status updated: userId=${userId}, isOnline=${isOnline}`);
+
+      this.logger.log(
+        `User online status updated: userId=${userId}, isOnline=${isOnline}`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to update user online status: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to update user online status: ${error.message}`,
+        error.stack,
+      );
     }
   }
 }
