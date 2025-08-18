@@ -605,13 +605,13 @@ graph TD
     A[관리자 대시보드] --> B[사용자 관리]
     B --> C[차단할 사용자 선택]
 
-    C --> D["POST /api/v1/moderation/ban/platform/:userId"]
+    C --> D[POST /api/v1/moderation/ban/platform/:userId]
     D --> E{ADMIN 권한 확인}
 
     E -->|Yes| F[User.isBanned = true]
     E -->|No| G[403 Forbidden]
 
-    F --> H[User.banUser() 호출]
+    F --> H[User.banUser 호출]
     H --> I[플랫폼 전체 차단]
 
     I --> J[모든 활동 중지]
@@ -625,8 +625,8 @@ graph TD
     A[채팅방 내 사용자] --> B[사용자 프로필 클릭]
     B --> C[뮤트 옵션]
 
-    C --> D["PATCH /api/v1/planet-users/:id"]
-    D --> E[status: MUTED 설정]
+    C --> D[PATCH /api/v1/planet-users/:id]
+    D --> E[status MUTED 설정]
 
     E --> F{뮤트 효과}
     F -->|메시지| G[메시지 전송 불가]
@@ -673,10 +673,10 @@ graph TD
 ```mermaid
 graph TD
     A[관리자 대시보드] --> B[사용자 선택]
-    B --> C["POST /api/v1/admin/users/:userId/force-logout"]
+    B --> C[POST /api/v1/admin/users/:userId/force-logout]
     
     C --> D[사용자 상태 확인]
-    D --> E{User.sessionVersion++}
+    D --> E[User.sessionVersion 증가]
     
     E --> F[SessionManager.invalidateUserSessions]
     F --> G[모든 Redis 세션 삭제]
@@ -691,7 +691,7 @@ graph TD
     L --> M[User.lastForcedLogout = now]
     
     M --> N[이벤트 발생]
-    N --> O{user.force.logout 이벤트}
+    N --> O[user.force.logout 이벤트]
     
     O --> P[성공 응답]
 ```
@@ -778,8 +778,8 @@ graph TD
     B --> C[토큰 해시 생성]
     
     C --> D[Redis 저장]
-    D --> E["blacklist:token:{hash}"]
-    D --> F["blacklist:user:{userId}"]
+    D --> E[blacklist:token:hash]
+    D --> F[blacklist:user:userId]
     
     E --> G[TTL = 토큰 만료 시간]
     F --> H[사용자 레벨 블랙리스트]
@@ -1107,11 +1107,11 @@ graph TD
     B -->|Travel| D[POST /api/v1/moderation/unban/travel/:travelId/:userId]
     
     C --> E{ADMIN 권한?}
-    E -->|Yes| F[User.unbanUser()]
+    E -->|Yes| F[User.unbanUser]
     E -->|No| G[403 Forbidden]
     
     D --> H{권한 확인}
-    H -->|ADMIN| I[TravelUser.unbanUser()]
+    H -->|ADMIN| I[TravelUser.unbanUser]
     H -->|HOST| J{자신의 Travel?}
     H -->|USER| K[403 Forbidden]
     
