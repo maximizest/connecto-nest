@@ -22,6 +22,8 @@
 16. [Moderation 플로우 (권한 기반 벤 시스템)](#16-moderation-플로우-권한-기반-벤-시스템)
 17. [멀티 레플리카 배포 플로우](#17-멀티-레플리카-배포-플로우)
 18. [Rate Limiting 시스템 (현재 비활성화)](#18-rate-limiting-시스템-현재-비활성화)
+19. [사용자 신고 시스템 (Report System)](#19-사용자-신고-시스템-report-system)
+20. [숙박 업소 시스템 (Accommodation System)](#20-숙박-업소-시스템-accommodation-system)
 
 ---
 
@@ -1439,6 +1441,282 @@ graph TD
 - **화살표**: 플로우 방향
 - **점선**: 선택적 경로
 - **실선**: 필수 경로
+
+---
+
+## 20. 숙박 업소 시스템 (Accommodation System)
+
+### 20.1 시스템 개요
+
+Accommodation 시스템은 Travel의 상위 개념으로, 하나의 숙박 업소가 여러 Travel을 포함할 수 있는 계층 구조를 제공합니다.
+
+### 20.2 시스템 아키텍처
+
+```mermaid
+graph TD
+    A[Accommodation<br/>숙박 업소] --> B[Travel 1<br/>여행 그룹]
+    A --> C[Travel 2<br/>여행 그룹]
+    A --> D[Travel N<br/>여행 그룹]
+    
+    B --> E[Planet A<br/>채팅방]
+    B --> F[Planet B<br/>채팅방]
+    
+    C --> G[Planet C<br/>채팅방]
+    C --> H[Planet D<br/>채팅방]
+    
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style B fill:#bbf,stroke:#333,stroke-width:2px
+    style C fill:#bbf,stroke:#333,stroke-width:2px
+    style D fill:#bbf,stroke:#333,stroke-width:2px
+```
+
+### 20.3 데이터베이스 스키마
+
+#### Accommodation 엔티티
+
+```typescript
+@Entity('accommodations')
+export class Accommodation extends BaseEntity {
+  @PrimaryGeneratedColumn()
+  id: number;
+  
+  @Column({ type: 'varchar', length: 255 })
+  name: string;  // 숙소명
+  
+  @Column({ type: 'text', nullable: true })
+  description: string | null;  // 숙소설명
+  
+  @OneToMany(() => Travel, (travel) => travel.accommodation)
+  travels: Travel[];  // 관련 여행 목록
+  
+  @CreateDateColumn()
+  createdAt: Date;
+  
+  @UpdateDateColumn()
+  updatedAt: Date;
+}
+```
+
+#### Travel 엔티티 (업데이트된 관계)
+
+```typescript
+@Entity('travels')
+export class Travel extends BaseEntity {
+  // ... 기존 필드들 ...
+  
+  @Column({ nullable: true })
+  accommodationId: number | null;
+  
+  @ManyToOne(() => Accommodation, (accommodation) => accommodation.travels, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'accommodationId' })
+  accommodation: Accommodation | null;
+  
+  // ... 나머지 필드들 ...
+}
+```
+
+### 20.4 API 엔드포인트
+
+#### 읽기 전용 API (Read-Only)
+
+Accommodation API는 읽기 전용으로 제공되며, 생성/수정/삭제는 관리자 시스템을 통해서만 가능합니다.
+
+##### 1. 숙박 업소 목록 조회
+
+```
+GET /api/v1/accommodations
+```
+
+**Query Parameters:**
+- `name`: 숙소명으로 필터링
+- `createdAt`: 생성일로 필터링
+- `include`: travels (관련 여행 정보 포함)
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "서울 호텔",
+      "description": "서울 중심부에 위치한 호텔",
+      "createdAt": "2024-01-01T00:00:00Z",
+      "updatedAt": "2024-01-01T00:00:00Z",
+      "travels": [
+        {
+          "id": 1,
+          "name": "서울 여행 1기",
+          "status": "ACTIVE"
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "take": 10,
+    "itemCount": 1,
+    "pageCount": 1,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  }
+}
+```
+
+##### 2. 특정 숙박 업소 조회
+
+```
+GET /api/v1/accommodations/:id
+```
+
+**Path Parameters:**
+- `id`: 숙박 업소 ID
+
+**Query Parameters:**
+- `include`: travels (관련 여행 정보 포함)
+
+**Response:**
+```json
+{
+  "id": 1,
+  "name": "서울 호텔",
+  "description": "서울 중심부에 위치한 호텔",
+  "createdAt": "2024-01-01T00:00:00Z",
+  "updatedAt": "2024-01-01T00:00:00Z",
+  "travels": [
+    {
+      "id": 1,
+      "name": "서울 여행 1기",
+      "description": "2024년 봄 서울 여행",
+      "status": "ACTIVE",
+      "startDate": "2024-03-01T00:00:00Z",
+      "endDate": "2024-03-10T00:00:00Z"
+    },
+    {
+      "id": 2,
+      "name": "서울 여행 2기",
+      "description": "2024년 여름 서울 여행",
+      "status": "INACTIVE",
+      "startDate": "2024-06-01T00:00:00Z",
+      "endDate": "2024-06-10T00:00:00Z"
+    }
+  ]
+}
+```
+
+### 20.5 컨트롤러 구현
+
+```typescript
+@Controller({ path: 'accommodations', version: '1' })
+@Crud({
+  entity: Accommodation,
+  only: ['index', 'show'], // 읽기 전용
+  allowedFilters: ['name', 'createdAt'],
+  allowedIncludes: ['travels'],
+  routes: {
+    index: {
+      allowedIncludes: ['travels'],
+    },
+    show: {
+      allowedIncludes: ['travels'],
+    },
+  },
+})
+@UseGuards(AuthGuard)
+export class AccommodationController {
+  constructor(public readonly crudService: AccommodationService) {}
+}
+```
+
+### 20.6 사용 시나리오
+
+#### 시나리오 1: 숙박 업소별 여행 관리
+
+```mermaid
+graph LR
+    A[사용자] --> B[숙박 업소 목록 조회]
+    B --> C[특정 숙박 업소 선택]
+    C --> D[해당 숙박 업소의<br/>Travel 목록 확인]
+    D --> E[Travel 참여]
+```
+
+#### 시나리오 2: Travel 생성 시 숙박 업소 연결
+
+```mermaid
+graph TD
+    A[관리자] --> B[숙박 업소 생성]
+    B --> C[Travel 생성]
+    C --> D{숙박 업소 연결}
+    D -->|선택| E[accommodationId 설정]
+    D -->|미선택| F[accommodationId = null]
+    E --> G[Travel 저장]
+    F --> G
+```
+
+### 20.7 데이터 관계 다이어그램
+
+```mermaid
+erDiagram
+    ACCOMMODATION ||--o{ TRAVEL : contains
+    TRAVEL ||--o{ PLANET : has
+    TRAVEL ||--o{ TRAVEL_USER : has
+    PLANET ||--o{ PLANET_USER : has
+    PLANET ||--o{ MESSAGE : contains
+    
+    ACCOMMODATION {
+        int id PK
+        string name
+        text description
+        datetime createdAt
+        datetime updatedAt
+    }
+    
+    TRAVEL {
+        int id PK
+        int accommodationId FK "nullable"
+        string name
+        text description
+        enum status
+        datetime startDate
+        datetime endDate
+        datetime createdAt
+        datetime updatedAt
+    }
+```
+
+### 20.8 주요 특징
+
+1. **계층 구조**: Accommodation → Travel → Planet 의 3단계 계층 구조
+2. **선택적 관계**: Travel은 Accommodation 없이도 존재 가능 (nullable)
+3. **읽기 전용 API**: 사용자는 조회만 가능, 생성/수정은 관리자만
+4. **CASCADE 설정**: Accommodation 삭제 시 Travel의 accommodationId는 NULL로 설정
+5. **유연한 구조**: 기존 Travel 시스템과 완벽한 하위 호환성 유지
+
+### 20.9 마이그레이션
+
+```sql
+-- 새 테이블 생성
+CREATE TABLE "accommodations" (
+    "id" SERIAL PRIMARY KEY,
+    "name" varchar(255) NOT NULL,
+    "description" text,
+    "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
+    "updatedAt" TIMESTAMP NOT NULL DEFAULT now()
+);
+
+-- Travel 테이블에 외래 키 추가
+ALTER TABLE "travels" 
+ADD COLUMN "accommodationId" integer,
+ADD CONSTRAINT "FK_accommodation_travel" 
+    FOREIGN KEY ("accommodationId") 
+    REFERENCES "accommodations"("id") 
+    ON DELETE SET NULL;
+
+-- 인덱스 추가
+CREATE INDEX "IDX_travel_accommodation" ON "travels" ("accommodationId");
+```
 
 ---
 
