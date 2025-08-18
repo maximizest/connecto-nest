@@ -244,11 +244,19 @@ export class StorageService {
    * 폴더 내 파일 목록 조회
    */
   async listFiles(
-    folder: keyof typeof STORAGE_SETTINGS.folders,
+    folderOrPrefix?: keyof typeof STORAGE_SETTINGS.folders | string,
     maxKeys: number = 100,
-  ): Promise<string[]> {
+  ): Promise<Array<{ key: string; size?: number; lastModified?: Date }>> {
     try {
-      const prefix = `${STORAGE_SETTINGS.folders[folder]}/`;
+      let prefix: string;
+      
+      if (!folderOrPrefix) {
+        prefix = '';
+      } else if (folderOrPrefix in STORAGE_SETTINGS.folders) {
+        prefix = `${STORAGE_SETTINGS.folders[folderOrPrefix as keyof typeof STORAGE_SETTINGS.folders]}/`;
+      } else {
+        prefix = folderOrPrefix;
+      }
 
       const command = new ListObjectsV2Command({
         Bucket: STORAGE_SETTINGS.bucket,
@@ -258,7 +266,11 @@ export class StorageService {
 
       const result = await this.s3Client.send(command);
 
-      return result.Contents?.map((item) => item.Key!) || [];
+      return result.Contents?.map((item) => ({
+        key: item.Key!,
+        size: item.Size,
+        lastModified: item.LastModified,
+      })) || [];
     } catch (error) {
       this.logger.error(`❌ File listing failed:`, error);
       throw error;

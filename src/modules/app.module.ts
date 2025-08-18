@@ -28,6 +28,7 @@ import { PlanetUserModule } from './planet-user/planet-user.module';
 import { ReportModule } from './report/report.module';
 import { PlanetModule } from './planet/planet.module';
 import { ProfileModule } from './profile/profile.module';
+import { QueueModule } from './queue/queue.module';
 import { ReadReceiptModule } from './read-receipt/read-receipt.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { SchemaModule } from './schema/schema.module';
@@ -74,6 +75,7 @@ modules.push(CacheModule);
 modules.push(StorageModule);
 modules.push(FileUploadModule);
 modules.push(NotificationModule);
+modules.push(QueueModule); // BullMQ 큐 모듈
 modules.push(SchedulerModule);
 modules.push(AuthModule);
 modules.push(AdminModule);

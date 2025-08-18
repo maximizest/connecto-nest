@@ -1,18 +1,14 @@
 import { Module } from '@nestjs/common';
-import { ScheduleModule } from '@nestjs/schedule';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { CacheModule } from '../cache/cache.module';
-import { FileUpload } from '../file-upload/file-upload.entity';
-import { StorageService } from '../storage/storage.service';
+import { RedisModule } from '../cache/redis.module';
+import { QueueModule } from '../queue/queue.module';
 import { SchedulerService } from './scheduler.service';
 
 @Module({
   imports: [
-    ScheduleModule.forRoot(),
-    TypeOrmModule.forFeature([FileUpload]),
-    CacheModule,
+    QueueModule, // BullMQ 큐 모듈
+    RedisModule, // Redis 모듈
   ],
-  providers: [SchedulerService, StorageService],
+  providers: [SchedulerService],
   controllers: [], // 일반 사용자용 컨트롤러 제거 (시스템 내부용으로만 사용)
   exports: [SchedulerService],
 })
