@@ -88,41 +88,41 @@ export class CacheCleanupProcessor extends WorkerHost {
 
     try {
       const client = this.redisService.getClient();
-      
+
       // 캐시 키 패턴별로 정리
-      const cachePatterns = [
-        'cache:*',
-        'session:*',
-        'temp:*',
-        'rate-limit:*',
-      ];
+      const cachePatterns = ['cache:*', 'session:*', 'temp:*', 'rate-limit:*'];
 
       let totalProgress = 10;
       const progressPerPattern = 80 / cachePatterns.length;
 
       for (const pattern of cachePatterns) {
         const keys = await client.keys(pattern);
-        
+
         for (const key of keys) {
           try {
             // TTL 확인
             const ttl = await client.ttl(key);
-            
+
             // TTL이 없거나 매우 오래된 키 삭제
             if (ttl === -1) {
               // TTL이 설정되지 않은 키 - 30일 이상된 것으로 추정
-              const idleTime = await client.object('IDLETIME', key) as number | null;
-              if (idleTime && idleTime > 2592000) { // 30일 in seconds
+              const idleTime = (await client.object('IDLETIME', key)) as
+                | number
+                | null;
+              if (idleTime && idleTime > 2592000) {
+                // 30일 in seconds
                 await client.del(key);
                 result.expiredKeys++;
                 result.processedItems++;
-                this.logger.debug(`Deleted idle key: ${key} (idle for ${idleTime} seconds)`);
+                this.logger.debug(
+                  `Deleted idle key: ${key} (idle for ${idleTime} seconds)`,
+                );
               }
             } else if (ttl === -2) {
               // 이미 만료된 키 (존재하지 않음)
               continue;
             }
-            
+
             // 곧 만료될 키는 Redis가 자동으로 처리하도록 놔둠
           } catch (error) {
             const errorMsg = `Failed to process key ${key}: ${error.message}`;
@@ -162,12 +162,15 @@ export class CacheCleanupProcessor extends WorkerHost {
       for (const key of bigKeys) {
         try {
           const memoryUsage = await client.memory('USAGE', key);
-          if (memoryUsage && memoryUsage > 1048576) { // 1MB 이상
+          if (memoryUsage && memoryUsage > 1048576) {
+            // 1MB 이상
             // 큰 키에 대한 TTL 설정 (없으면)
             const ttl = await client.ttl(key);
             if (ttl === -1) {
               await client.expire(key, 3600); // 1시간 TTL 설정
-              this.logger.debug(`Set TTL for big key: ${key} (${memoryUsage} bytes)`);
+              this.logger.debug(
+                `Set TTL for big key: ${key} (${memoryUsage} bytes)`,
+              );
             }
           }
         } catch (error) {
@@ -191,7 +194,10 @@ export class CacheCleanupProcessor extends WorkerHost {
         this.logger.debug('Memory purge executed');
       } catch (error) {
         // 명령이 지원되지 않을 수 있음
-        this.logger.debug('Memory purge not supported or failed:', error.message);
+        this.logger.debug(
+          'Memory purge not supported or failed:',
+          error.message,
+        );
       }
 
       await job.updateProgress(90);
@@ -227,17 +233,17 @@ export class CacheCleanupProcessor extends WorkerHost {
     try {
       const client = this.redisService.getClient();
       const info = await client.info('memory');
-      
+
       const stats: any = {};
       const lines = info.split('\r\n');
-      
+
       for (const line of lines) {
         const [key, value] = line.split(':');
         if (key && value) {
           stats[key] = value;
         }
       }
-      
+
       return {
         usedMemory: stats.used_memory_human,
         usedMemoryRss: stats.used_memory_rss_human,
@@ -257,23 +263,24 @@ export class CacheCleanupProcessor extends WorkerHost {
     try {
       const client = this.redisService.getClient();
       const bigKeys: string[] = [];
-      
+
       // 샘플링으로 큰 키 찾기
-      const sampleKeys = await client.call('RANDOMKEY') as string;
+      const sampleKeys = (await client.call('RANDOMKEY')) as string;
       if (sampleKeys) {
         const memoryUsage = await client.memory('USAGE', sampleKeys);
-        if (memoryUsage && memoryUsage > 524288) { // 512KB 이상
+        if (memoryUsage && memoryUsage > 524288) {
+          // 512KB 이상
           bigKeys.push(sampleKeys);
         }
       }
-      
+
       // 알려진 큰 키 패턴 확인
       const patterns = ['large:*', 'bulk:*', 'report:*'];
       for (const pattern of patterns) {
         const keys = await client.keys(pattern);
         bigKeys.push(...keys.slice(0, 10)); // 각 패턴당 최대 10개
       }
-      
+
       return bigKeys;
     } catch (error) {
       this.logger.error('Failed to find big keys', error);
@@ -288,10 +295,13 @@ export class CacheCleanupProcessor extends WorkerHost {
     try {
       const client = this.redisService.getClient();
       const sessionKeys = await client.keys('session:*');
-      
+
       for (const key of sessionKeys) {
-        const idleTime = await client.object('IDLETIME', key) as number | null;
-        if (idleTime && idleTime > 86400) { // 24시간 이상 유휴
+        const idleTime = (await client.object('IDLETIME', key)) as
+          | number
+          | null;
+        if (idleTime && idleTime > 86400) {
+          // 24시간 이상 유휴
           await client.del(key);
           result.expiredKeys++;
           result.processedItems++;

@@ -88,8 +88,10 @@ export class SchedulerService {
 
       // Redis에서 저장된 작업 통계 조회
       const taskStats: Record<string, any> = {};
-      const statsKeys = await this.redisService.getClient().keys(`${this.SCHEDULER_STATS_KEY}:*`);
-      
+      const statsKeys = await this.redisService
+        .getClient()
+        .keys(`${this.SCHEDULER_STATS_KEY}:*`);
+
       for (const key of statsKeys) {
         const taskName = key.split(':').pop();
         if (taskName) {
@@ -119,7 +121,9 @@ export class SchedulerService {
    */
   async getTaskStats(taskName: string): Promise<SchedulerStats | null> {
     try {
-      const stats = await this.redisService.get(`${this.SCHEDULER_STATS_KEY}:${taskName}`);
+      const stats = await this.redisService.get(
+        `${this.SCHEDULER_STATS_KEY}:${taskName}`,
+      );
       return stats ? JSON.parse(stats) : null;
     } catch (error) {
       this.logger.error(`Failed to get stats for task ${taskName}`, error);
@@ -134,7 +138,10 @@ export class SchedulerService {
     try {
       return await this.queueService.getJobStatus(queueName, jobId);
     } catch (error) {
-      this.logger.error(`Failed to get job status for ${queueName}:${jobId}`, error);
+      this.logger.error(
+        `Failed to get job status for ${queueName}:${jobId}`,
+        error,
+      );
       return null;
     }
   }
@@ -151,7 +158,7 @@ export class SchedulerService {
     try {
       const queueStats = await this.queueService.getQueueStats();
       const redisPing = await this.redisService.getClient().ping();
-      
+
       return {
         status: 'healthy',
         queues: queueStats,

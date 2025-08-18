@@ -1,9 +1,2 @@
-import { IsString } from 'class-validator';
-
-/**
- * 룸 퇴장 DTO
- */
-export class LeaveRoomDto {
-  @IsString()
-  roomId: string;
-}
+// This file is deprecated. Use common/dto/room.dto.ts instead
+export { LeaveRoomDto } from '../../../common/dto/room.dto';

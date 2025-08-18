@@ -4,7 +4,7 @@ import { QueueService } from '../../queue.service';
 
 /**
  * Queue Admin Controller
- * 
+ *
  * BullMQ 큐 관리 및 모니터링을 위한 관리자 전용 API
  * Bull Board는 /admin/queues 경로에서 별도로 제공됨
  */

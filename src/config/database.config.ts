@@ -7,6 +7,9 @@ import {
 import { Accommodation } from '../modules/accommodation/accommodation.entity';
 import { FileUpload } from '../modules/file-upload/file-upload.entity';
 import { Message } from '../modules/message/message.entity';
+import { Mission } from '../modules/mission/mission.entity';
+import { MissionTravel } from '../modules/mission/mission-travel.entity';
+import { MissionSubmission } from '../modules/mission/mission-submission.entity';
 import { Notification } from '../modules/notification/notification.entity';
 import { PlanetUser } from '../modules/planet-user/planet-user.entity';
 import { Planet } from '../modules/planet/planet.entity';
@@ -53,6 +56,9 @@ export const ENTITIES = [
   Notification,
   FileUpload,
   Report, // 사용자 신고 기능
+  Mission, // 미션 시스템
+  MissionTravel, // 미션-여행 관계
+  MissionSubmission, // 미션 제출
 ];
 
 /**

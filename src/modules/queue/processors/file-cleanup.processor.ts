@@ -187,13 +187,13 @@ export class FileCleanupProcessor extends WorkerHost {
     try {
       // 고아 파일 찾기 로직
       const orphanedFiles = await this.findOrphanedFiles();
-      
+
       for (const fileKey of orphanedFiles) {
         try {
           await this.storageService.deleteFile(fileKey);
           result.processedItems++;
           result.orphanedFiles++;
-          
+
           this.logger.debug(`Cleaned up orphaned file: ${fileKey}`);
         } catch (error) {
           const errorMsg = `Failed to cleanup orphaned file ${fileKey}: ${error.message}`;
@@ -217,12 +217,14 @@ export class FileCleanupProcessor extends WorkerHost {
       const dbFiles = await this.fileUploadRepository.find({
         select: ['storageKey'],
       });
-      
-      const dbFileKeys = new Set(dbFiles.map(f => f.storageKey).filter(Boolean));
-      
+
+      const dbFileKeys = new Set(
+        dbFiles.map((f) => f.storageKey).filter(Boolean),
+      );
+
       return storageFiles
-        .map(f => f.key)
-        .filter(key => !dbFileKeys.has(key))
+        .map((f) => f.key)
+        .filter((key) => !dbFileKeys.has(key))
         .slice(0, 50); // 한 번에 최대 50개만 처리
     } catch (error) {
       this.logger.error('Error finding orphaned files', error);

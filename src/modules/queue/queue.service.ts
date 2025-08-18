@@ -108,7 +108,8 @@ export class QueueService {
    * 수동으로 파일 정리 작업 트리거
    */
   async triggerFileCleanup(type: 'large' | 'failed' = 'large') {
-    const jobName = type === 'large' ? 'cleanup-large-files' : 'cleanup-failed-uploads';
+    const jobName =
+      type === 'large' ? 'cleanup-large-files' : 'cleanup-failed-uploads';
     const job = await this.fileCleanupQueue.add(
       jobName,
       { triggeredManually: true },
@@ -116,8 +117,10 @@ export class QueueService {
         priority: 1, // 높은 우선순위
       },
     );
-    
-    this.logger.log(`Manual file cleanup triggered: ${jobName}, Job ID: ${job.id}`);
+
+    this.logger.log(
+      `Manual file cleanup triggered: ${jobName}, Job ID: ${job.id}`,
+    );
     return job;
   }
 
@@ -132,7 +135,7 @@ export class QueueService {
         priority: 1,
       },
     );
-    
+
     this.logger.log(`Manual travel cleanup triggered, Job ID: ${job.id}`);
     return job;
   }
@@ -148,7 +151,7 @@ export class QueueService {
         priority: 1,
       },
     );
-    
+
     this.logger.log(`Manual cache cleanup triggered, Job ID: ${job.id}`);
     return job;
   }
@@ -158,7 +161,7 @@ export class QueueService {
    */
   async getJobStatus(queueName: string, jobId: string) {
     let queue: Queue;
-    
+
     switch (queueName) {
       case 'file-cleanup':
         queue = this.fileCleanupQueue;

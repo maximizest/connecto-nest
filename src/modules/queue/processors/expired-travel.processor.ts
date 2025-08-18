@@ -91,7 +91,7 @@ export class ExpiredTravelProcessor extends WorkerHost {
     await job.updateProgress(10);
 
     const now = new Date();
-    
+
     // 만료된 활성 Travel 찾기
     const expiredTravels = await this.travelRepository.find({
       where: {
@@ -108,7 +108,7 @@ export class ExpiredTravelProcessor extends WorkerHost {
         // Travel 상태를 비활성으로 변경
         travel.expire();
         await this.travelRepository.save(travel);
-        
+
         result.processedItems++;
         result.expiredTravels++;
 
@@ -159,11 +159,14 @@ export class ExpiredTravelProcessor extends WorkerHost {
 
         if (!alreadyNotified) {
           // 알림 설정
-          await this.setExpiringNotification(travel.id, travel.getDaysUntilExpiry());
-          
+          await this.setExpiringNotification(
+            travel.id,
+            travel.getDaysUntilExpiry(),
+          );
+
           // 24시간 동안 중복 알림 방지
           await this.redisService.set(notificationKey, '1', 86400);
-          
+
           result.processedItems++;
           result.expiringTravels++;
           result.notificationsSet++;
@@ -205,7 +208,10 @@ export class ExpiredTravelProcessor extends WorkerHost {
         }
       }
     } catch (error) {
-      this.logger.error(`Failed to invalidate cache for travel ${travelId}`, error);
+      this.logger.error(
+        `Failed to invalidate cache for travel ${travelId}`,
+        error,
+      );
     }
   }
 
@@ -221,19 +227,24 @@ export class ExpiredTravelProcessor extends WorkerHost {
         timestamp: new Date().toISOString(),
       };
 
-      await this.redisService.getClient().lpush(
-        'notifications:queue',
-        JSON.stringify(notificationData),
-      );
+      await this.redisService
+        .getClient()
+        .lpush('notifications:queue', JSON.stringify(notificationData));
     } catch (error) {
-      this.logger.error(`Failed to set expired notification for travel ${travelId}`, error);
+      this.logger.error(
+        `Failed to set expired notification for travel ${travelId}`,
+        error,
+      );
     }
   }
 
   /**
    * 만료 임박 알림 설정
    */
-  private async setExpiringNotification(travelId: number, daysRemaining: number) {
+  private async setExpiringNotification(
+    travelId: number,
+    daysRemaining: number,
+  ) {
     try {
       const notificationData = {
         type: 'TRAVEL_EXPIRING',
@@ -242,12 +253,14 @@ export class ExpiredTravelProcessor extends WorkerHost {
         timestamp: new Date().toISOString(),
       };
 
-      await this.redisService.getClient().lpush(
-        'notifications:queue',
-        JSON.stringify(notificationData),
-      );
+      await this.redisService
+        .getClient()
+        .lpush('notifications:queue', JSON.stringify(notificationData));
     } catch (error) {
-      this.logger.error(`Failed to set expiring notification for travel ${travelId}`, error);
+      this.logger.error(
+        `Failed to set expiring notification for travel ${travelId}`,
+        error,
+      );
     }
   }
 }

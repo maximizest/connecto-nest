@@ -145,6 +145,9 @@ export class Travel extends BaseEntity {
   @OneToMany('Planet', 'travel')
   planets: any[];
 
+  @OneToMany('MissionTravel', 'travel')
+  missionTravels: any[];
+
   /**
    * 비즈니스 로직 메서드
    */

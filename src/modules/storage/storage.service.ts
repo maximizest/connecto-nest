@@ -249,7 +249,7 @@ export class StorageService {
   ): Promise<Array<{ key: string; size?: number; lastModified?: Date }>> {
     try {
       let prefix: string;
-      
+
       if (!folderOrPrefix) {
         prefix = '';
       } else if (folderOrPrefix in STORAGE_SETTINGS.folders) {
@@ -266,11 +266,13 @@ export class StorageService {
 
       const result = await this.s3Client.send(command);
 
-      return result.Contents?.map((item) => ({
-        key: item.Key!,
-        size: item.Size,
-        lastModified: item.LastModified,
-      })) || [];
+      return (
+        result.Contents?.map((item) => ({
+          key: item.Key!,
+          size: item.Size,
+          lastModified: item.LastModified,
+        })) || []
+      );
     } catch (error) {
       this.logger.error(`❌ File listing failed:`, error);
       throw error;

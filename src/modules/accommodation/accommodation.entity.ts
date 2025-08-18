@@ -11,7 +11,7 @@ import { Travel } from '../travel/travel.entity';
 
 /**
  * Accommodation 엔티티
- * 
+ *
  * 숙박 업소 정보를 관리합니다.
  * 하나의 숙박 업소는 여러 개의 Travel을 가질 수 있습니다.
  */
