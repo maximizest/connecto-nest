@@ -4,6 +4,8 @@ import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { TEST_DATABASE_CONFIG } from '../config/database-test.config';
 import {
   DATABASE_CONFIG,
@@ -16,6 +18,7 @@ import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { CacheModule } from './cache/cache.module';
 import { RedisModule } from './cache/redis.module';
+import { EventsModule } from './events/events.module';
 import { FileUploadModule } from './file-upload/file-upload.module';
 import { MessageModule } from './message/message.module';
 import { ModerationModule } from './moderation/moderation.module';
@@ -31,6 +34,8 @@ import { TravelUserModule } from './travel-user/travel-user.module';
 import { TravelModule } from './travel/travel.module';
 import { UserModule } from './user/user.module';
 import { WebSocketModule } from './websocket/websocket.module';
+import { ReplicaAwareLoggingInterceptor } from '../common/interceptors/replica-aware-logging.interceptor';
+import { DistributedThrottlerGuard } from '../common/guards/distributed-throttler.guard';
 
 const NODE_ENV = process.env.NODE_ENV;
 // 기본 모듈 설정
@@ -46,6 +51,13 @@ const modules: any[] = [
     process.env.NODE_ENV === 'test' ? TEST_DATABASE_CONFIG : DATABASE_CONFIG,
   ),
   ScheduleModule.forRoot(),
+  ThrottlerModule.forRoot([
+    {
+      ttl: 60000, // 1분
+      limit: 100, // 1분당 100개 요청 (기본값)
+    },
+  ]),
+  EventsModule, // 분산 이벤트 모듈 추가
 ];
 
 // 개발 && 테스트 환경 모듈
@@ -81,6 +93,18 @@ modules.push(WebSocketModule);
 
 @Module({
   imports: modules,
+  providers: [
+    // 레플리카 인식 로깅 인터셉터
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ReplicaAwareLoggingInterceptor,
+    },
+    // 분산 Rate Limiting Guard
+    {
+      provide: APP_GUARD,
+      useClass: DistributedThrottlerGuard,
+    },
+  ],
 })
 export class AppModule implements OnModuleInit {
   private readonly logger = new Logger(AppModule.name);
@@ -91,6 +115,11 @@ export class AppModule implements OnModuleInit {
     validateJwtConfig();
     validateRedisConfig();
     validateStorageConfig();
+    
+    // 레플리카 정보 로깅
+    const replicaId = process.env.RAILWAY_REPLICA_ID || 'single-instance';
+    this.logger.log(`🔄 Running as replica: ${replicaId}`);
+    
     this.logger.log('✅ All configurations validated successfully!');
   }
 }

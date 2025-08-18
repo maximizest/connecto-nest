@@ -1,9 +1,13 @@
-import { Global, Module } from '@nestjs/common';
+import { Global, Module, forwardRef } from '@nestjs/common';
 import { RedisService } from './redis.service';
+import { DistributedCacheService } from './distributed-cache.service';
 
 @Global()
 @Module({
-  providers: [RedisService],
-  exports: [RedisService],
+  imports: [
+    // EventsModule will be imported in app.module to avoid circular dependency
+  ],
+  providers: [RedisService, DistributedCacheService],
+  exports: [RedisService, DistributedCacheService],
 })
 export class RedisModule {}

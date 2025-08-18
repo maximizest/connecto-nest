@@ -151,6 +151,36 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  async incr(key: string): Promise<number> {
+    if (!this.checkConnection()) return 0;
+    try {
+      return await this.redis.incr(key);
+    } catch (error) {
+      this.logger.error(`Redis INCR error for key ${key}:`, error.message);
+      return 0;
+    }
+  }
+
+  async expire(key: string, seconds: number): Promise<number> {
+    if (!this.checkConnection()) return 0;
+    try {
+      return await this.redis.expire(key, seconds);
+    } catch (error) {
+      this.logger.error(`Redis EXPIRE error for key ${key}:`, error.message);
+      return 0;
+    }
+  }
+
+  async ttl(key: string): Promise<number> {
+    if (!this.checkConnection()) return -1;
+    try {
+      return await this.redis.ttl(key);
+    } catch (error) {
+      this.logger.error(`Redis TTL error for key ${key}:`, error.message);
+      return -1;
+    }
+  }
+
   /**
    * JSON 객체 캐시 (직렬화/역직렬화)
    */

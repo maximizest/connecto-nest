@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { Server } from 'socket.io';
-import * as Redis from 'ioredis';
+import { Redis } from 'ioredis';
 
 /**
  * Redis Adapter Service
@@ -12,8 +12,8 @@ import * as Redis from 'ioredis';
 @Injectable()
 export class RedisAdapterService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisAdapterService.name);
-  private pubClient: Redis.Redis;
-  private subClient: Redis.Redis;
+  private pubClient: Redis;
+  private subClient: Redis;
   private isInitialized = false;
 
   async onModuleInit() {
@@ -94,11 +94,11 @@ export class RedisAdapterService implements OnModuleInit, OnModuleDestroy {
   /**
    * Redis URL 파싱
    */
-  private parseRedisUrl(url: string): Redis.RedisOptions {
+  private parseRedisUrl(url: string): any {
     try {
       const redisUrl = new URL(url);
       
-      const options: Redis.RedisOptions = {
+      const options: any = {
         port: parseInt(redisUrl.port) || 6379,
         host: redisUrl.hostname || 'localhost',
       };
@@ -132,7 +132,7 @@ export class RedisAdapterService implements OnModuleInit, OnModuleDestroy {
   /**
    * Redis 클라이언트 연결 대기
    */
-  private async waitForConnection(client: Redis.Redis, type: string): Promise<void> {
+  private async waitForConnection(client: Redis, type: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error(`${type} client connection timeout`));
@@ -205,7 +205,7 @@ export class RedisAdapterService implements OnModuleInit, OnModuleDestroy {
   /**
    * Redis 클라이언트 PING
    */
-  private async pingClient(client: Redis.Redis): Promise<boolean> {
+  private async pingClient(client: Redis): Promise<boolean> {
     try {
       const result = await client.ping();
       return result === 'PONG';
