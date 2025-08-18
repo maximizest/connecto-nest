@@ -4,6 +4,7 @@ import {
   DATABASE_CONSTANTS,
   ENV_KEYS,
 } from '../common/constants/app.constants';
+import { Accommodation } from '../modules/accommodation/accommodation.entity';
 import { FileUpload } from '../modules/file-upload/file-upload.entity';
 import { Message } from '../modules/message/message.entity';
 import { Notification } from '../modules/notification/notification.entity';
@@ -42,6 +43,7 @@ dotenv.config();
 export const ENTITIES = [
   User,
   Profile, // User와 1:1 관계의 프로필 정보
+  Accommodation, // 숙박 업소
   Travel,
   TravelUser,
   Planet,

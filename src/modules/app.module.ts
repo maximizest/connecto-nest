@@ -14,6 +14,7 @@ import {
 import { JWT_CONFIG, validateJwtConfig } from '../config/jwt.config';
 import { validateRedisConfig } from '../config/redis.config';
 import { validateStorageConfig } from '../config/storage.config';
+import { AccommodationModule } from './accommodation/accommodation.module';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { CacheModule } from './cache/cache.module';
@@ -78,6 +79,7 @@ modules.push(AuthModule);
 modules.push(AdminModule);
 modules.push(UserModule);
 modules.push(ProfileModule);
+modules.push(AccommodationModule);
 modules.push(TravelModule);
 modules.push(TravelUserModule);
 modules.push(PlanetModule);

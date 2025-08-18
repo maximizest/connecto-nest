@@ -5,10 +5,13 @@ import {
   CreateDateColumn,
   Entity,
   Index,
+  JoinColumn,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Accommodation } from '../accommodation/accommodation.entity';
 import { TravelStatus } from './enums/travel-status.enum';
 import { TravelVisibility } from './enums/travel-visibility.enum';
 
@@ -81,6 +84,19 @@ export class Travel extends BaseEntity {
   @IsDateString()
   @Index() // 종료/만료 날짜 정렬 최적화
   endDate: Date;
+
+  /**
+   * 숙박 업소 관계
+   */
+  @Column({ nullable: true })
+  accommodationId: number | null;
+
+  @ManyToOne(() => Accommodation, (accommodation) => accommodation.travels, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'accommodationId' })
+  accommodation: Accommodation | null;
 
   /**
    * 접근 제어
