@@ -21,8 +21,9 @@
 9. [Travel (여행 그룹)](#travel-여행-그룹)
 10. [Travel User (여행 그룹 사용자)](#travel-user-여행-그룹-사용자)
 11. [User (사용자)](#user-사용자)
-12. [Admin (관리자)](#admin-관리자)
-13. [Schema (스키마)](#schema-스키마)
+12. [Moderation (관리 및 조정)](#moderation-관리-및-조정)
+13. [Admin (관리자)](#admin-관리자)
+14. [Schema (스키마)](#schema-스키마)
 
 ---
 
@@ -308,6 +309,29 @@
 
 **관계 포함 옵션:**
 - `profile`
+
+---
+
+## Moderation (관리 및 조정)
+
+### 엔드포인트: `/api/v1/moderation`
+
+| Method | Path | 인증 필요 | 역할 | 기능 |
+|--------|------|----------|------|------|
+| POST | `/ban/platform/:userId` | ✅ | ADMIN | 플랫폼 전체 사용자 벤 |
+| POST | `/unban/platform/:userId` | ✅ | ADMIN | 플랫폼 전체 사용자 벤 해제 |
+| POST | `/ban/travel/:travelId/:userId` | ✅ | ADMIN, HOST | Travel에서 사용자 벤 |
+| POST | `/unban/travel/:travelId/:userId` | ✅ | ADMIN, HOST | Travel에서 사용자 벤 해제 |
+
+**권한 규칙:**
+- **ADMIN**: 플랫폼 전체, 모든 Travel, 모든 Planet에서 벤 가능
+- **HOST**: 참여한 Travel 및 해당 Travel의 Planet에서만 벤 가능
+- **USER**: 벤 권한 없음
+
+**벤 레벨:**
+- **플랫폼 벤**: User.isBanned = true (전체 서비스 접근 차단)
+- **Travel 벤**: TravelUser.status = 'BANNED' (해당 Travel 참여 차단)
+- **Planet 벤**: PlanetUser에서 mute 시스템 사용 (별도 벤 없음)
 
 ---
 
