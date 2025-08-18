@@ -804,7 +804,7 @@ graph TD
     C -->|Yes| E[TokenBlacklist 확인]
     
     E --> F{블랙리스트?}
-    F -->|Yes| G[연결 거부 + 에러 메시지]
+    F -->|Yes| G[연결 거부 및 에러 메시지]
     F -->|No| H[JWT 검증]
     
     H --> I{유효한 토큰?}
@@ -816,7 +816,7 @@ graph TD
     L -->|No| N[ConnectionManager.registerConnection]
     
     N --> O[연결 등록]
-    O --> P[Heartbeat 설정 (25초)]
+    O --> P[Heartbeat 설정 25초]
 ```
 
 #### ChatGateway (채팅 기능)
@@ -906,7 +906,7 @@ graph TD
     B -->|401| D[토큰 갱신 시도]
     B -->|403| E[권한 없음 알림]
     B -->|404| F[리소스 없음]
-    B -->|500+| G[서버 에러]
+    B -->|500-599| G[서버 에러]
 
     D --> H{갱신 성공?}
     H -->|Yes| I[요청 재시도]
@@ -1091,8 +1091,8 @@ graph TD
     C --> G[Travel 벤]
     C --> H[Planet 뮤트]
     
-    D --> I[Travel 벤 (자신이 HOST인 경우)]
-    D --> J[Planet 뮤트 (자신의 Travel 내)]
+    D --> I[Travel 벤 - HOST인 경우]
+    D --> J[Planet 뮤트 - Travel 내]
     
     E --> K[권한 없음 에러]
 ```
@@ -1143,7 +1143,7 @@ graph TD
     F --> H
     G --> H
     
-    H -->|초과| I[429 에러 + 남은 시간]
+    H -->|초과| I[429 에러 및 남은 시간]
     H -->|통과| J[액션 실행]
     
     I --> K[클라이언트에 에러 전송]
