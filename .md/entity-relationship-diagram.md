@@ -11,6 +11,9 @@ erDiagram
     User ||--o{ MessageReadReceipt : "reads"
     User ||--o{ Notification : "receives"
     User ||--o{ FileUpload : "uploads"
+    User ||--o{ Admin : "admin role"
+    
+    Admin }o--|| User : "admin account"
     
     Travel ||--o{ TravelUser : "has members"
     Travel ||--o{ Planet : "contains"
@@ -152,6 +155,12 @@ graph TB
 | notificationsEnabled | boolean | 알림 활성화 | Default: false |
 | advertisingConsentEnabled | boolean | 광고 동의 | Default: false |
 | isBanned | boolean | 차단 여부 | Default: false |
+| bannedAt | timestamp | 차단 시작 시간 | Nullable |
+| bannedReason | string | 차단 사유 | Nullable |
+| bannedBy | int | 차단한 관리자 ID | FK → User.id, Nullable |
+| bannedUntil | timestamp | 차단 해제 예정 시간 | Nullable |
+| lastForcedLogout | timestamp | 마지막 강제 로그아웃 시간 | Nullable |
+| sessionVersion | int | 세션 버전 | Default: 0 |
 | refreshToken | string | Refresh Token | |
 | socialMetadata | json | 소셜 로그인 추가 정보 | |
 | createdAt | timestamp | 생성일시 | Not Null |
@@ -361,6 +370,22 @@ graph TB
 - **푸시 알림 관련**: badge, sound, category, icon, image
 - **사용자 정의**: customData
 - **시스템 정보**: createdBy, batchId, channel (시스템에서 자동 추가)
+
+### Admin (관리자)
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|----------|
+| id | int | Primary Key | PK, Auto Increment |
+| userId | int | User ID | FK → User.id, Unique |
+| permissions | json | 관리자 권한 | |
+| lastLoginAt | timestamp | 마지막 로그인 시간 | |
+| createdAt | timestamp | 생성일시 | Not Null |
+| updatedAt | timestamp | 수정일시 | Not Null |
+
+**주요 기능**:
+- 강제 로그아웃 실행
+- 사용자 차단/해제
+- 세션 관리 및 모니터링
+- 감사 로그 접근
 
 ### FileUpload (파일 업로드)
 | 필드명 | 타입 | 설명 | 제약조건 |

@@ -21,7 +21,8 @@
 9. [Travel (여행 그룹)](#travel-여행-그룹)
 10. [Travel User (여행 그룹 사용자)](#travel-user-여행-그룹-사용자)
 11. [User (사용자)](#user-사용자)
-12. [Schema (스키마)](#schema-스키마)
+12. [Admin (관리자)](#admin-관리자)
+13. [Schema (스키마)](#schema-스키마)
 
 ---
 
@@ -310,6 +311,37 @@
 
 ---
 
+## Admin (관리자)
+
+### 엔드포인트: `/api/v1/admin`
+
+| Method | Path | 인증 필요 | 역할 | 기능 |
+|--------|------|----------|------|------|
+| POST | `/users/:userId/force-logout` | ✅ | ADMIN | 특정 사용자 강제 로그아웃 |
+| POST | `/users/:userId/ban` | ✅ | ADMIN | 사용자 차단 |
+| POST | `/users/:userId/unban` | ✅ | ADMIN | 사용자 차단 해제 |
+| GET | `/users/:userId/sessions` | ✅ | ADMIN | 사용자의 활성 세션 목록 조회 |
+| GET | `/sessions/stats` | ✅ | ADMIN | 전체 세션 통계 조회 |
+| GET | `/users/banned` | ✅ | ADMIN | 차단된 사용자 목록 조회 |
+| POST | `/devices/:deviceId/force-disconnect` | ✅ | ADMIN | 특정 디바이스 강제 연결 종료 |
+
+**주요 기능:**
+- 강제 로그아웃 시스템
+- 사용자 차단 관리
+- 세션 모니터링 및 통계
+- 디바이스별 연결 관리
+- Redis 기반 토큰 블랙리스트
+- WebSocket 즉시 연결 종료
+
+**차단 프로세스:**
+1. 사용자 상태를 차단으로 변경
+2. 모든 활성 세션 무효화
+3. 모든 토큰 블랙리스트 추가
+4. WebSocket 연결 즉시 종료
+5. 감사 로그 기록
+
+---
+
 ## Schema (스키마)
 
 ### 엔드포인트: `/api/v1/schema`
@@ -332,6 +364,8 @@
 ### JWT 토큰
 - Access Token: 짧은 유효 기간
 - Refresh Token: 긴 유효 기간, 재발급용
+- Token Blacklist: Redis 기반 토큰 무효화 시스템
+- Session Manager: 세션 생명주기 및 상태 추적
 
 ### 역할 기반 접근 제어 (RBAC)
 1. **USER**: 일반 사용자
@@ -348,6 +382,9 @@ Travel (여행 그룹)
 
 ### 밴(Ban) 시스템
 - **User Ban**: 전체 계정 로그인 차단
+  - 강제 로그아웃 기능 포함
+  - 차단 기간 설정 가능 (bannedUntil)
+  - 차단 사유 및 관리자 추적
 - **TravelUser Ban**: 특정 Travel 참여 차단
 - **PlanetUser Mute**: 채팅방 뮤트 (차단 대신)
 
@@ -403,6 +440,23 @@ Travel (여행 그룹)
 - 타이핑 표시
 - 온라인 상태
 - 알림 푸시
+
+---
+
+## 🔀 실시간 세션 관리
+
+### 세션 추적 시스템
+- **SessionManager Service**: Redis 기반 세션 생명주기 관리
+- **TokenBlacklist Service**: JWT 토큰 블랙리스트 관리
+- **ConnectionManager Service**: WebSocket 연결 실시간 관리
+- **Enhanced Auth Guard**: 향상된 인증 검증 파이프라인
+
+### 강제 로그아웃 프로세스
+1. 관리자가 강제 로그아웃 API 호출
+2. 모든 활성 세션 Redis에서 무효화
+3. 모든 토큰 블랙리스트 추가
+4. WebSocket 연결 즉시 종료
+5. 감사 로그 기록
 
 ---
 

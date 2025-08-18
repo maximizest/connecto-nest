@@ -12,6 +12,8 @@
 6. [알림 관리 플로우](#6-알림-관리-플로우)
 7. [프로필 관리 플로우](#7-프로필-관리-플로우)
 8. [사용자 차단/신고 플로우](#8-사용자-차단신고-플로우)
+9. [강제 로그아웃 플로우](#9-강제-로그아웃-플로우)
+10. [세션 관리 플로우](#10-세션-관리-플로우)
 
 ---
 
@@ -521,16 +523,172 @@ graph TD
 
     H --> I[User.bannedAt = now]
     I --> J[User.bannedReason 저장]
+    J --> K[User.bannedBy = 관리자 ID]
+    K --> L[User.bannedUntil 설정]
 
-    J --> K[모든 세션 종료]
-    K --> L[로그인 차단]
+    L --> M[강제 로그아웃 실행]
+    M --> N[모든 세션 무효화]
+    N --> O[토큰 블랙리스트 추가]
+    O --> P[WebSocket 연결 종료]
+    P --> Q[로그인 차단]
 ```
 
 ---
 
-## 9. 실시간 상태 관리 플로우
+## 9. 강제 로그아웃 플로우
 
-### 9.1 온라인 상태 추적
+### 9.1 관리자에 의한 강제 로그아웃
+
+```mermaid
+graph TD
+    A[관리자 대시보드] --> B[사용자 선택]
+    B --> C["POST /api/v1/admin/users/:userId/force-logout"]
+    
+    C --> D[사용자 상태 확인]
+    D --> E{User.sessionVersion++}
+    
+    E --> F[SessionManager.invalidateUserSessions]
+    F --> G[모든 Redis 세션 삭제]
+    
+    G --> H[TokenBlacklist.blacklistUserSessions]
+    H --> I[모든 토큰 블랙리스트 추가]
+    
+    I --> J[ConnectionManager.forceDisconnectUser]
+    J --> K[WebSocket 연결 즉시 종료]
+    
+    K --> L[감사 로그 기록]
+    L --> M[User.lastForcedLogout = now]
+    
+    M --> N[이벤트 발생]
+    N --> O{user.force.logout 이벤트}
+    
+    O --> P[성공 응답]
+```
+
+### 9.2 강제 로그아웃 후 사용자 경험
+
+```mermaid
+graph TD
+    A[사용자 앱 사용 중] --> B[API 요청]
+    B --> C{Enhanced Auth Guard}
+    
+    C --> D[토큰 블랙리스트 확인]
+    D --> E{블랙리스트?}
+    
+    E -->|Yes| F[401 Unauthorized]
+    E -->|No| G[세션 유효성 확인]
+    
+    G --> H{sessionVersion 비교}
+    H -->|불일치| F
+    H -->|일치| I[요청 처리]
+    
+    F --> J[클라이언트 로그아웃 처리]
+    J --> K[WebSocket 연결 종료]
+    K --> L[로그인 화면으로 이동]
+    
+    L --> M[강제 로그아웃 안내 메시지]
+```
+
+### 9.3 세션 모니터링 및 관리
+
+```
+GET /api/v1/admin/users/:userId/sessions
+```
+
+응답:
+```json
+{
+  "sessions": [
+    {
+      "sessionId": "uuid-1234",
+      "deviceId": "iPhone-XYZ",
+      "platform": "ios",
+      "ipAddress": "192.168.1.1",
+      "userAgent": "MyApp/1.0",
+      "createdAt": "2025-01-15T10:00:00Z",
+      "lastActivity": "2025-01-15T15:30:00Z"
+    }
+  ],
+  "totalCount": 3
+}
+```
+
+---
+
+## 10. 세션 관리 플로우
+
+### 10.1 세션 생성 및 추적
+
+```mermaid
+graph TD
+    A[로그인 성공] --> B[JWT 토큰 발급]
+    B --> C[SessionManager.createSession]
+    
+    C --> D[세션 ID 생성]
+    D --> E[세션 데이터 저장]
+    
+    E --> F[Redis 저장]
+    F --> G["session:{sessionId}"]
+    F --> H["user:{userId}:sessions"]
+    F --> I["device:{deviceId}:session"]
+    
+    G --> J[24시간 TTL]
+    H --> K[사용자 세션 리스트]
+    I --> L[디바이스 매핑]
+    
+    L --> M[세션 활성 상태]
+```
+
+### 10.2 토큰 블랙리스트 플로우
+
+```mermaid
+graph TD
+    A[토큰 무효화 필요] --> B[TokenBlacklist.blacklistToken]
+    B --> C[토큰 해시 생성]
+    
+    C --> D[Redis 저장]
+    D --> E["blacklist:token:{hash}"]
+    D --> F["blacklist:user:{userId}"]
+    
+    E --> G[TTL = 토큰 만료 시간]
+    F --> H[사용자 레벨 블랙리스트]
+    
+    I[API 요청 시] --> J[토큰 검증]
+    J --> K[isTokenBlacklisted 확인]
+    
+    K --> L{블랙리스트?}
+    L -->|Yes| M[401 Unauthorized]
+    L -->|No| N[요청 허용]
+```
+
+### 10.3 WebSocket 연결 관리
+
+```mermaid
+graph TD
+    A[WebSocket 연결 요청] --> B[토큰 검증]
+    B --> C{Enhanced Auth Guard}
+    
+    C --> D[블랙리스트 확인]
+    D --> E{유효?}
+    
+    E -->|No| F[연결 거부]
+    E -->|Yes| G[ConnectionManager.registerConnection]
+    
+    G --> H[연결 등록]
+    H --> I["connections:user:{userId}"]
+    H --> J["connections:device:{deviceId}"]
+    
+    K[강제 연결 종료 시] --> L[ConnectionManager.forceDisconnectUser]
+    L --> M[모든 소켓 찾기]
+    M --> N[socket.disconnect(true)]
+    N --> O[연결 맵 삭제]
+```
+
+---
+
+## 11. 실시간 상태 관리 플로우
+
+### 11.1 온라인 상태 추적
 
 ```mermaid
 graph TD
@@ -549,7 +707,7 @@ graph TD
     K --> L[상태 브로드캐스트]
 ```
 
-### 9.2 타이핑 인디케이터
+### 11.2 타이핑 인디케이터
 
 ```mermaid
 graph TD
@@ -569,9 +727,9 @@ graph TD
 
 ---
 
-## 10. 에러 처리 플로우
+## 12. 에러 처리 플로우
 
-### 10.1 API 에러 처리
+### 12.1 API 에러 처리
 
 ```mermaid
 graph TD
@@ -592,7 +750,7 @@ graph TD
     G --> L[재시도 or 지원팀 안내]
 ```
 
-### 10.2 네트워크 에러 처리
+### 12.2 네트워크 에러 처리
 
 ```mermaid
 graph TD
@@ -611,9 +769,9 @@ graph TD
 
 ---
 
-## 11. 성능 최적화 플로우
+## 13. 성능 최적화 플로우
 
-### 11.1 메시지 페이지네이션
+### 13.1 메시지 페이지네이션
 
 ```mermaid
 graph TD
@@ -629,7 +787,7 @@ graph TD
     I --> J[스크롤 위치 유지]
 ```
 
-### 11.2 이미지 최적화
+### 13.2 이미지 최적화
 
 ```mermaid
 graph TD
@@ -652,9 +810,9 @@ graph TD
 
 ---
 
-## 12. 보안 플로우
+## 14. 보안 플로우
 
-### 12.1 JWT 토큰 관리
+### 14.1 JWT 토큰 관리
 
 ```mermaid
 graph TD
@@ -675,7 +833,7 @@ graph TD
     K --> J
 ```
 
-### 12.2 데이터 암호화
+### 14.2 데이터 암호화
 
 ```mermaid
 graph TD
