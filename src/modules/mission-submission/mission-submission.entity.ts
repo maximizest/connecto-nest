@@ -1,6 +1,5 @@
 import { IsEnum, IsOptional, IsObject } from 'class-validator';
-import {
-  BaseActiveRecord } from "../../common/entities/base-active-record.entity";
+import { BaseActiveRecord } from '../../common/entities/base-active-record.entity';
 import {
   Column,
   CreateDateColumn,
@@ -118,7 +117,6 @@ export class MissionSubmission extends BaseActiveRecord {
   })
   @IsOptional()
   messageId?: number;
-
 
   /**
    * 관계 설정

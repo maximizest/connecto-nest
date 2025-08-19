@@ -121,7 +121,6 @@ export class Travel extends BaseActiveRecord {
   @Index() // 초대 코드 검색 최적화
   inviteCode?: string;
 
-
   /**
    * 관계 설정
    */
@@ -153,9 +152,9 @@ export class Travel extends BaseActiveRecord {
    */
   static async findPublicTravel(): Promise<Travel[]> {
     return this.find({
-      where: { 
+      where: {
         visibility: TravelVisibility.PUBLIC,
-        status: TravelStatus.ACTIVE 
+        status: TravelStatus.ACTIVE,
       },
       order: { createdAt: 'DESC' },
     });
@@ -193,7 +192,10 @@ export class Travel extends BaseActiveRecord {
   /**
    * 기간별 여행 조회
    */
-  static async findByDateRange(startDate: Date, endDate: Date): Promise<Travel[]> {
+  static async findByDateRange(
+    startDate: Date,
+    endDate: Date,
+  ): Promise<Travel[]> {
     const repository = this.getRepository();
     return repository
       .createQueryBuilder('travel')
@@ -234,7 +236,10 @@ export class Travel extends BaseActiveRecord {
   /**
    * 여행 상태 업데이트
    */
-  static async updateStatus(travelId: number, status: TravelStatus): Promise<void> {
+  static async updateStatus(
+    travelId: number,
+    status: TravelStatus,
+  ): Promise<void> {
     await this.update(travelId, { status });
   }
 

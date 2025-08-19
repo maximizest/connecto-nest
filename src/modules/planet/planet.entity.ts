@@ -119,7 +119,6 @@ export class Planet extends BaseActiveRecord {
   @IsJSON()
   timeRestriction?: TimeRestriction;
 
-
   /**
    * 관계 설정
    */
@@ -145,9 +144,9 @@ export class Planet extends BaseActiveRecord {
    */
   static async findActivePlanetsByTravel(travelId: number): Promise<Planet[]> {
     return this.find({
-      where: { 
-        travelId, 
-        status: PlanetStatus.ACTIVE 
+      where: {
+        travelId,
+        status: PlanetStatus.ACTIVE,
       },
       order: { createdAt: 'ASC' },
     });
@@ -168,10 +167,10 @@ export class Planet extends BaseActiveRecord {
    */
   static async findGroupPlanetsByTravel(travelId: number): Promise<Planet[]> {
     return this.find({
-      where: { 
-        travelId, 
+      where: {
+        travelId,
         type: PlanetType.GROUP,
-        status: PlanetStatus.ACTIVE 
+        status: PlanetStatus.ACTIVE,
       },
       order: { createdAt: 'ASC' },
     });
@@ -182,10 +181,10 @@ export class Planet extends BaseActiveRecord {
    */
   static async findDirectPlanetsByTravel(travelId: number): Promise<Planet[]> {
     return this.find({
-      where: { 
-        travelId, 
+      where: {
+        travelId,
         type: PlanetType.DIRECT,
-        status: PlanetStatus.ACTIVE 
+        status: PlanetStatus.ACTIVE,
       },
       order: { createdAt: 'ASC' },
     });
@@ -212,7 +211,10 @@ export class Planet extends BaseActiveRecord {
   /**
    * Planet 상태 업데이트
    */
-  static async updateStatus(planetId: number, status: PlanetStatus): Promise<void> {
+  static async updateStatus(
+    planetId: number,
+    status: PlanetStatus,
+  ): Promise<void> {
     await this.update(planetId, { status });
   }
 
@@ -221,8 +223,8 @@ export class Planet extends BaseActiveRecord {
    */
   static async deactivateByTravel(travelId: number): Promise<number> {
     const result = await this.update(
-      { travelId }, 
-      { status: PlanetStatus.INACTIVE }
+      { travelId },
+      { status: PlanetStatus.INACTIVE },
     );
     return result.affected || 0;
   }

@@ -130,7 +130,10 @@ export class Profile extends BaseActiveRecord {
   /**
    * 나이대별 프로필 조회
    */
-  static async findByAgeRange(minAge: number, maxAge: number): Promise<Profile[]> {
+  static async findByAgeRange(
+    minAge: number,
+    maxAge: number,
+  ): Promise<Profile[]> {
     const repository = this.getRepository();
     return repository
       .createQueryBuilder('profile')
@@ -180,7 +183,7 @@ export class Profile extends BaseActiveRecord {
    */
   static async findByCompletionRate(minRate: number): Promise<Profile[]> {
     const profiles = await this.find();
-    return profiles.filter(profile => profile.getCompletionRate() >= minRate);
+    return profiles.filter((profile) => profile.getCompletionRate() >= minRate);
   }
 
   /**

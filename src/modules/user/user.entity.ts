@@ -218,7 +218,6 @@ export class User extends BaseActiveRecord {
   @IsOptional()
   socialMetadata?: Record<string, any>;
 
-
   /**
    * Soft Delete 지원
    */
@@ -322,10 +321,7 @@ export class User extends BaseActiveRecord {
    */
   static async findHosts(): Promise<User[]> {
     return this.find({
-      where: [
-        { role: UserRole.HOST },
-        { role: UserRole.ADMIN },
-      ],
+      where: [{ role: UserRole.HOST }, { role: UserRole.ADMIN }],
       order: { createdAt: 'DESC' },
     });
   }

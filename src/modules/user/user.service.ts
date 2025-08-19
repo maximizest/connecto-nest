@@ -5,7 +5,7 @@ import { SocialProvider } from './enums/social-provider.enum';
 
 /**
  * User Service - Active Record Pattern
- * 
+ *
  * Repository 주입 없이 User 엔티티의 Active Record 메서드를 활용합니다.
  */
 @Injectable()
@@ -110,7 +110,12 @@ export class UserService {
   /**
    * 사용자 밴
    */
-  async banUser(userId: number, reason: string, bannedBy: number, bannedUntil?: Date) {
+  async banUser(
+    userId: number,
+    reason: string,
+    bannedBy: number,
+    bannedUntil?: Date,
+  ) {
     return User.banUser(userId, reason, bannedBy, bannedUntil);
   }
 

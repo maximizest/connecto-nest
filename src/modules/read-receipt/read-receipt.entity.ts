@@ -144,7 +144,6 @@ export class MessageReadReceipt extends BaseActiveRecord {
    */
   @IsOptional()
   @IsDateString()
-
   @IsOptional()
   @IsDateString()
 
@@ -311,21 +310,23 @@ export class MessageReadReceipt extends BaseActiveRecord {
 
     // 이미 읽은 메시지들 확인
     const existing = await this.find({
-      where: { 
+      where: {
         messageId: messageIds.length > 0 ? (messageIds as any) : undefined,
-        userId 
+        userId,
       },
     });
 
-    const existingMessageIds = existing.map(r => r.messageId);
-    const newMessageIds = messageIds.filter(id => !existingMessageIds.includes(id));
+    const existingMessageIds = existing.map((r) => r.messageId);
+    const newMessageIds = messageIds.filter(
+      (id) => !existingMessageIds.includes(id),
+    );
 
     if (newMessageIds.length === 0) {
       return existing;
     }
 
     // 새로운 읽음 영수증들 생성
-    const newReceipts = newMessageIds.map(messageId =>
+    const newReceipts = newMessageIds.map((messageId) =>
       this.create({
         messageId,
         userId,
@@ -339,7 +340,7 @@ export class MessageReadReceipt extends BaseActiveRecord {
           sessionId: options?.sessionId,
           batchReadCount: newMessageIds.length,
         },
-      })
+      }),
     );
 
     const savedReceipts = await this.save(newReceipts);
@@ -353,15 +354,15 @@ export class MessageReadReceipt extends BaseActiveRecord {
     planetId: number,
     userId: number,
   ): Promise<number> {
-    const queryBuilder = this.getRepository().manager
-      .createQueryBuilder()
+    const queryBuilder = this.getRepository()
+      .manager.createQueryBuilder()
       .select('COUNT(*)', 'count')
       .from('messages', 'message')
       .leftJoin(
         'message_read_receipts',
         'receipt',
         'receipt.messageId = message.id AND receipt.userId = :userId',
-        { userId }
+        { userId },
       )
       .where('message.planetId = :planetId', { planetId })
       .andWhere('message.isDeleted = false')

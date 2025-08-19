@@ -6,12 +6,11 @@ import { SystemMessageMetadata } from './types/system-message-metadata.interface
 
 /**
  * Message Service - Active Record Pattern
- * 
+ *
  * Repository 주입 없이 Message 엔티티의 Active Record 메서드를 활용합니다.
  */
 @Injectable()
 export class MessageService {
-
   /**
    * ID로 메시지 조회
    */

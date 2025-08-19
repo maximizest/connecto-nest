@@ -1,5 +1,5 @@
 import { IsOptional, IsDateString } from 'class-validator';
-import { BaseActiveRecord } from "../../common/entities/base-active-record.entity";
+import { BaseActiveRecord } from '../../common/entities/base-active-record.entity';
 import {
   Column,
   Entity,

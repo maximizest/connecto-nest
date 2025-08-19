@@ -4,9 +4,9 @@ import { PlanetUserStatus } from './enums/planet-user-status.enum';
 
 /**
  * PlanetUser Service - Active Record Pattern
- * 
+ *
  * Repository 주입 없이 PlanetUser 엔티티의 Active Record 메서드를 활용합니다.
- * 
+ *
  * 주요 기능:
  * - Planet 멤버 관리 (초대, 수락, 거절)
  * - Planet 멤버십 조회 및 필터링
@@ -59,10 +59,7 @@ export class PlanetUserService {
   /**
    * Planet 멤버 추가
    */
-  async addMember(memberData: {
-    planetId: number;
-    userId: number;
-  }) {
+  async addMember(memberData: { planetId: number; userId: number }) {
     return PlanetUser.addMember(memberData);
   }
 
@@ -98,7 +95,7 @@ export class PlanetUserService {
   async banUser(planetId: number, userId: number) {
     await PlanetUser.update(
       { planetId, userId },
-      { status: PlanetUserStatus.BANNED }
+      { status: PlanetUserStatus.BANNED },
     );
     return PlanetUser.findMembership(planetId, userId);
   }
@@ -109,7 +106,7 @@ export class PlanetUserService {
   async unbanUser(planetId: number, userId: number) {
     await PlanetUser.update(
       { planetId, userId },
-      { status: PlanetUserStatus.ACTIVE }
+      { status: PlanetUserStatus.ACTIVE },
     );
     return PlanetUser.findMembership(planetId, userId);
   }

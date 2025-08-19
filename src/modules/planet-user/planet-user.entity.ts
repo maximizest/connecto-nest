@@ -103,7 +103,6 @@ export class PlanetUser extends BaseActiveRecord {
    */
   @IsOptional()
   @IsDateString()
-
   @IsOptional()
   @IsDateString()
 
@@ -190,9 +189,11 @@ export class PlanetUser extends BaseActiveRecord {
   /**
    * Planet의 활성 멤버 조회
    */
-  static async findActiveMembersByPlanet(planetId: number): Promise<PlanetUser[]> {
+  static async findActiveMembersByPlanet(
+    planetId: number,
+  ): Promise<PlanetUser[]> {
     return this.find({
-      where: { 
+      where: {
         planetId,
         status: PlanetUserStatus.ACTIVE,
       },
@@ -217,7 +218,7 @@ export class PlanetUser extends BaseActiveRecord {
    */
   static async findActiveByUser(userId: number): Promise<PlanetUser[]> {
     return this.find({
-      where: { 
+      where: {
         userId,
         status: PlanetUserStatus.ACTIVE,
       },
@@ -229,7 +230,10 @@ export class PlanetUser extends BaseActiveRecord {
   /**
    * 특정 사용자의 특정 Planet 멤버십 조회
    */
-  static async findMembership(planetId: number, userId: number): Promise<PlanetUser | null> {
+  static async findMembership(
+    planetId: number,
+    userId: number,
+  ): Promise<PlanetUser | null> {
     return this.findOne({
       where: { planetId, userId },
       relations: ['user', 'planet'],
@@ -256,7 +260,10 @@ export class PlanetUser extends BaseActiveRecord {
   /**
    * Planet에서 멤버 제거
    */
-  static async removeMember(planetId: number, userId: number): Promise<boolean> {
+  static async removeMember(
+    planetId: number,
+    userId: number,
+  ): Promise<boolean> {
     const planetUser = await this.findMembership(planetId, userId);
     if (planetUser) {
       await planetUser.remove();
@@ -270,7 +277,7 @@ export class PlanetUser extends BaseActiveRecord {
    */
   static async countActiveMembers(planetId: number): Promise<number> {
     return this.count({
-      where: { 
+      where: {
         planetId,
         status: PlanetUserStatus.ACTIVE,
       },
@@ -283,10 +290,10 @@ export class PlanetUser extends BaseActiveRecord {
   static async anonymizeUserRecords(userId: number): Promise<void> {
     await this.update(
       { userId },
-      { 
+      {
         isDeletedUser: true,
         userId: undefined,
-      }
+      },
     );
   }
 

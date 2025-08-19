@@ -1,13 +1,9 @@
-import {
-  BaseEntity,
-  CreateDateColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { BaseEntity, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Exclude } from 'class-transformer';
 
 /**
  * Base Active Record Entity
- * 
+ *
  * TypeORM의 BaseEntity를 확장하여 Active Record 패턴을 제공합니다.
  * Repository 패턴 대신 Entity 자체에서 데이터 접근과 비즈니스 로직을 처리합니다.
  */
@@ -52,7 +48,10 @@ export abstract class BaseActiveRecord extends BaseEntity {
   /**
    * Active Record 공통 메서드: ID로 엔티티 찾기
    */
-  static async findById<T extends BaseActiveRecord>(this: new () => T, id: number): Promise<T | null> {
+  static async findById<T extends BaseActiveRecord>(
+    this: new () => T,
+    id: number,
+  ): Promise<T | null> {
     return (this as any).findOne({ where: { id } });
   }
 }

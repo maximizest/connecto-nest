@@ -6,13 +6,8 @@ import {
   IsBoolean,
   IsObject,
 } from 'class-validator';
-import { BaseActiveRecord } from "../../common/entities/base-active-record.entity";
-import {
-  Column,
-  Entity,
-  Index,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { BaseActiveRecord } from '../../common/entities/base-active-record.entity';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 import { MissionType } from './enums/mission-type.enum';
 import { MissionTarget } from './enums/mission-target.enum';
 import { Exclude } from 'class-transformer';
@@ -121,7 +116,6 @@ export class Mission extends BaseActiveRecord {
   })
   @IsBoolean()
   allowResubmission: boolean;
-
 
   /**
    * 비즈니스 로직 메서드
@@ -270,7 +264,7 @@ export class Mission extends BaseActiveRecord {
       .andWhere('mission.startAt <= :now', { now })
       .andWhere('mission.endAt >= :now', { now })
       .orderBy('mission.startAt', 'ASC');
-    
+
     return query.getMany();
   }
 
@@ -315,9 +309,9 @@ export class Mission extends BaseActiveRecord {
     const now = new Date();
     const result = await this.update(
       { endAt: new Date(now.getTime() - 24 * 60 * 60 * 1000), active: true },
-      { active: false }
+      { active: false },
     );
-    
+
     return result.affected || 0;
   }
 }

@@ -6,7 +6,7 @@ import { TimeRestrictionType } from './enums/time-restriction-type.enum';
 
 /**
  * Planet Service - Active Record Pattern
- * 
+ *
  * Repository 주입 없이 Planet 엔티티의 Active Record 메서드를 활용합니다.
  */
 @Injectable()

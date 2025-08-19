@@ -302,7 +302,6 @@ export class Message extends BaseActiveRecord {
     priority?: 'low' | 'normal' | 'high'; // 메시지 우선순위
   };
 
-
   /**
    * Active Record 정적 메서드
    */
@@ -310,13 +309,16 @@ export class Message extends BaseActiveRecord {
   /**
    * Planet의 모든 메시지 조회 (시간순)
    */
-  static async findByPlanet(planetId: number, limit?: number): Promise<Message[]> {
+  static async findByPlanet(
+    planetId: number,
+    limit?: number,
+  ): Promise<Message[]> {
     const query = this.find({
       where: { planetId },
       order: { createdAt: 'DESC' },
       relations: ['sender'],
     });
-    
+
     if (limit) {
       return (await query).slice(0, limit);
     }
@@ -346,7 +348,10 @@ export class Message extends BaseActiveRecord {
   /**
    * Planet의 타입별 메시지 조회
    */
-  static async findByPlanetAndType(planetId: number, type: MessageType): Promise<Message[]> {
+  static async findByPlanetAndType(
+    planetId: number,
+    type: MessageType,
+  ): Promise<Message[]> {
     return this.find({
       where: { planetId, type },
       order: { createdAt: 'DESC' },
@@ -356,7 +361,10 @@ export class Message extends BaseActiveRecord {
   /**
    * 메시지 검색 (내용 기반)
    */
-  static async searchMessages(query: string, planetId?: number): Promise<Message[]> {
+  static async searchMessages(
+    query: string,
+    planetId?: number,
+  ): Promise<Message[]> {
     const repository = this.getRepository();
     const qb = repository
       .createQueryBuilder('message')
@@ -373,11 +381,16 @@ export class Message extends BaseActiveRecord {
   /**
    * 읽지 않은 메시지 수 조회
    */
-  static async countUnreadByPlanet(planetId: number, userId: number): Promise<number> {
+  static async countUnreadByPlanet(
+    planetId: number,
+    userId: number,
+  ): Promise<number> {
     const repository = this.getRepository();
     return repository
       .createQueryBuilder('message')
-      .leftJoin('message.readReceipts', 'receipt', 'receipt.userId = :userId', { userId })
+      .leftJoin('message.readReceipts', 'receipt', 'receipt.userId = :userId', {
+        userId,
+      })
       .where('message.planetId = :planetId', { planetId })
       .andWhere('message.senderId != :userId', { userId })
       .andWhere('receipt.id IS NULL')
@@ -418,14 +431,17 @@ export class Message extends BaseActiveRecord {
   /**
    * 사용자 탈퇴 시 메시지 익명화
    */
-  static async anonymizeUserMessages(userId: number, userType: 'user' | 'admin'): Promise<number> {
+  static async anonymizeUserMessages(
+    userId: number,
+    userType: 'user' | 'admin',
+  ): Promise<number> {
     const result = await this.update(
       { senderId: userId },
       {
         isFromDeletedUser: true,
         deletedUserType: userType,
         senderId: undefined,
-      }
+      },
     );
     return result.affected || 0;
   }
@@ -445,14 +461,14 @@ export class Message extends BaseActiveRecord {
   static async cleanupOldMessages(daysOld: number): Promise<number> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysOld);
-    
+
     const repository = this.getRepository();
     const result = await repository
       .createQueryBuilder()
       .delete()
       .where('deletedAt < :cutoffDate', { cutoffDate })
       .execute();
-    
+
     return result.affected || 0;
   }
 

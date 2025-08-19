@@ -117,7 +117,6 @@ export class FileUpload extends BaseActiveRecord {
 
   @IsDateString()
   @Index() // 시간별 정렬
-
   @IsDateString()
 
   /**

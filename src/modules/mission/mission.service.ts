@@ -5,7 +5,7 @@ import { MissionTarget } from './enums/mission-target.enum';
 
 /**
  * Mission Service - Active Record Pattern
- * 
+ *
  * Repository 주입 없이 Mission 엔티티의 Active Record 메서드를 활용합니다.
  */
 @Injectable()
@@ -84,7 +84,7 @@ export class MissionService {
    */
   async updateMissionStatus(missionId: number, isActive: boolean) {
     const mission = await Mission.findById(missionId);
-    
+
     if (!mission) {
       throw new NotFoundException('미션을 찾을 수 없습니다.');
     }

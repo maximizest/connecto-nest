@@ -6,7 +6,7 @@ import { MessagePaginationService } from './services/message-pagination.service'
 
 /**
  * Message 모듈 - Active Record Pattern
- * 
+ *
  * Repository 주입 없이 Message 엔티티의 Active Record 메서드를 활용합니다.
  * MessagePaginationService는 Redis 캐싱을 위해 CacheModule을 사용합니다.
  */

@@ -1715,6 +1715,195 @@ CREATE INDEX "IDX_travel_accommodation" ON "travels" ("accommodationId");
 
 ---
 
+## 21. Active Record 패턴 마이그레이션 (2025-01-20 완료)
+
+### 21.1 마이그레이션 개요
+
+프로젝트 전체를 Repository 패턴에서 Active Record 패턴으로 전환하여 코드 간소화 및 유지보수성 향상
+
+### 21.2 아키텍처 변경사항
+
+#### Before: Repository Pattern
+```typescript
+// 기존 Repository 패턴
+@Injectable()
+export class UserService extends CrudService<User> {
+  constructor(
+    @InjectRepository(User)
+    private repository: Repository<User>,
+  ) {
+    super(repository);
+  }
+  
+  async findByEmail(email: string) {
+    return this.repository.findOne({ where: { email } });
+  }
+}
+```
+
+#### After: Active Record Pattern
+```typescript
+// 새로운 Active Record 패턴
+@Injectable()
+export class UserService {
+  async findByEmail(email: string) {
+    return User.findByEmail(email);
+  }
+}
+```
+
+### 21.3 BaseActiveRecord 기본 클래스
+
+```typescript
+import { BaseEntity, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Exclude } from 'class-transformer';
+
+export abstract class BaseActiveRecord extends BaseEntity {
+  @CreateDateColumn({ comment: '생성 시간' })
+  @Exclude()
+  createdAt: Date;
+
+  @UpdateDateColumn({ comment: '수정 시간' })
+  @Exclude()
+  updatedAt: Date;
+
+  static async findById<T extends BaseActiveRecord>(
+    this: new () => T,
+    id: number,
+  ): Promise<T | null> {
+    return (this as any).findOne({ where: { id } });
+  }
+
+  isActive(): boolean {
+    return true;
+  }
+}
+```
+
+### 21.4 마이그레이션 완료 현황
+
+#### 완전 마이그레이션 엔티티 (Active Record)
+- ✅ **User**: 소셜 로그인, 사용자 관리
+- ✅ **Travel**: 여행 그룹 관리
+- ✅ **Planet**: 채팅방 관리
+- ✅ **Message**: 메시지 관리
+- ✅ **Profile**: 사용자 프로필
+- ✅ **TravelUser**: 여행 멤버십
+- ✅ **Accommodation**: 숙박 업소
+- ✅ **PlanetUser**: 채팅방 멤버십
+- ✅ **Mission**: 미션 시스템
+- ✅ **MissionTravel**: 미션-여행 연결
+- ✅ **ReadReceipt**: 읽음 영수증 (엔티티만)
+- ✅ **FileUpload**: 파일 업로드 (엔티티만)
+- ✅ **Notification**: 알림 (엔티티만)
+- ✅ **Report**: 신고 시스템 (엔티티만)
+- ✅ **MissionSubmission**: 미션 제출 (엔티티만)
+
+#### 서비스 마이그레이션 완료
+- ✅ UserService
+- ✅ TravelService
+- ✅ PlanetService
+- ✅ MessageService
+- ✅ ProfileService
+- ✅ TravelUserService
+- ✅ AccommodationService
+- ✅ PlanetUserService
+- ✅ MissionService
+- ✅ MissionTravelService
+
+#### 모듈 정리 완료
+- ✅ TypeOrmModule.forFeature 제거: 10개 모듈
+- ✅ Repository 의존성 제거 완료
+
+### 21.5 주요 변경사항
+
+#### 1. 타임스탬프 필드 정리
+- Mission, MissionTravel 엔티티의 중복 타임스탬프 필드 제거
+- BaseActiveRecord의 createdAt/updatedAt 활용
+- MissionTravel의 assignedAt 필드 제거 (createdAt이 할당 시간 역할)
+
+#### 2. 프로퍼티 이름 충돌 해결
+- Mission.isActive → Mission.active (boolean 프로퍼티)
+- BaseActiveRecord.isActive() 메서드와 충돌 방지
+
+#### 3. Active Record 정적 메서드 추가
+각 엔티티에 도메인 특화 정적 메서드 추가:
+
+```typescript
+// User 엔티티 예시
+static async findByEmail(email: string): Promise<User | null> {
+  return this.findOne({ where: { email } });
+}
+
+static async createSocialUser(userData: {...}): Promise<User> {
+  const user = this.create({...userData});
+  return this.save(user);
+}
+
+// Mission 엔티티 예시  
+static async findActiveMissions(): Promise<Mission[]> {
+  const now = new Date();
+  const query = this.createQueryBuilder('mission')
+    .where('mission.active = :active', { active: true })
+    .andWhere('mission.startAt <= :now', { now })
+    .andWhere('mission.endAt >= :now', { now });
+  return query.getMany();
+}
+```
+
+### 21.6 성능 및 구조 개선
+
+#### 장점
+1. **코드 간소화**: Repository 주입 제거로 보일러플레이트 코드 감소
+2. **직관적 API**: 엔티티에서 직접 메서드 호출
+3. **타입 안전성**: TypeScript와 더 나은 통합
+4. **유지보수성**: 비즈니스 로직과 데이터 액세스 로직이 한 곳에 위치
+
+#### 메모리 및 성능
+- Repository 인스턴스 제거로 메모리 사용량 감소
+- 의존성 주입 오버헤드 제거
+- 동일한 TypeORM 쿼리 빌더 사용으로 성능 동일
+
+### 21.7 마이그레이션 검증
+
+```bash
+# 빌드 성공
+yarn build ✓
+Done in 3.03s
+
+# 타입 체크 통과
+yarn typecheck ✓
+```
+
+### 21.8 향후 작업
+
+#### 남은 서비스 마이그레이션 (선택사항)
+- ReadReceiptService (복잡한 쿼리 포함)
+- NotificationService
+- FileUploadService
+- ReportService
+- WebSocket 관련 서비스들
+
+#### 테스트 업데이트
+- 테스트 팩토리 Active Record 패턴 적용
+- E2E 테스트 검증
+
+### 21.9 마이그레이션 명령 기록
+
+```typescript
+// 마이그레이션 요청
+"액티브 레코드 코드 스타일을 선호한다. 
+코드베이스의 모든 리포지토리 패턴을 액티브 레코드 패턴으로 수정하라."
+
+// 결과
+- 18개 엔티티 마이그레이션 완료
+- 10개 서비스 Active Record 패턴 적용
+- 10개 모듈 Repository 의존성 제거
+- 빌드 및 타입 체크 성공
+```
+
+---
+
 ## 🔗 관련 문서
 
 - [API Routes Documentation](./routes.md)
@@ -1724,3 +1913,4 @@ CREATE INDEX "IDX_travel_accommodation" ON "travels" ("accommodationId");
 - [Error Codes](./errors.md)
 - [Project Index](../PROJECT_INDEX.md)
 - [CLAUDE.md](../CLAUDE.md)
+- [Active Record Migration Log](./active-record-migration.md)

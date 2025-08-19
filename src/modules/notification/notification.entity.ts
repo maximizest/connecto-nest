@@ -226,7 +226,6 @@ export class Notification extends BaseActiveRecord {
   @IsOptional()
   @IsDateString()
   @Index() // 생성 시간 정렬 최적화
-
   @IsOptional()
   @IsDateString()
 

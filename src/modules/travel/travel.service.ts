@@ -5,7 +5,7 @@ import { TravelVisibility } from './enums/travel-visibility.enum';
 
 /**
  * Travel Service - Active Record Pattern
- * 
+ *
  * Repository 주입 없이 Travel 엔티티의 Active Record 메서드를 활용합니다.
  */
 @Injectable()

@@ -117,7 +117,6 @@ export class TravelUser extends BaseActiveRecord {
   @IsOptional()
   banReason?: string;
 
-
   /**
    * Active Record 정적 메서드
    */
@@ -136,11 +135,13 @@ export class TravelUser extends BaseActiveRecord {
   /**
    * Travel의 활성 멤버 조회
    */
-  static async findActiveMembersByTravel(travelId: number): Promise<TravelUser[]> {
+  static async findActiveMembersByTravel(
+    travelId: number,
+  ): Promise<TravelUser[]> {
     return this.find({
-      where: { 
-        travelId, 
-        status: TravelUserStatus.ACTIVE 
+      where: {
+        travelId,
+        status: TravelUserStatus.ACTIVE,
       },
       order: { joinedAt: 'ASC' },
       relations: ['user'],
@@ -163,9 +164,9 @@ export class TravelUser extends BaseActiveRecord {
    */
   static async findActiveByUser(userId: number): Promise<TravelUser[]> {
     return this.find({
-      where: { 
-        userId, 
-        status: TravelUserStatus.ACTIVE 
+      where: {
+        userId,
+        status: TravelUserStatus.ACTIVE,
       },
       order: { joinedAt: 'DESC' },
       relations: ['travel'],
@@ -177,9 +178,9 @@ export class TravelUser extends BaseActiveRecord {
    */
   static async findHostsByTravel(travelId: number): Promise<TravelUser[]> {
     return this.find({
-      where: { 
-        travelId, 
-        role: TravelUserRole.HOST 
+      where: {
+        travelId,
+        role: TravelUserRole.HOST,
       },
       relations: ['user'],
     });
@@ -188,7 +189,10 @@ export class TravelUser extends BaseActiveRecord {
   /**
    * Travel의 따로 역할 담김 멤버 조회
    */
-  static async findByTravelAndRole(travelId: number, role: TravelUserRole): Promise<TravelUser[]> {
+  static async findByTravelAndRole(
+    travelId: number,
+    role: TravelUserRole,
+  ): Promise<TravelUser[]> {
     return this.find({
       where: { travelId, role },
       order: { joinedAt: 'ASC' },
@@ -199,7 +203,10 @@ export class TravelUser extends BaseActiveRecord {
   /**
    * 특정 사용자의 특정 Travel 멤버십 조회
    */
-  static async findMembership(travelId: number, userId: number): Promise<TravelUser | null> {
+  static async findMembership(
+    travelId: number,
+    userId: number,
+  ): Promise<TravelUser | null> {
     return this.findOne({
       where: { travelId, userId },
       relations: ['travel', 'user'],
@@ -226,7 +233,10 @@ export class TravelUser extends BaseActiveRecord {
   /**
    * Travel에서 멤버 제거
    */
-  static async removeMember(travelId: number, userId: number): Promise<boolean> {
+  static async removeMember(
+    travelId: number,
+    userId: number,
+  ): Promise<boolean> {
     const result = await this.delete({ travelId, userId });
     return (result.affected || 0) > 0;
   }
@@ -236,9 +246,9 @@ export class TravelUser extends BaseActiveRecord {
    */
   static async countActiveMembers(travelId: number): Promise<number> {
     return this.count({
-      where: { 
-        travelId, 
-        status: TravelUserStatus.ACTIVE 
+      where: {
+        travelId,
+        status: TravelUserStatus.ACTIVE,
       },
     });
   }

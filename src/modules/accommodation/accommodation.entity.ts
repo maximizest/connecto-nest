@@ -1,9 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  OneToMany,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { BaseActiveRecord } from '../../common/entities/base-active-record.entity';
 import { Travel } from '../travel/travel.entity';
 
@@ -30,6 +25,4 @@ export class Accommodation extends BaseActiveRecord {
   travels: Travel[];
 
   // ==================== Timestamps ====================
-
-
 }
