@@ -17,8 +17,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { validateRoleBasedPlanetAccess } from '../../../../common/helpers/role-based-permission.helper';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { Message } from '../../../message/message.entity';
@@ -100,12 +98,6 @@ export class ReadReceiptController {
 
   constructor(
     public readonly crudService: ReadReceiptService,
-    @InjectRepository(MessageReadReceipt)
-    private readonly readReceiptRepository: Repository<MessageReadReceipt>,
-    @InjectRepository(Message)
-    private readonly messageRepository: Repository<Message>,
-    @InjectRepository(Planet)
-    private readonly planetRepository: Repository<Planet>,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -125,7 +117,7 @@ export class ReadReceiptController {
     body.planetId = message.planetId;
 
     // 기존 읽음 확인 체크 (upsert 로직)
-    const existing = await this.readReceiptRepository.findOne({
+    const existing = await MessageReadReceipt.findOne({
       where: { messageId: body.messageId, userId: user.id },
     });
 
@@ -142,7 +134,7 @@ export class ReadReceiptController {
         updatedAt: new Date().toISOString(),
       };
 
-      const updated = await this.readReceiptRepository.save(existing);
+      const updated = await existing.save();
       context.skipCreate = true;
       context.existingEntity = updated;
       context.isUpdate = true;
@@ -255,8 +247,8 @@ export class ReadReceiptController {
       return crudResponse(processedBody.existingEntity);
     }
 
-    const entity = this.readReceiptRepository.create(processedBody);
-    const result = await this.readReceiptRepository.save(entity);
+    const entity = MessageReadReceipt.create(processedBody);
+    const result = await entity.save();
 
     // AfterCreate 훅 호출 - result가 배열인 경우 첫 번째 요소 사용
     const savedEntity = Array.isArray(result) ? result[0] : result;
@@ -508,7 +500,7 @@ export class ReadReceiptController {
     messageId: number,
     userId: number,
   ): Promise<Message> {
-    const message = await this.messageRepository.findOne({
+    const message = await Message.findOne({
       where: { id: messageId },
       relations: ['planet', 'planet.travel'],
     });

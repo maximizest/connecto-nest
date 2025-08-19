@@ -1,6 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { User } from '../../user/user.entity';
 import {
   TypingStatusResponse,
@@ -16,10 +14,7 @@ import {
 export class TypingIndicatorService {
   private readonly logger = new Logger(TypingIndicatorService.name);
 
-  constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-  ) {}
+  constructor() {}
 
   /**
    * 타이핑 시작 (간소화 버전)
@@ -35,7 +30,7 @@ export class TypingIndicatorService {
     } = {},
   ): Promise<TypingUserInfo> {
     try {
-      const user = await this.userRepository.findOne({
+      const user = await User.findOne({
         where: { id: userId },
         select: ['id', 'name'],
       });

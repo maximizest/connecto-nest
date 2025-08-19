@@ -1,7 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Server } from 'socket.io';
-import { Repository } from 'typeorm';
 import { validateRoleBasedPlanetAccess } from '../../../common/helpers/role-based-permission.helper';
 
 import { PlanetUser } from '../../planet-user/planet-user.entity';
@@ -27,16 +25,7 @@ export class WebSocketRoomService {
   // 룸별 온라인 사용자 관리
   private roomMembers = new Map<string, Set<number>>();
 
-  constructor(
-    @InjectRepository(Travel)
-    private readonly travelRepository: Repository<Travel>,
-    @InjectRepository(Planet)
-    private readonly planetRepository: Repository<Planet>,
-    @InjectRepository(TravelUser)
-    private readonly travelUserRepository: Repository<TravelUser>,
-    @InjectRepository(PlanetUser)
-    private readonly planetUserRepository: Repository<PlanetUser>,
-  ) {}
+  constructor() {}
 
   /**
    * 사용자가 서버에 연결될 때 초기화
@@ -106,7 +95,7 @@ export class WebSocketRoomService {
 
     try {
       // 사용자가 속한 Travel들 조회
-      const travelUsers = await this.travelUserRepository.find({
+      const travelUsers = await TravelUser.find({
         where: {
           userId,
           status: TravelUserStatus.ACTIVE,
@@ -126,7 +115,7 @@ export class WebSocketRoomService {
       }
 
       // 사용자가 속한 Planet들 조회
-      const planetUsers = await this.planetUserRepository.find({
+      const planetUsers = await PlanetUser.find({
         where: {
           userId,
           status: PlanetUserStatus.ACTIVE,
@@ -275,7 +264,7 @@ export class WebSocketRoomService {
       const { type, entityId } = this.parseRoomId(roomId);
 
       if (type === 'travel') {
-        const travelUser = await this.travelUserRepository.findOne({
+        const travelUser = await TravelUser.findOne({
           where: {
             userId,
             travelId: entityId,
@@ -364,13 +353,13 @@ export class WebSocketRoomService {
       const onlineCount = this.roomMembers.get(roomId)?.size || 0;
 
       if (type === 'travel') {
-        const travel = await this.travelRepository.findOne({
+        const travel = await Travel.findOne({
           where: { id: entityId },
         });
         if (!travel) return null;
 
         // Travel의 실제 멤버 수 계산
-        const memberCount = await this.travelUserRepository.count({
+        const memberCount = await TravelUser.count({
           where: {
             travelId: entityId,
             status: TravelUserStatus.ACTIVE,
@@ -386,13 +375,13 @@ export class WebSocketRoomService {
           onlineCount,
         };
       } else if (type === 'planet') {
-        const planet = await this.planetRepository.findOne({
+        const planet = await Planet.findOne({
           where: { id: entityId },
         });
         if (!planet) return null;
 
         // Planet의 멤버 수 실시간 계산
-        const planetMemberCount = await this.planetUserRepository.count({
+        const planetMemberCount = await PlanetUser.count({
           where: {
             planetId: entityId,
             status: PlanetUserStatus.ACTIVE,

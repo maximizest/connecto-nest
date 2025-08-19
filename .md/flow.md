@@ -1801,7 +1801,7 @@ export abstract class BaseActiveRecord extends BaseEntity {
 }
 ```
 
-### 21.4 마이그레이션 완료 현황
+### 21.4 마이그레이션 완료 현황 (2025-01-20 100% 완료)
 
 #### 완전 마이그레이션 엔티티 (Active Record)
 

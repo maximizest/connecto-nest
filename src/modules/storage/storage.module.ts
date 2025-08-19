@@ -1,10 +1,9 @@
 import { Global, Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { StorageService } from './storage.service';
 
 @Global()
 @Module({
-  imports: [TypeOrmModule.forFeature([])],
+  imports: [],
   controllers: [],
   providers: [StorageService],
   exports: [StorageService],

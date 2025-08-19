@@ -1,23 +1,14 @@
-import { CrudService } from '@foryourdev/nestjs-crud';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { StorageService } from '../storage/storage.service';
 import { FileUpload } from './file-upload.entity';
 import { FileUploadStatus } from './enums/file-upload-status.enum';
 import { FileUploadType } from './enums/file-upload-type.enum';
 
 @Injectable()
-export class FileUploadService extends CrudService<FileUpload> {
+export class FileUploadService {
   private readonly logger = new Logger(FileUploadService.name);
 
-  constructor(
-    @InjectRepository(FileUpload)
-    private readonly fileUploadRepository: Repository<FileUpload>,
-    private readonly storageService: StorageService,
-  ) {
-    super(fileUploadRepository);
-  }
+  constructor(private readonly storageService: StorageService) {}
 
   /**
    * 새 파일 업로드 레코드 생성
@@ -32,12 +23,12 @@ export class FileUploadService extends CrudService<FileUpload> {
     folder?: string;
     metadata?: Record<string, any>;
   }): Promise<FileUpload> {
-    const upload = this.repository.create({
+    const upload = FileUpload.create({
       ...data,
       status: FileUploadStatus.PENDING,
     });
 
-    const savedUpload = await this.repository.save(upload);
+    const savedUpload = await upload.save();
 
     this.logger.log(
       `Upload record created: ${savedUpload.id} for user ${data.userId}`,
@@ -49,7 +40,7 @@ export class FileUploadService extends CrudService<FileUpload> {
    * 업로드 레코드 조회 (ID)
    */
   async findById(id: number): Promise<FileUpload | null> {
-    return await this.repository.findOne({
+    return await FileUpload.findOne({
       where: { id },
       relations: ['user'],
     });
@@ -59,7 +50,7 @@ export class FileUploadService extends CrudService<FileUpload> {
    * 업로드 레코드 조회 (Storage Key)
    */
   async findByStorageKey(storageKey: string): Promise<FileUpload | null> {
-    return await this.repository.findOne({
+    return await FileUpload.findOne({
       where: { storageKey },
       relations: ['user'],
     });
@@ -76,8 +67,7 @@ export class FileUploadService extends CrudService<FileUpload> {
       offset?: number;
     },
   ): Promise<{ uploads: FileUpload[]; total: number }> {
-    const queryBuilder = this.repository
-      .createQueryBuilder('upload')
+    const queryBuilder = FileUpload.createQueryBuilder('upload')
       .leftJoinAndSelect('upload.user', 'user')
       .where('upload.userId = :userId', { userId });
 
@@ -120,7 +110,7 @@ export class FileUploadService extends CrudService<FileUpload> {
       upload.completeUpload();
     }
 
-    const updatedUpload = await this.repository.save(upload);
+    const updatedUpload = await upload.save();
 
     this.logger.log(`Upload status updated: ${id} -> ${status}`);
     return updatedUpload;
@@ -136,7 +126,7 @@ export class FileUploadService extends CrudService<FileUpload> {
     }
 
     upload.failUpload();
-    const updatedUpload = await this.repository.save(upload);
+    const updatedUpload = await upload.save();
 
     this.logger.error(`Upload failed: ${id}`);
     return updatedUpload;
@@ -152,7 +142,7 @@ export class FileUploadService extends CrudService<FileUpload> {
     }
 
     upload.completeUpload(publicUrl);
-    const updatedUpload = await this.repository.save(upload);
+    const updatedUpload = await upload.save();
 
     this.logger.log(`Upload completed: ${id}`);
     return updatedUpload;
@@ -166,8 +156,7 @@ export class FileUploadService extends CrudService<FileUpload> {
       Date.now() - olderThanDays * 24 * 60 * 60 * 1000,
     );
 
-    const result = await this.repository
-      .createQueryBuilder()
+    const result = await FileUpload.createQueryBuilder()
       .delete()
       .where('status = :status', { status: FileUploadStatus.FAILED })
       .andWhere('createdAt < :cutoffTime', { cutoffTime })
@@ -199,7 +188,7 @@ export class FileUploadService extends CrudService<FileUpload> {
     // 상태 초기화
     upload.status = FileUploadStatus.PENDING;
 
-    const updatedUpload = await this.repository.save(upload);
+    const updatedUpload = await upload.save();
 
     this.logger.log(`Upload retry initiated: ${id}`);
     return updatedUpload;
@@ -214,7 +203,7 @@ export class FileUploadService extends CrudService<FileUpload> {
       throw new NotFoundException(`Upload record not found: ${id}`);
     }
 
-    await this.repository.remove(upload);
+    await upload.remove();
 
     this.logger.log(`Upload record deleted: ${id}`);
   }
@@ -237,7 +226,7 @@ export class FileUploadService extends CrudService<FileUpload> {
 
     upload.status = FileUploadStatus.COMPLETED;
 
-    const updatedUpload = await this.repository.save(upload);
+    const updatedUpload = await upload.save();
 
     this.logger.log(`Upload completed via direct upload: ${uploadId}`);
     return updatedUpload;

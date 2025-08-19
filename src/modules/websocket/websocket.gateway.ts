@@ -11,8 +11,6 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Logger, UseFilters } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { User } from '../user/user.entity';
 import { ConnectionManagerService } from './services/connection-manager.service';
 import { TokenBlacklistService } from '../auth/services/token-blacklist.service';
@@ -52,8 +50,6 @@ export class EnhancedWebSocketGateway
     private readonly webSocketService: WebSocketService,
     private readonly eventEmitter: EventEmitter2,
     private readonly redisAdapterService: RedisAdapterService,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
   ) {}
 
   /**
@@ -154,7 +150,7 @@ export class EnhancedWebSocketGateway
       }
 
       // 5. 사용자 정보 조회 및 차단 상태 확인
-      const user = await this.userRepository.findOne({
+      const user = await User.findOne({
         where: { id: payload.id },
         select: ['id', 'email', 'name', 'role', 'isBanned'],
       });

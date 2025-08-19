@@ -1,11 +1,8 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { RedisModule } from '@nestjs-modules/ioredis';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ENV_KEYS } from '../../common/constants/app.constants';
-import { Profile } from '../profile/profile.entity';
-import { User } from '../user/user.entity';
 import { PushNotificationService } from '../notification/services/push-notification.service';
 import { AuthController } from './api/v1/auth.controller';
 import { AuthService } from './auth.service';
@@ -14,12 +11,6 @@ import { SessionManagerService } from './services/session-manager.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      // Auth 관련 기본 entities
-      User,
-      Profile, // 프로필 자동 생성을 위해 필요
-    ]),
-
     // JWT 모듈 설정
     JwtModule.register({
       secret: process.env[ENV_KEYS.JWT_SECRET],

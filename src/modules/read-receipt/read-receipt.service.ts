@@ -1,7 +1,4 @@
-import { CrudService } from '@foryourdev/nestjs-crud';
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { Message } from '../message/message.entity';
 import { PlanetUser } from '../planet-user/planet-user.entity';
 import { PlanetUserStatus } from '../planet-user/enums/planet-user-status.enum';
@@ -14,17 +11,10 @@ import { MessageReadReceipt } from './read-receipt.entity';
 import { PlanetReadStatus } from './types/planet-read-status.interface';
 
 @Injectable()
-export class ReadReceiptService extends CrudService<MessageReadReceipt> {
+export class ReadReceiptService {
   private readonly logger = new Logger(ReadReceiptService.name);
 
-  constructor(
-    @InjectRepository(MessageReadReceipt)
-    repository: Repository<MessageReadReceipt>,
-    @InjectRepository(Message)
-    private readonly messageRepository: Repository<Message>,
-  ) {
-    super(repository);
-  }
+  constructor() {}
 
   /**
    * 메시지 읽음 처리
@@ -42,7 +32,7 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
   ): Promise<MessageReadReceipt> {
     try {
       // 메시지 정보 조회
-      const message = await this.messageRepository.findOne({
+      const message = await Message.findOne({
         where: { id: messageId },
         relations: ['planet'],
       });
@@ -52,7 +42,7 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
       }
 
       // 이미 읽음 처리된 경우 기존 레코드 반환
-      const existingReceipt = await this.repository.findOne({
+      const existingReceipt = await MessageReadReceipt.findOne({
         where: {
           messageId,
           userId,
@@ -67,7 +57,7 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
       }
 
       // 새로운 읽음 영수증 생성
-      const receipt = this.repository.create({
+      const receipt = MessageReadReceipt.create({
         messageId,
         userId,
         planetId: message.planetId,
@@ -82,7 +72,7 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
         },
       });
 
-      const savedReceipt = await this.repository.save(receipt);
+      const savedReceipt = await receipt.save();
 
       // 메시지의 읽음 카운트 업데이트
       await this.updateMessageReadCount(messageId);
@@ -118,7 +108,7 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
       const receipts: MessageReadReceipt[] = [];
 
       // 이미 읽은 메시지들 확인
-      const existingReceipts = await this.repository.find({
+      const existingReceipts = await MessageReadReceipt.find({
         where: {
           messageId: messageIds.length > 0 ? (messageIds as any) : undefined,
           userId,
@@ -138,7 +128,7 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
       }
 
       // 새로운 메시지들 정보 조회
-      const messages = await this.messageRepository.find({
+      const messages = await Message.find({
         where: {
           id: newMessageIds.length > 0 ? (newMessageIds as any) : undefined,
         },
@@ -147,7 +137,7 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
 
       // 일괄 읽음 영수증 생성
       const newReceipts = messages.map((message) =>
-        this.repository.create({
+        MessageReadReceipt.create({
           messageId: message.id,
           userId,
           planetId: message.planetId,
@@ -163,7 +153,7 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
         }),
       );
 
-      const savedReceipts = await this.repository.save(newReceipts);
+      const savedReceipts = await MessageReadReceipt.save(newReceipts);
       receipts.push(...existingReceipts, ...savedReceipts);
 
       // 각 메시지의 읽음 카운트 업데이트
@@ -201,14 +191,13 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
   ): Promise<{ processedCount: number; receipts: MessageReadReceipt[] }> {
     try {
       // Planet의 마지막 읽은 메시지 찾기
-      const lastReadReceipt = await this.repository.findOne({
+      const lastReadReceipt = await MessageReadReceipt.findOne({
         where: { planetId, userId },
         order: { readAt: 'DESC' },
       });
 
       // 마지막 읽은 메시지 이후의 모든 메시지 조회
-      const queryBuilder = this.messageRepository
-        .createQueryBuilder('message')
+      const queryBuilder = Message.createQueryBuilder('message')
         .where('message.planetId = :planetId', { planetId })
         .andWhere('message.isDeleted = :isDeleted', { isDeleted: false });
 
@@ -257,15 +246,13 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
   ): Promise<number> {
     try {
       // Planet의 모든 메시지 조회 (삭제되지 않은 것만)
-      const totalMessagesQuery = this.messageRepository
-        .createQueryBuilder('message')
+      const totalMessagesQuery = Message.createQueryBuilder('message')
         .where('message.planetId = :planetId', { planetId })
         .andWhere('message.isDeleted = :isDeleted', { isDeleted: false })
         .getCount();
 
       // 사용자가 읽은 메시지 조회
-      const readMessagesQuery = this.repository
-        .createQueryBuilder('receipt')
+      const readMessagesQuery = MessageReadReceipt.createQueryBuilder('receipt')
         .where('receipt.planetId = :planetId', { planetId })
         .andWhere('receipt.userId = :userId', { userId })
         .andWhere('receipt.isRead = :isRead', { isRead: true })
@@ -304,13 +291,13 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
         );
 
         // 마지막 읽은 메시지 정보
-        const lastReadReceipt = await this.repository.findOne({
+        const lastReadReceipt = await MessageReadReceipt.findOne({
           where: { planetId: planet.id, userId },
           order: { readAt: 'DESC' },
         });
 
         // Planet의 총 메시지 수 (삭제되지 않은 메시지만)
-        const totalMessages = await this.messageRepository.count({
+        const totalMessages = await Message.count({
           where: {
             planetId: planet.id,
           },
@@ -342,11 +329,11 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
    */
   private async updateMessageReadCount(messageId: number): Promise<void> {
     try {
-      const readCount = await this.repository.count({
+      const readCount = await MessageReadReceipt.count({
         where: { messageId, isRead: true },
       });
 
-      await this.messageRepository.update(messageId, {
+      await Message.update(messageId, {
         readCount,
         firstReadAt: readCount === 1 ? new Date() : undefined,
       });
@@ -363,8 +350,8 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
    */
   private async getAccessiblePlanets(userId: number): Promise<any[]> {
     // GROUP Planet들 (Travel 멤버)
-    const groupPlanets = await this.repository.manager
-      .createQueryBuilder()
+    const groupPlanets = await MessageReadReceipt.getRepository()
+      .manager.createQueryBuilder()
       .select('planet')
       .from('planets', 'planet')
       .innerJoin('travels', 'travel', 'planet.travelId = travel.id')
@@ -382,8 +369,8 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
       .getMany();
 
     // DIRECT Planet들 (직접 참여)
-    const directPlanets = await this.repository.manager
-      .createQueryBuilder()
+    const directPlanets = await MessageReadReceipt.getRepository()
+      .manager.createQueryBuilder()
       .select('planet')
       .from('planets', 'planet')
       .innerJoin(
@@ -406,17 +393,20 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
    * Planet의 모든 사용자 조회
    */
   private async getPlanetUsers(planetId: number): Promise<any[]> {
-    const planet = await this.repository.manager.findOne(Planet, {
-      where: { id: planetId },
-      select: ['id', 'type', 'travelId'],
-      relations: ['travel'],
-    });
+    const planet = await MessageReadReceipt.getRepository().manager.findOne(
+      Planet,
+      {
+        where: { id: planetId },
+        select: ['id', 'type', 'travelId'],
+        relations: ['travel'],
+      },
+    );
 
     if (!planet) return [];
 
     if (planet.type === PlanetType.GROUP) {
       // GROUP Planet: Travel의 모든 멤버
-      return await this.repository.manager.find(TravelUser, {
+      return await MessageReadReceipt.getRepository().manager.find(TravelUser, {
         where: {
           travelId: planet.travelId,
           status: TravelUserStatus.ACTIVE,
@@ -425,7 +415,7 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
       });
     } else {
       // DIRECT Planet: Planet의 직접 멤버
-      return await this.repository.manager.find(PlanetUser, {
+      return await MessageReadReceipt.getRepository().manager.find(PlanetUser, {
         where: {
           planetId: planet.id,
           status: PlanetUserStatus.ACTIVE,

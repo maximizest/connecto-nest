@@ -1,8 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
+import { LessThan } from 'typeorm';
 import { FileUpload } from '../../file-upload/file-upload.entity';
 import { FileUploadStatus } from '../../file-upload/enums/file-upload-status.enum';
 import { StorageService } from '../../storage/storage.service';
@@ -25,8 +24,6 @@ export class FileCleanupProcessor extends WorkerHost {
   private readonly STATS_KEY = 'scheduler:file-cleanup:stats';
 
   constructor(
-    @InjectRepository(FileUpload)
-    private readonly fileUploadRepository: Repository<FileUpload>,
     private readonly storageService: StorageService,
     private readonly redisService: RedisService,
   ) {
@@ -117,7 +114,7 @@ export class FileCleanupProcessor extends WorkerHost {
     const oneDayAgo = new Date();
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
 
-    const failedUploads = await this.fileUploadRepository.find({
+    const failedUploads = await FileUpload.find({
       where: {
         status: FileUploadStatus.FAILED,
         createdAt: LessThan(oneDayAgo),
@@ -133,7 +130,7 @@ export class FileCleanupProcessor extends WorkerHost {
         }
 
         // DB 레코드 삭제
-        await this.fileUploadRepository.remove(upload);
+        await upload.remove();
         result.processedItems++;
         result.failedUploads++;
 
@@ -153,7 +150,7 @@ export class FileCleanupProcessor extends WorkerHost {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    const oldTempUploads = await this.fileUploadRepository.find({
+    const oldTempUploads = await FileUpload.find({
       where: {
         folder: 'temp',
         createdAt: LessThan(oneWeekAgo),
@@ -167,7 +164,7 @@ export class FileCleanupProcessor extends WorkerHost {
           await this.storageService.deleteFile(upload.storageKey);
         }
 
-        await this.fileUploadRepository.remove(upload);
+        await upload.remove();
         result.processedItems++;
         result.tempFiles++;
 
@@ -214,7 +211,7 @@ export class FileCleanupProcessor extends WorkerHost {
     // 이 로직은 스토리지 서비스의 구현에 따라 달라질 수 있음
     try {
       const storageFiles = await this.storageService.listFiles('uploads/');
-      const dbFiles = await this.fileUploadRepository.find({
+      const dbFiles = await FileUpload.find({
         select: ['storageKey'],
       });
 

@@ -12,8 +12,6 @@ import {
   NotFoundException,
   UseGuards,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { PlanetUser } from '../../../planet-user/planet-user.entity';
 import { PlanetUserStatus } from '../../../planet-user/enums/planet-user-status.enum';
@@ -108,14 +106,6 @@ export class TravelUserController {
 
   constructor(
     public readonly crudService: TravelUserService,
-    @InjectRepository(TravelUser)
-    private readonly travelUserRepository: Repository<TravelUser>,
-    @InjectRepository(Travel)
-    private readonly travelRepository: Repository<Travel>,
-    @InjectRepository(Planet)
-    private readonly planetRepository: Repository<Planet>,
-    @InjectRepository(PlanetUser)
-    private readonly planetUserRepository: Repository<PlanetUser>,
   ) {}
 
   /**
@@ -127,7 +117,7 @@ export class TravelUserController {
     const targetTravelUserId = parseInt(params.id, 10);
 
     // 조회하려는 TravelUser 정보 가져오기
-    const targetTravelUser = await this.travelUserRepository.findOne({
+    const targetTravelUser = await TravelUser.findOne({
       where: { id: targetTravelUserId },
     });
 
@@ -136,7 +126,7 @@ export class TravelUserController {
     }
 
     // 현재 유저가 해당 여행에 참여했는지 확인
-    const currentUserTravelMembership = await this.travelUserRepository.findOne(
+    const currentUserTravelMembership = await TravelUser.findOne(
       {
         where: {
           travelId: targetTravelUser.travelId,
@@ -196,7 +186,7 @@ export class TravelUserController {
     }
 
     // 초대코드로 Travel 찾기
-    const travel = await this.travelRepository.findOne({
+    const travel = await Travel.findOne({
       where: {
         inviteCode: body.inviteCode,
       },
@@ -220,7 +210,7 @@ export class TravelUserController {
     }
 
     // 이미 가입된 멤버인지 확인
-    const existingMember = await this.travelUserRepository.findOne({
+    const existingMember = await TravelUser.findOne({
       where: {
         travelId: body.travelId,
         userId: user.id,
@@ -260,7 +250,7 @@ export class TravelUserController {
     }
 
     // 최대 멤버 수 확인
-    const currentMemberCount = await this.travelUserRepository.count({
+    const currentMemberCount = await TravelUser.count({
       where: {
         travelId: body.travelId,
         status: TravelUserStatus.ACTIVE,
@@ -290,15 +280,11 @@ export class TravelUserController {
     try {
       // 활성 가입인 경우에만 후속 처리
       if (entity.status === TravelUserStatus.ACTIVE) {
-        // Travel의 memberCount 증가
-        await this.travelRepository.increment(
-          { id: entity.travelId },
-          'memberCount',
-          1,
-        );
+        // Note: memberCount field does not exist in Travel entity
+        // TODO: Add memberCount field to Travel entity if member count tracking is needed
 
         // 해당 Travel의 모든 GROUP Planet에 자동 참여 처리
-        const groupPlanets = await this.planetRepository.find({
+        const groupPlanets = await Planet.find({
           where: {
             travelId: entity.travelId,
             type: PlanetType.GROUP,
@@ -308,21 +294,17 @@ export class TravelUserController {
 
         for (const planet of groupPlanets) {
           // 각 그룹 Planet에 사용자 추가
-          const planetUser = this.planetUserRepository.create({
+          const planetUser = PlanetUser.create({
             planetId: planet.id,
             userId: entity.userId,
             status: PlanetUserStatus.ACTIVE,
             joinedAt: new Date(),
           });
 
-          await this.planetUserRepository.save(planetUser);
+          await planetUser.save();
 
-          // Planet의 memberCount 증가
-          await this.planetRepository.increment(
-            { id: planet.id },
-            'memberCount',
-            1,
-          );
+          // Note: memberCount field does not exist in Planet entity
+          // TODO: Add memberCount field to Planet entity if member count tracking is needed
 
           this.logger.log(
             `User auto-joined group planet: userId=${entity.userId}, planetId=${planet.id}`,

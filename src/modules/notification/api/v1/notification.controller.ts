@@ -6,8 +6,6 @@ import {
   crudResponse,
 } from '@foryourdev/nestjs-crud';
 import { Body, Controller, Get, Logger, Post, UseGuards } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import {
   CurrentUser,
   CurrentUserData,
@@ -74,8 +72,6 @@ export class NotificationController {
   constructor(
     public readonly crudService: NotificationService,
     private readonly pushNotificationService: PushNotificationService,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
   ) {}
 
   @BeforeCreate()

@@ -7,9 +7,7 @@ import {
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Request } from 'express';
-import { Repository } from 'typeorm';
 import {
   ERROR_MESSAGES,
   SUCCESS_MESSAGES,
@@ -32,8 +30,6 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly pushNotificationService: PushNotificationService,
-    @InjectRepository(Profile)
-    private readonly profileRepository: Repository<Profile>,
   ) {}
 
   @Post('sign/social')
@@ -252,13 +248,14 @@ export class AuthController {
    */
   private async createDefaultProfile(userId: number): Promise<void> {
     try {
-      const profile = new Profile();
-      profile.userId = userId;
-      profile.nickname = '';
-      profile.name = '';
-      profile.occupation = '';
+      const profile = Profile.create({
+        userId: userId,
+        nickname: '',
+        name: '',
+        occupation: '',
+      });
 
-      await this.profileRepository.save(profile);
+      await profile.save();
     } catch (error) {
       // 프로필 생성 실패해도 로그인은 성공
       this.logger.error('프로필 자동 생성 실패:', error);

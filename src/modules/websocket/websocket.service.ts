@@ -1,6 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { User } from '../user/user.entity';
 
 /**
@@ -12,11 +10,6 @@ import { User } from '../user/user.entity';
 export class WebSocketService {
   private readonly logger = new Logger(WebSocketService.name);
 
-  constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-  ) {}
-
   /**
    * 사용자 온라인 상태 업데이트
    */
@@ -25,7 +18,7 @@ export class WebSocketService {
     isOnline: boolean,
   ): Promise<void> {
     try {
-      await this.userRepository.update(userId, {
+      await User.update(userId, {
         updatedAt: new Date(),
       });
 

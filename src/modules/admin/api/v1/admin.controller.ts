@@ -11,8 +11,6 @@ import {
   HttpStatus,
   HttpCode,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EnhancedAuthGuard } from '../../../../guards/enhanced-auth.guard';
 import { AdminGuard } from '../../../../guards/admin.guard';
@@ -34,8 +32,6 @@ export class AdminController {
   private readonly logger = new Logger(AdminController.name);
 
   constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
     private readonly sessionManager: SessionManagerService,
     private readonly tokenBlacklistService: TokenBlacklistService,
     private readonly connectionManager: ConnectionManagerService,
@@ -54,7 +50,7 @@ export class AdminController {
   ): Promise<any> {
     try {
       // 대상 사용자 확인
-      const targetUser = await this.userRepository.findOne({
+      const targetUser = await User.findOne({
         where: { id: userId },
         select: ['id', 'email', 'name', 'role'],
       });
@@ -97,7 +93,7 @@ export class AdminController {
       });
 
       // 4. 사용자 테이블에 마지막 강제 로그아웃 시간 기록
-      await this.userRepository.update(userId, {
+      await User.update(userId, {
         lastForcedLogout: new Date(),
       });
 
@@ -146,7 +142,7 @@ export class AdminController {
   ): Promise<any> {
     try {
       // 대상 사용자 확인
-      const targetUser = await this.userRepository.findOne({
+      const targetUser = await User.findOne({
         where: { id: userId },
         select: ['id', 'email', 'name', 'role', 'isBanned'],
       });
@@ -182,7 +178,7 @@ export class AdminController {
         ? new Date(Date.now() + body.duration * 24 * 60 * 60 * 1000)
         : null;
 
-      await this.userRepository.update(userId, {
+      await User.update(userId, {
         isBanned: true,
         bannedAt: new Date(),
         bannedReason: body.reason,
@@ -248,7 +244,7 @@ export class AdminController {
   ): Promise<any> {
     try {
       // 대상 사용자 확인
-      const targetUser = await this.userRepository.findOne({
+      const targetUser = await User.findOne({
         where: { id: userId },
         select: ['id', 'email', 'name', 'isBanned'],
       });
@@ -272,7 +268,7 @@ export class AdminController {
       );
 
       // 1. 차단 상태 해제
-      await this.userRepository.update(userId, {
+      await User.update(userId, {
         isBanned: false,
         bannedAt: undefined,
         bannedReason: undefined,
@@ -386,7 +382,7 @@ export class AdminController {
     @Query('limit') limit: number = 20,
   ): Promise<any> {
     try {
-      const [users, total] = await this.userRepository.findAndCount({
+      const [users, total] = await User.findAndCount({
         where: { isBanned: true },
         select: [
           'id',

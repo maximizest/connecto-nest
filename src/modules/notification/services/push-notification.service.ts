@@ -1,7 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { RedisService } from '../../cache/redis.service';
 import { User } from '../../user/user.entity';
 import { Notification } from '../notification.entity';
@@ -23,8 +21,6 @@ export class PushNotificationService {
   private readonly PUSH_STATS_TTL = 86400; // 1일
 
   constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
     private readonly redisService: RedisService,
     private readonly eventEmitter: EventEmitter2,
   ) {}

@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
-import { InjectRepository } from '@nestjs/typeorm';
 import {
   ConnectedSocket,
   MessageBody,
@@ -20,7 +19,6 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Repository } from 'typeorm';
 
 import { Message } from '../message/message.entity';
 import { NotificationService } from '../notification/notification.service';
@@ -101,14 +99,6 @@ export class ChatGateway
     private readonly eventEmitter: EventEmitter2,
     private readonly readReceiptService: ReadReceiptService,
     private readonly redisAdapterService: RedisAdapterService,
-    @InjectRepository(Planet)
-    private readonly planetRepository: Repository<Planet>,
-    @InjectRepository(Message)
-    private readonly messageRepository: Repository<Message>,
-    @InjectRepository(MessageReadReceipt)
-    private readonly readReceiptRepository: Repository<MessageReadReceipt>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
   ) {}
 
   /**
@@ -218,7 +208,7 @@ export class ChatGateway
       const { planetId, type, content, fileUrl, fileName, fileSize } = data;
 
       // Planet 권한 확인 (시간 제한, 활성 상태 등)
-      const planet = await this.planetRepository.findOne({
+      const planet = await Planet.findOne({
         where: { id: planetId },
         relations: ['travel'],
       });
@@ -266,11 +256,9 @@ export class ChatGateway
         };
       }
 
-      const message = this.messageRepository.create(messageData);
+      const message = Message.create(messageData);
 
-      const savedMessage = (await this.messageRepository.save(
-        message,
-      )) as unknown as Message;
+      const savedMessage = (await message.save()) as unknown as Message;
 
       // 브로드캐스트 데이터 준비
       const broadcastData = {
@@ -505,7 +493,7 @@ export class ChatGateway
       );
 
       // 메시지 조회
-      const message = await this.messageRepository.findOne({
+      const message = await Message.findOne({
         where: { id: messageId },
         relations: ['sender', 'planet', 'planet.travel'],
       });
@@ -544,7 +532,7 @@ export class ChatGateway
       message.updateSearchableText();
 
       // 메시지 저장
-      const updatedMessage = await this.messageRepository.save(message);
+      const updatedMessage = await message.save();
 
       // Planet 방에 브로드캐스트
       const roomId = `planet_${message.planetId}`;
@@ -588,7 +576,7 @@ export class ChatGateway
       );
 
       // 메시지 조회
-      const message = await this.messageRepository.findOne({
+      const message = await Message.findOne({
         where: { id: messageId },
         relations: ['sender', 'planet', 'planet.travel'],
       });
@@ -616,7 +604,7 @@ export class ChatGateway
 
       // 소프트 삭제 처리
       message.prepareForSoftDelete(client.user.id);
-      const deletedMessage = await this.messageRepository.softRemove(message);
+      const deletedMessage = await message.softRemove();
 
       // Planet 방에 브로드캐스트
       const roomId = `planet_${message.planetId}`;
@@ -657,7 +645,7 @@ export class ChatGateway
       );
 
       // 메시지 조회
-      const message = await this.messageRepository.findOne({
+      const message = await Message.findOne({
         where: { id: messageId },
         relations: ['sender', 'planet', 'planet.travel'],
       });
@@ -695,7 +683,7 @@ export class ChatGateway
       }
 
       // 복구 처리
-      const restoredMessage = await this.messageRepository.recover(message);
+      const restoredMessage = await message.recover();
 
       // Planet 방에 브로드캐스트
       const roomId = `planet_${message.planetId}`;
@@ -737,7 +725,7 @@ export class ChatGateway
       );
 
       // 메시지 조회 및 접근 권한 확인
-      const message = await this.messageRepository.findOne({
+      const message = await Message.findOne({
         where: { id: messageId },
         relations: ['planet'],
       });

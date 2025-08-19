@@ -1,8 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan, Between } from 'typeorm';
+import { LessThan, Between } from 'typeorm';
 import { Travel } from '../../travel/travel.entity';
 import { TravelUser } from '../../travel-user/travel-user.entity';
 import { TravelStatus } from '../../travel/enums/travel-status.enum';
@@ -26,10 +25,6 @@ export class ExpiredTravelProcessor extends WorkerHost {
   private readonly STATS_KEY = 'scheduler:travel-cleanup:stats';
 
   constructor(
-    @InjectRepository(Travel)
-    private readonly travelRepository: Repository<Travel>,
-    @InjectRepository(TravelUser)
-    private readonly travelUserRepository: Repository<TravelUser>,
     private readonly travelService: TravelService,
     private readonly redisService: RedisService,
   ) {
@@ -93,7 +88,7 @@ export class ExpiredTravelProcessor extends WorkerHost {
     const now = new Date();
 
     // 만료된 활성 Travel 찾기
-    const expiredTravels = await this.travelRepository.find({
+    const expiredTravels = await Travel.find({
       where: {
         status: TravelStatus.ACTIVE,
         endDate: LessThan(now),
@@ -107,7 +102,7 @@ export class ExpiredTravelProcessor extends WorkerHost {
       try {
         // Travel 상태를 비활성으로 변경
         travel.expire();
-        await this.travelRepository.save(travel);
+        await travel.save();
 
         result.processedItems++;
         result.expiredTravels++;
@@ -141,7 +136,7 @@ export class ExpiredTravelProcessor extends WorkerHost {
     threeDaysLater.setDate(threeDaysLater.getDate() + 3);
 
     // 3일 내 만료 예정인 Travel 찾기
-    const expiringTravels = await this.travelRepository.find({
+    const expiringTravels = await Travel.find({
       where: {
         status: TravelStatus.ACTIVE,
         endDate: Between(now, threeDaysLater),

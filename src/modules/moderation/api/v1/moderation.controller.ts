@@ -8,8 +8,6 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import {
   CurrentUser,
   CurrentUserData,
@@ -38,16 +36,7 @@ import { UserRole } from '../../../user/enums/user-role.enum';
 export class ModerationController {
   private readonly logger = new Logger(ModerationController.name);
 
-  constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-    @InjectRepository(Travel)
-    private readonly travelRepository: Repository<Travel>,
-    @InjectRepository(Planet)
-    private readonly planetRepository: Repository<Planet>,
-    @InjectRepository(TravelUser)
-    private readonly travelUserRepository: Repository<TravelUser>,
-  ) {}
+  constructor() {}
 
   /**
    * 플랫폼 전체 사용자 벤 (ADMIN만 가능)
@@ -74,7 +63,7 @@ export class ModerationController {
       }
 
       // 대상 사용자 조회
-      const targetUser = await this.userRepository.findOne({
+      const targetUser = await User.findOne({
         where: { id: targetUserId },
       });
 
@@ -88,7 +77,7 @@ export class ModerationController {
 
       // 플랫폼 벤 실행
       targetUser.banUser();
-      await this.userRepository.save(targetUser);
+      await targetUser.save();
 
       this.logger.log(
         `Platform ban: targetUserId=${targetUserId}, bannedBy=${bannerUser.id}, reason=${body.reason}`,
@@ -131,7 +120,7 @@ export class ModerationController {
       }
 
       // 대상 사용자 조회
-      const targetUser = await this.userRepository.findOne({
+      const targetUser = await User.findOne({
         where: { id: targetUserId },
       });
 
@@ -145,7 +134,7 @@ export class ModerationController {
 
       // 플랫폼 벤 해제
       targetUser.unbanUser();
-      await this.userRepository.save(targetUser);
+      await targetUser.save();
 
       this.logger.log(
         `Platform unban: targetUserId=${targetUserId}, unbannedBy=${bannerUser.id}`,
@@ -195,7 +184,7 @@ export class ModerationController {
       }
 
       // Travel 조회
-      const travel = await this.travelRepository.findOne({
+      const travel = await Travel.findOne({
         where: { id: travelId },
       });
 
@@ -204,7 +193,7 @@ export class ModerationController {
       }
 
       // 대상 사용자의 TravelUser 조회
-      const targetTravelUser = await this.travelUserRepository.findOne({
+      const targetTravelUser = await TravelUser.findOne({
         where: { userId: targetUserId, travelId },
       });
 
@@ -220,7 +209,7 @@ export class ModerationController {
 
       // Travel 벤 실행
       targetTravelUser.banUser(body.reason);
-      await this.travelUserRepository.save(targetTravelUser);
+      await targetTravelUser.save();
 
       this.logger.log(
         `Travel ban: travelId=${travelId}, targetUserId=${targetUserId}, bannedBy=${bannerUser.id}, reason=${body.reason}`,
@@ -272,7 +261,7 @@ export class ModerationController {
       }
 
       // Travel 조회
-      const travel = await this.travelRepository.findOne({
+      const travel = await Travel.findOne({
         where: { id: travelId },
       });
 
@@ -281,7 +270,7 @@ export class ModerationController {
       }
 
       // 대상 사용자의 TravelUser 조회
-      const targetTravelUser = await this.travelUserRepository.findOne({
+      const targetTravelUser = await TravelUser.findOne({
         where: { userId: targetUserId, travelId },
       });
 
@@ -297,7 +286,7 @@ export class ModerationController {
 
       // Travel 벤 해제
       targetTravelUser.unbanUser();
-      await this.travelUserRepository.save(targetTravelUser);
+      await targetTravelUser.save();
 
       this.logger.log(
         `Travel unban: travelId=${travelId}, targetUserId=${targetUserId}, unbannedBy=${bannerUser.id}`,

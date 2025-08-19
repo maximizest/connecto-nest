@@ -6,10 +6,6 @@ import { FileCleanupProcessor } from './processors/file-cleanup.processor';
 import { ExpiredTravelProcessor } from './processors/expired-travel.processor';
 import { CacheCleanupProcessor } from './processors/cache-cleanup.processor';
 import { QueueService } from './queue.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { FileUpload } from '../file-upload/file-upload.entity';
-import { Travel } from '../travel/travel.entity';
-import { TravelUser } from '../travel-user/travel-user.entity';
 import { StorageModule } from '../storage/storage.module';
 import { RedisModule } from '../cache/redis.module';
 import { TravelModule } from '../travel/travel.module';
@@ -20,7 +16,6 @@ import { TravelModule } from '../travel/travel.module';
     StorageModule,
     RedisModule,
     TravelModule,
-    TypeOrmModule.forFeature([FileUpload, Travel, TravelUser]),
     // BullMQ 전역 설정
     BullModule.forRootAsync({
       imports: [ConfigModule],

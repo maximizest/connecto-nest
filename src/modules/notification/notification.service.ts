@@ -1,8 +1,5 @@
-import { CrudService } from '@foryourdev/nestjs-crud';
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { RedisService } from '../cache/redis.service';
 import { Planet } from '../planet/planet.entity';
 import { Travel } from '../travel/travel.entity';
@@ -16,23 +13,13 @@ import { BulkNotificationOptions } from './types/bulk-notification-options.inter
 import { CreateNotificationOptions } from './types/create-notification-options.interface';
 
 @Injectable()
-export class NotificationService extends CrudService<Notification> {
+export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
 
   constructor(
-    @InjectRepository(Notification)
-    public readonly repository: Repository<Notification>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-    @InjectRepository(Travel)
-    private readonly travelRepository: Repository<Travel>,
-    @InjectRepository(Planet)
-    private readonly planetRepository: Repository<Planet>,
     private readonly redisService: RedisService,
     private readonly eventEmitter: EventEmitter2,
-  ) {
-    super(repository);
-  }
+  ) {}
 
   /**
    * 단일 알림 생성 - 채널별로 개별 생성
@@ -47,7 +34,7 @@ export class NotificationService extends CrudService<Notification> {
 
       // 각 채널별로 개별 알림 생성
       for (const channel of channels) {
-        const notification = this.repository.create({
+        const notification = Notification.create({
           type: options.type,
           title: options.title,
           content: options.content,
@@ -70,7 +57,7 @@ export class NotificationService extends CrudService<Notification> {
           },
         });
 
-        const savedNotification = await this.repository.save(notification);
+        const savedNotification = await notification.save();
         notifications.push(savedNotification);
 
         // 즉시 전송 또는 예약 처리
@@ -106,12 +93,12 @@ export class NotificationService extends CrudService<Notification> {
     try {
       const batchId = `bulk_${Date.now()}`;
       const channels = options.channels || [NotificationChannel.IN_APP];
-      const notifications: Partial<Notification>[] = [];
+      const notifications: Notification[] = [];
 
       // 각 사용자별, 채널별로 개별 알림 생성
       for (const userId of options.userIds) {
         for (const channel of channels) {
-          notifications.push({
+          const notification = Notification.create({
             type: options.type,
             title: options.title,
             content: options.content,
@@ -133,10 +120,11 @@ export class NotificationService extends CrudService<Notification> {
               },
             },
           });
+          notifications.push(notification);
         }
       }
 
-      const savedNotifications = await this.repository.save(notifications);
+      const savedNotifications = await Notification.save(notifications);
 
       // 대량 알림 생성 이벤트 발행
       this.eventEmitter.emit('notifications.bulk_created', {
@@ -195,7 +183,7 @@ export class NotificationService extends CrudService<Notification> {
       }
 
       // 전송 결과 저장
-      await this.repository.save(notification);
+      await notification.save();
 
       // 전송 완료 이벤트 발행
       this.eventEmitter.emit('notification.sent', {
@@ -345,8 +333,7 @@ export class NotificationService extends CrudService<Notification> {
     try {
       const { page = 1, limit = 20, types, priorities } = options;
 
-      const queryBuilder = this.repository
-        .createQueryBuilder('notification')
+      const queryBuilder = Notification.createQueryBuilder('notification')
         .where('notification.userId = :userId', { userId })
         .leftJoinAndSelect('notification.triggerUser', 'triggerUser')
         .leftJoinAndSelect('notification.travel', 'travel')
@@ -386,7 +373,7 @@ export class NotificationService extends CrudService<Notification> {
    */
   async cleanupExpiredNotifications(): Promise<number> {
     try {
-      const result = await this.repository.delete({
+      const result = await Notification.delete({
         expiresAt: 'LessThan' as any,
         status: NotificationStatus.DELIVERED,
       });
@@ -409,7 +396,7 @@ export class NotificationService extends CrudService<Notification> {
    */
   async processScheduledNotifications(): Promise<number> {
     try {
-      const scheduledNotifications = await this.repository.find({
+      const scheduledNotifications = await Notification.find({
         where: {
           status: NotificationStatus.PENDING,
           scheduledAt: 'LessThanOrEqual' as any,

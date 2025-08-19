@@ -1,8 +1,4 @@
-import {
-  BeforeUpdate,
-  BeforeShow,
-  Crud,
-} from '@foryourdev/nestjs-crud';
+import { BeforeUpdate, BeforeShow, Crud } from '@foryourdev/nestjs-crud';
 import {
   Controller,
   UseGuards,
@@ -58,7 +54,6 @@ import { CurrentUserData } from '../../../../common/decorators/current-user.deco
 @UseGuards(AuthGuard)
 export class ProfileController {
   constructor(public readonly crudService: ProfileService) {}
-
 
   /**
    * 프로필 수정 전 권한 확인

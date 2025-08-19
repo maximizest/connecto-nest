@@ -6,8 +6,6 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { User } from '../modules/user/user.entity';
 import { TokenBlacklistService } from '../modules/auth/services/token-blacklist.service';
 
@@ -23,8 +21,6 @@ export class EnhancedAuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly tokenBlacklistService: TokenBlacklistService,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -81,7 +77,7 @@ export class EnhancedAuthGuard implements CanActivate {
       }
 
       // 5. 사용자 정보 조회 및 차단 상태 확인
-      const user = await this.userRepository.findOne({
+      const user = await User.findOne({
         where: { id: payload.id },
         select: [
           'id',

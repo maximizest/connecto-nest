@@ -22,8 +22,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import {
   CurrentUser,
   CurrentUserData,
@@ -84,8 +82,6 @@ export class FileUploadController {
 
   constructor(
     public readonly crudService: FileUploadService,
-    @InjectRepository(FileUpload)
-    private readonly fileUploadRepository: Repository<FileUpload>,
     private readonly storageService: StorageService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -175,7 +171,7 @@ export class FileUploadController {
     // Complete upload 로직인 경우
     if (body.storageKey && body.uploadId) {
       // 기존 업로드 레코드 조회
-      const existing = await this.fileUploadRepository.findOne({
+      const existing = await FileUpload.findOne({
         where: { id: body.uploadId, userId: user.id },
       });
 

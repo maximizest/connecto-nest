@@ -3,22 +3,12 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { CrudService } from '@foryourdev/nestjs-crud';
 import { MissionSubmission } from './mission-submission.entity';
 import { SubmissionStatus } from '../mission/enums/submission-status.enum';
 
 @Injectable()
-export class MissionSubmissionService extends CrudService<MissionSubmission> {
-  public readonly repository: Repository<MissionSubmission>;
-  constructor(
-    @InjectRepository(MissionSubmission)
-    repository: Repository<MissionSubmission>,
-  ) {
-    super(repository);
-    this.repository = repository;
-  }
+export class MissionSubmissionService {
+  constructor() {}
 
   /**
    * 미션 제출
@@ -30,7 +20,7 @@ export class MissionSubmissionService extends CrudService<MissionSubmission> {
     submissionData: any,
   ): Promise<any> {
     // 중복 제출 체크
-    const existingSubmission = await this.repository.findOne({
+    const existingSubmission = await MissionSubmission.findOne({
       where: {
         userId,
         missionId,
@@ -42,7 +32,7 @@ export class MissionSubmissionService extends CrudService<MissionSubmission> {
       throw new BadRequestException('이미 제출된 미션입니다.');
     }
 
-    const submission = this.repository.create({
+    const submission = MissionSubmission.create({
       userId,
       missionId,
       travelId,
@@ -50,7 +40,7 @@ export class MissionSubmissionService extends CrudService<MissionSubmission> {
       status: SubmissionStatus.SUBMITTED,
     } as any);
 
-    return await this.repository.save(submission);
+    return await submission.save();
   }
 
   /**
@@ -61,7 +51,7 @@ export class MissionSubmissionService extends CrudService<MissionSubmission> {
     status: SubmissionStatus,
     reviewComment?: string,
   ): Promise<MissionSubmission> {
-    const submission = await this.repository.findOne({
+    const submission = await MissionSubmission.findOne({
       where: { id: submissionId },
     });
 
@@ -73,7 +63,7 @@ export class MissionSubmissionService extends CrudService<MissionSubmission> {
     submission.reviewComment = reviewComment;
     submission.reviewedAt = new Date();
 
-    return await this.repository.save(submission);
+    return await submission.save();
   }
 
   /**
@@ -88,7 +78,7 @@ export class MissionSubmissionService extends CrudService<MissionSubmission> {
       whereCondition.travelId = travelId;
     }
 
-    return await this.repository.find({
+    return await MissionSubmission.find({
       where: whereCondition,
       relations: ['mission', 'travel'],
       order: { createdAt: 'DESC' },
@@ -107,7 +97,7 @@ export class MissionSubmissionService extends CrudService<MissionSubmission> {
       whereCondition.travelId = travelId;
     }
 
-    return await this.repository.find({
+    return await MissionSubmission.find({
       where: whereCondition,
       relations: ['user', 'travel'],
       order: { createdAt: 'DESC' },
@@ -118,7 +108,7 @@ export class MissionSubmissionService extends CrudService<MissionSubmission> {
    * 제출물 삭제 (사용자 본인만)
    */
   async deleteSubmission(submissionId: number, userId: number): Promise<void> {
-    const submission = await this.repository.findOne({
+    const submission = await MissionSubmission.findOne({
       where: { id: submissionId, userId },
     });
 
@@ -130,6 +120,6 @@ export class MissionSubmissionService extends CrudService<MissionSubmission> {
       throw new BadRequestException('승인된 제출물은 삭제할 수 없습니다.');
     }
 
-    await this.repository.delete(submissionId);
+    await MissionSubmission.delete(submissionId);
   }
 }

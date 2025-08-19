@@ -5,10 +5,8 @@ import {
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { InjectRepository } from '@nestjs/typeorm';
 import { WsException } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
-import { Repository } from 'typeorm';
 
 import { User } from '../../user/user.entity';
 import { AuthenticatedSocket } from '../types/authenticated-socket.interface';
@@ -19,8 +17,6 @@ export class WebSocketAuthGuard implements CanActivate {
 
   constructor(
     private readonly jwtService: JwtService,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -33,7 +29,7 @@ export class WebSocketAuthGuard implements CanActivate {
       }
 
       const payload = this.jwtService.verify(token);
-      const user = await this.userRepository.findOne({
+      const user = await User.findOne({
         where: { id: payload.sub },
       });
 

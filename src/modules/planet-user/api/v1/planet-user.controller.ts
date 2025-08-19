@@ -6,8 +6,6 @@ import {
   NotFoundException,
   UseGuards,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { PlanetUser } from '../../planet-user.entity';
 import { PlanetUserService } from '../../planet-user.service';
@@ -80,12 +78,6 @@ export class PlanetUserController {
 
   constructor(
     public readonly crudService: PlanetUserService,
-    @InjectRepository(PlanetUser)
-    private readonly planetUserRepository: Repository<PlanetUser>,
-    @InjectRepository(Planet)
-    private readonly planetRepository: Repository<Planet>,
-    @InjectRepository(TravelUser)
-    private readonly travelUserRepository: Repository<TravelUser>,
   ) {}
 
   /**
@@ -97,7 +89,7 @@ export class PlanetUserController {
     const planetUserId = parseInt(params.id, 10);
 
     // 조회하려는 PlanetUser 정보 가져오기
-    const targetPlanetUser = await this.planetUserRepository.findOne({
+    const targetPlanetUser = await PlanetUser.findOne({
       where: { id: planetUserId },
       relations: ['planet'],
     });
@@ -107,7 +99,7 @@ export class PlanetUserController {
     }
 
     // 현재 유저가 해당 여행에 참여했는지 확인
-    const userTravelMembership = await this.travelUserRepository.findOne({
+    const userTravelMembership = await TravelUser.findOne({
       where: {
         travelId: targetPlanetUser.planet.travelId,
         userId: user.id,
