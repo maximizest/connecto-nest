@@ -28,7 +28,7 @@ export class MissionSubmissionService extends CrudService<MissionSubmission> {
     missionId: number,
     travelId: number,
     submissionData: any,
-  ): Promise<MissionSubmission> {
+  ): Promise<any> {
     // 중복 제출 체크
     const existingSubmission = await this.repository.findOne({
       where: {
@@ -48,8 +48,7 @@ export class MissionSubmissionService extends CrudService<MissionSubmission> {
       travelId,
       content: submissionData,
       status: SubmissionStatus.SUBMITTED,
-      submittedAt: new Date(),
-    });
+    } as any);
 
     return await this.repository.save(submission);
   }
@@ -92,7 +91,7 @@ export class MissionSubmissionService extends CrudService<MissionSubmission> {
     return await this.repository.find({
       where: whereCondition,
       relations: ['mission', 'travel'],
-      order: { submittedAt: 'DESC' },
+      order: { createdAt: 'DESC' },
     });
   }
 
@@ -111,7 +110,7 @@ export class MissionSubmissionService extends CrudService<MissionSubmission> {
     return await this.repository.find({
       where: whereCondition,
       relations: ['user', 'travel'],
-      order: { submittedAt: 'DESC' },
+      order: { createdAt: 'DESC' },
     });
   }
 

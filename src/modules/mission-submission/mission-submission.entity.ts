@@ -1,6 +1,7 @@
 import { IsEnum, IsOptional, IsObject } from 'class-validator';
 import {
-  BaseEntity,
+  BaseActiveRecord } from "../../common/entities/base-active-record.entity";
+import {
   Column,
   CreateDateColumn,
   Entity,
@@ -19,8 +20,8 @@ import { Exclude } from 'class-transformer';
 @Index(['userId', 'missionId']) // 사용자별 미션 제출 조회
 @Index(['travelId', 'missionId']) // 여행별 미션 제출 조회
 @Index(['status']) // 상태별 조회 최적화
-@Index(['submittedAt']) // 제출 시간별 정렬
-export class MissionSubmission extends BaseEntity {
+@Index(['createdAt']) // 제출 시간별 정렬
+export class MissionSubmission extends BaseActiveRecord {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -118,15 +119,6 @@ export class MissionSubmission extends BaseEntity {
   @IsOptional()
   messageId?: number;
 
-  /**
-   * 생성/수정 시간
-   */
-  @CreateDateColumn({ comment: '제출 시간' })
-  submittedAt: Date;
-
-  @UpdateDateColumn({ comment: '수정 시간' })
-  @Exclude()
-  updatedAt: Date;
 
   /**
    * 관계 설정

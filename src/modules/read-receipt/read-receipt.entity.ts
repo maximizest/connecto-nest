@@ -6,17 +6,15 @@ import {
   IsString,
 } from 'class-validator';
 import {
-  BaseEntity,
   Column,
-  CreateDateColumn,
   Entity,
   Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
   Unique,
-  UpdateDateColumn,
 } from 'typeorm';
+import { BaseActiveRecord } from '../../common/entities/base-active-record.entity';
 import { Message } from '../message/message.entity';
 import { Planet } from '../planet/planet.entity';
 import { User } from '../user/user.entity';
@@ -38,7 +36,7 @@ import { User } from '../user/user.entity';
 @Index(['userId', 'isRead']) // 사용자별 읽음 상태
 @Index(['planetId', 'userId', 'readAt']) // Planet 내 사용자별 시간순 조회
 @Index(['planetId', 'messageId', 'userId']) // 트리플 인덱스 (고성능 조회)
-export class MessageReadReceipt extends BaseEntity {
+export class MessageReadReceipt extends BaseActiveRecord {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -144,15 +142,11 @@ export class MessageReadReceipt extends BaseEntity {
   /**
    * 생성/수정 시간
    */
-  @CreateDateColumn({ comment: '읽음 영수증 생성 시간' })
   @IsOptional()
   @IsDateString()
-  createdAt: Date;
 
-  @UpdateDateColumn({ comment: '읽음 영수증 수정 시간' })
   @IsOptional()
   @IsDateString()
-  updatedAt: Date;
 
   /**
    * 비즈니스 로직 메서드
@@ -250,5 +244,199 @@ export class MessageReadReceipt extends BaseEntity {
         ? this.getReadDelay(this.message.createdAt)
         : undefined,
     };
+  }
+
+  /**
+   * Active Record Static Methods
+   */
+
+  /**
+   * 메시지 읽음 처리
+   */
+  static async markMessageAsRead(
+    messageId: number,
+    userId: number,
+    planetId: number,
+    options?: {
+      deviceType?: string;
+      userAgent?: string;
+      readSource?: 'auto' | 'manual' | 'scroll';
+      readDuration?: number;
+      sessionId?: string;
+    },
+  ): Promise<MessageReadReceipt | null> {
+    // 기존 읽음 영수증 확인
+    const existing = await this.findOne({
+      where: { messageId, userId },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    // 새로운 읽음 영수증 생성
+    const receipt = this.create({
+      messageId,
+      userId,
+      planetId,
+      isRead: true,
+      readAt: new Date(),
+      deviceType: options?.deviceType,
+      userAgent: options?.userAgent,
+      metadata: {
+        readSource: options?.readSource || 'manual',
+        readDuration: options?.readDuration,
+        sessionId: options?.sessionId,
+      },
+    });
+
+    return await receipt.save();
+  }
+
+  /**
+   * 여러 메시지 일괄 읽음 처리
+   */
+  static async markMultipleMessagesAsRead(
+    messageIds: number[],
+    userId: number,
+    planetId: number,
+    options?: {
+      deviceType?: string;
+      userAgent?: string;
+      readSource?: 'auto' | 'manual' | 'scroll';
+      sessionId?: string;
+    },
+  ): Promise<MessageReadReceipt[]> {
+    if (messageIds.length === 0) return [];
+
+    // 이미 읽은 메시지들 확인
+    const existing = await this.find({
+      where: { 
+        messageId: messageIds.length > 0 ? (messageIds as any) : undefined,
+        userId 
+      },
+    });
+
+    const existingMessageIds = existing.map(r => r.messageId);
+    const newMessageIds = messageIds.filter(id => !existingMessageIds.includes(id));
+
+    if (newMessageIds.length === 0) {
+      return existing;
+    }
+
+    // 새로운 읽음 영수증들 생성
+    const newReceipts = newMessageIds.map(messageId =>
+      this.create({
+        messageId,
+        userId,
+        planetId,
+        isRead: true,
+        readAt: new Date(),
+        deviceType: options?.deviceType,
+        userAgent: options?.userAgent,
+        metadata: {
+          readSource: options?.readSource || 'auto',
+          sessionId: options?.sessionId,
+          batchReadCount: newMessageIds.length,
+        },
+      })
+    );
+
+    const savedReceipts = await this.save(newReceipts);
+    return [...existing, ...savedReceipts];
+  }
+
+  /**
+   * Planet의 읽지 않은 메시지 수 조회
+   */
+  static async getUnreadCountInPlanet(
+    planetId: number,
+    userId: number,
+  ): Promise<number> {
+    const queryBuilder = this.getRepository().manager
+      .createQueryBuilder()
+      .select('COUNT(*)', 'count')
+      .from('messages', 'message')
+      .leftJoin(
+        'message_read_receipts',
+        'receipt',
+        'receipt.messageId = message.id AND receipt.userId = :userId',
+        { userId }
+      )
+      .where('message.planetId = :planetId', { planetId })
+      .andWhere('message.isDeleted = false')
+      .andWhere('message.senderId != :userId', { userId }) // 본인 메시지 제외
+      .andWhere('(receipt.isRead IS NULL OR receipt.isRead = false)');
+
+    const result = await queryBuilder.getRawOne();
+    return parseInt(result.count) || 0;
+  }
+
+  /**
+   * Planet의 사용자별 읽음 영수증 조회
+   */
+  static async findByPlanetAndUser(
+    planetId: number,
+    userId: number,
+  ): Promise<MessageReadReceipt[]> {
+    return this.find({
+      where: { planetId, userId },
+      relations: ['message', 'user', 'planet'],
+      order: { readAt: 'DESC' },
+    });
+  }
+
+  /**
+   * 메시지별 모든 읽음 영수증 조회
+   */
+  static async findByMessage(messageId: number): Promise<MessageReadReceipt[]> {
+    return this.find({
+      where: { messageId },
+      relations: ['user'],
+      order: { readAt: 'ASC' },
+    });
+  }
+
+  /**
+   * 메시지의 읽음 카운트 조회
+   */
+  static async getMessageReadCount(messageId: number): Promise<number> {
+    return this.count({
+      where: { messageId, isRead: true },
+    });
+  }
+
+  /**
+   * 사용자의 마지막 읽음 영수증 조회
+   */
+  static async getLastReadReceiptInPlanet(
+    planetId: number,
+    userId: number,
+  ): Promise<MessageReadReceipt | null> {
+    return this.findOne({
+      where: { planetId, userId },
+      order: { readAt: 'DESC' },
+    });
+  }
+
+  /**
+   * 사용자 탈퇴 시 영수증 정리
+   */
+  static async cleanupByUser(userId: number): Promise<void> {
+    await this.delete({ userId });
+  }
+
+  /**
+   * Planet 삭제 시 영수증 정리
+   */
+  static async cleanupByPlanet(planetId: number): Promise<void> {
+    await this.delete({ planetId });
+  }
+
+  /**
+   * 메시지 삭제 시 영수증 정리
+   */
+  static async cleanupByMessage(messageId: number): Promise<void> {
+    await this.delete({ messageId });
   }
 }

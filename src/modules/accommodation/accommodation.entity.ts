@@ -3,10 +3,8 @@ import {
   PrimaryGeneratedColumn,
   Column,
   OneToMany,
-  CreateDateColumn,
-  UpdateDateColumn,
-  BaseEntity,
 } from 'typeorm';
+import { BaseActiveRecord } from '../../common/entities/base-active-record.entity';
 import { Travel } from '../travel/travel.entity';
 
 /**
@@ -16,7 +14,7 @@ import { Travel } from '../travel/travel.entity';
  * 하나의 숙박 업소는 여러 개의 Travel을 가질 수 있습니다.
  */
 @Entity('accommodations')
-export class Accommodation extends BaseEntity {
+export class Accommodation extends BaseActiveRecord {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -33,9 +31,5 @@ export class Accommodation extends BaseEntity {
 
   // ==================== Timestamps ====================
 
-  @CreateDateColumn()
-  createdAt: Date;
 
-  @UpdateDateColumn()
-  updatedAt: Date;
 }

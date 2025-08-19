@@ -6,17 +6,15 @@ import {
   IsOptional,
 } from 'class-validator';
 import {
-  BaseEntity,
   Column,
-  CreateDateColumn,
   Entity,
   Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
   Unique,
-  UpdateDateColumn,
 } from 'typeorm';
+import { BaseActiveRecord } from '../../common/entities/base-active-record.entity';
 import { Travel } from '../travel/travel.entity';
 import { User } from '../user/user.entity';
 import { TravelUserRole } from './enums/travel-user-role.enum';
@@ -31,7 +29,7 @@ import { TravelUserStatus } from './enums/travel-user-status.enum';
 @Index(['status', 'joinedAt']) // 상태별 가입순 정렬
 @Index(['travelId', 'status', 'role']) // Travel 내 상태별 역할 조회
 @Index(['userId', 'joinedAt']) // 사용자별 가입순 Travel
-export class TravelUser extends BaseEntity {
+export class TravelUser extends BaseActiveRecord {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -119,18 +117,131 @@ export class TravelUser extends BaseEntity {
   @IsOptional()
   banReason?: string;
 
-  /**
-   * 생성/수정 시간
-   */
-  @CreateDateColumn({ comment: '레코드 생성 시간' })
-  @IsOptional()
-  @IsDateString()
-  createdAt: Date;
 
-  @UpdateDateColumn({ comment: '레코드 수정 시간' })
-  @IsOptional()
-  @IsDateString()
-  updatedAt: Date;
+  /**
+   * Active Record 정적 메서드
+   */
+
+  /**
+   * Travel의 모든 멤버 조회
+   */
+  static async findByTravel(travelId: number): Promise<TravelUser[]> {
+    return this.find({
+      where: { travelId },
+      order: { joinedAt: 'ASC' },
+      relations: ['user'],
+    });
+  }
+
+  /**
+   * Travel의 활성 멤버 조회
+   */
+  static async findActiveMembersByTravel(travelId: number): Promise<TravelUser[]> {
+    return this.find({
+      where: { 
+        travelId, 
+        status: TravelUserStatus.ACTIVE 
+      },
+      order: { joinedAt: 'ASC' },
+      relations: ['user'],
+    });
+  }
+
+  /**
+   * 사용자의 모든 Travel 조회
+   */
+  static async findByUser(userId: number): Promise<TravelUser[]> {
+    return this.find({
+      where: { userId },
+      order: { joinedAt: 'DESC' },
+      relations: ['travel'],
+    });
+  }
+
+  /**
+   * 사용자의 활성 Travel 조회
+   */
+  static async findActiveByUser(userId: number): Promise<TravelUser[]> {
+    return this.find({
+      where: { 
+        userId, 
+        status: TravelUserStatus.ACTIVE 
+      },
+      order: { joinedAt: 'DESC' },
+      relations: ['travel'],
+    });
+  }
+
+  /**
+   * Travel의 호스트 조회
+   */
+  static async findHostsByTravel(travelId: number): Promise<TravelUser[]> {
+    return this.find({
+      where: { 
+        travelId, 
+        role: TravelUserRole.HOST 
+      },
+      relations: ['user'],
+    });
+  }
+
+  /**
+   * Travel의 따로 역할 담김 멤버 조회
+   */
+  static async findByTravelAndRole(travelId: number, role: TravelUserRole): Promise<TravelUser[]> {
+    return this.find({
+      where: { travelId, role },
+      order: { joinedAt: 'ASC' },
+      relations: ['user'],
+    });
+  }
+
+  /**
+   * 특정 사용자의 특정 Travel 멤버십 조회
+   */
+  static async findMembership(travelId: number, userId: number): Promise<TravelUser | null> {
+    return this.findOne({
+      where: { travelId, userId },
+      relations: ['travel', 'user'],
+    });
+  }
+
+  /**
+   * Travel 멤버 추가
+   */
+  static async addMember(memberData: {
+    travelId: number;
+    userId: number;
+    role?: TravelUserRole;
+  }): Promise<TravelUser> {
+    const member = this.create({
+      ...memberData,
+      role: memberData.role || TravelUserRole.PARTICIPANT,
+      status: TravelUserStatus.ACTIVE,
+      joinedAt: new Date(),
+    });
+    return this.save(member);
+  }
+
+  /**
+   * Travel에서 멤버 제거
+   */
+  static async removeMember(travelId: number, userId: number): Promise<boolean> {
+    const result = await this.delete({ travelId, userId });
+    return (result.affected || 0) > 0;
+  }
+
+  /**
+   * Travel의 멤버 수 조회
+   */
+  static async countActiveMembers(travelId: number): Promise<number> {
+    return this.count({
+      where: { 
+        travelId, 
+        status: TravelUserStatus.ACTIVE 
+      },
+    });
+  }
 
   /**
    * 비즈니스 로직 메서드

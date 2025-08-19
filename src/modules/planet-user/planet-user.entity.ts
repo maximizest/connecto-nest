@@ -7,17 +7,15 @@ import {
   IsOptional,
 } from 'class-validator';
 import {
-  BaseEntity,
   Column,
-  CreateDateColumn,
   Entity,
   Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
   Unique,
-  UpdateDateColumn,
 } from 'typeorm';
+import { BaseActiveRecord } from '../../common/entities/base-active-record.entity';
 import { Planet } from '../planet/planet.entity';
 import { User } from '../user/user.entity';
 import { PlanetUserStatus } from './enums/planet-user-status.enum';
@@ -26,7 +24,7 @@ import { PlanetUserStatus } from './enums/planet-user-status.enum';
 @Unique(['planetId', 'userId']) // Planet당 사용자는 하나의 레코드만
 // 복합 인덱스 - 성능 향상
 @Index(['planetId', 'status']) // Planet 내 활성 멤버 조회
-export class PlanetUser extends BaseEntity {
+export class PlanetUser extends BaseActiveRecord {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -103,15 +101,11 @@ export class PlanetUser extends BaseEntity {
   /**
    * 생성/수정 시간
    */
-  @CreateDateColumn({ comment: '레코드 생성 시간' })
   @IsOptional()
   @IsDateString()
-  createdAt: Date;
 
-  @UpdateDateColumn({ comment: '레코드 수정 시간' })
   @IsOptional()
   @IsDateString()
-  updatedAt: Date;
 
   /**
    * 비즈니스 로직 메서드
@@ -176,5 +170,130 @@ export class PlanetUser extends BaseEntity {
    */
   isFromDeletedUserAccount(): boolean {
     return this.isDeletedUser;
+  }
+
+  /**
+   * Active Record Static Methods
+   */
+
+  /**
+   * Planet의 모든 멤버 조회
+   */
+  static async findByPlanet(planetId: number): Promise<PlanetUser[]> {
+    return this.find({
+      where: { planetId },
+      relations: ['user', 'planet'],
+      order: { joinedAt: 'ASC' },
+    });
+  }
+
+  /**
+   * Planet의 활성 멤버 조회
+   */
+  static async findActiveMembersByPlanet(planetId: number): Promise<PlanetUser[]> {
+    return this.find({
+      where: { 
+        planetId,
+        status: PlanetUserStatus.ACTIVE,
+      },
+      relations: ['user', 'planet'],
+      order: { joinedAt: 'ASC' },
+    });
+  }
+
+  /**
+   * 사용자의 모든 Planet 조회
+   */
+  static async findByUser(userId: number): Promise<PlanetUser[]> {
+    return this.find({
+      where: { userId },
+      relations: ['user', 'planet'],
+      order: { joinedAt: 'DESC' },
+    });
+  }
+
+  /**
+   * 사용자의 활성 Planet 조회
+   */
+  static async findActiveByUser(userId: number): Promise<PlanetUser[]> {
+    return this.find({
+      where: { 
+        userId,
+        status: PlanetUserStatus.ACTIVE,
+      },
+      relations: ['user', 'planet'],
+      order: { joinedAt: 'DESC' },
+    });
+  }
+
+  /**
+   * 특정 사용자의 특정 Planet 멤버십 조회
+   */
+  static async findMembership(planetId: number, userId: number): Promise<PlanetUser | null> {
+    return this.findOne({
+      where: { planetId, userId },
+      relations: ['user', 'planet'],
+    });
+  }
+
+  /**
+   * Planet 멤버 추가
+   */
+  static async addMember(memberData: {
+    planetId: number;
+    userId: number;
+  }): Promise<PlanetUser> {
+    const planetUser = this.create({
+      planetId: memberData.planetId,
+      userId: memberData.userId,
+      status: PlanetUserStatus.ACTIVE,
+      joinedAt: new Date(),
+    });
+
+    return await planetUser.save();
+  }
+
+  /**
+   * Planet에서 멤버 제거
+   */
+  static async removeMember(planetId: number, userId: number): Promise<boolean> {
+    const planetUser = await this.findMembership(planetId, userId);
+    if (planetUser) {
+      await planetUser.remove();
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Planet의 활성 멤버 수 조회
+   */
+  static async countActiveMembers(planetId: number): Promise<number> {
+    return this.count({
+      where: { 
+        planetId,
+        status: PlanetUserStatus.ACTIVE,
+      },
+    });
+  }
+
+  /**
+   * 사용자 탈퇴 시 기록 익명화
+   */
+  static async anonymizeUserRecords(userId: number): Promise<void> {
+    await this.update(
+      { userId },
+      { 
+        isDeletedUser: true,
+        userId: undefined,
+      }
+    );
+  }
+
+  /**
+   * Planet 삭제 시 관련 멤버십 정리
+   */
+  static async cleanupByPlanet(planetId: number): Promise<void> {
+    await this.delete({ planetId });
   }
 }

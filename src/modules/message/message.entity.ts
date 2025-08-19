@@ -9,11 +9,9 @@ import {
   MaxLength,
 } from 'class-validator';
 import {
-  BaseEntity,
   BeforeInsert,
   BeforeUpdate,
   Column,
-  CreateDateColumn,
   DeleteDateColumn,
   Entity,
   Index,
@@ -21,8 +19,8 @@ import {
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
 } from 'typeorm';
+import { BaseActiveRecord } from '../../common/entities/base-active-record.entity';
 import { CHAT_CONSTANTS } from '../../common/constants/app.constants';
 import { Planet } from '../planet/planet.entity';
 import { User } from '../user/user.entity';
@@ -41,7 +39,7 @@ import { MessageStatus } from './enums/message-status.enum';
 @Index(['status', 'createdAt']) // 상태별 시간순 조회
 @Index(['planetId', 'type', 'createdAt']) // Planet 내 타입별 시간순 조회
 @Index(['senderId', 'type', 'createdAt']) // 사용자별 타입별 시간순 조회
-export class Message extends BaseEntity {
+export class Message extends BaseActiveRecord {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -304,19 +302,159 @@ export class Message extends BaseEntity {
     priority?: 'low' | 'normal' | 'high'; // 메시지 우선순위
   };
 
-  /**
-   * 생성/수정 시간
-   */
-  @CreateDateColumn({ comment: '메시지 전송 시간' })
-  @IsOptional()
-  @IsDateString()
-  @Index() // 시간순 정렬 최적화
-  createdAt: Date;
 
-  @UpdateDateColumn({ comment: '메시지 수정 시간' })
-  @IsOptional()
-  @IsDateString()
-  updatedAt: Date;
+  /**
+   * Active Record 정적 메서드
+   */
+
+  /**
+   * Planet의 모든 메시지 조회 (시간순)
+   */
+  static async findByPlanet(planetId: number, limit?: number): Promise<Message[]> {
+    const query = this.find({
+      where: { planetId },
+      order: { createdAt: 'DESC' },
+      relations: ['sender'],
+    });
+    
+    if (limit) {
+      return (await query).slice(0, limit);
+    }
+    return query;
+  }
+
+  /**
+   * 사용자의 모든 메시지 조회
+   */
+  static async findBySender(senderId: number): Promise<Message[]> {
+    return this.find({
+      where: { senderId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * 메시지 타입별 조회
+   */
+  static async findByType(type: MessageType): Promise<Message[]> {
+    return this.find({
+      where: { type },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Planet의 타입별 메시지 조회
+   */
+  static async findByPlanetAndType(planetId: number, type: MessageType): Promise<Message[]> {
+    return this.find({
+      where: { planetId, type },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * 메시지 검색 (내용 기반)
+   */
+  static async searchMessages(query: string, planetId?: number): Promise<Message[]> {
+    const repository = this.getRepository();
+    const qb = repository
+      .createQueryBuilder('message')
+      .where('message.searchableText ILIKE :query', { query: `%${query}%` })
+      .orderBy('message.createdAt', 'DESC');
+
+    if (planetId) {
+      qb.andWhere('message.planetId = :planetId', { planetId });
+    }
+
+    return qb.getMany();
+  }
+
+  /**
+   * 읽지 않은 메시지 수 조회
+   */
+  static async countUnreadByPlanet(planetId: number, userId: number): Promise<number> {
+    const repository = this.getRepository();
+    return repository
+      .createQueryBuilder('message')
+      .leftJoin('message.readReceipts', 'receipt', 'receipt.userId = :userId', { userId })
+      .where('message.planetId = :planetId', { planetId })
+      .andWhere('message.senderId != :userId', { userId })
+      .andWhere('receipt.id IS NULL')
+      .getCount();
+  }
+
+  /**
+   * 특정 메시지에 대한 답장들 조회
+   */
+  static async findReplies(messageId: number): Promise<Message[]> {
+    return this.find({
+      where: { replyToMessageId: messageId },
+      order: { createdAt: 'ASC' },
+      relations: ['sender'],
+    });
+  }
+
+  /**
+   * 메시지 생성
+   */
+  static async createMessage(messageData: {
+    type: MessageType;
+    planetId: number;
+    senderId?: number;
+    content?: string;
+    fileMetadata?: FileMetadata;
+    systemMetadata?: SystemMessageMetadata;
+    replyToMessageId?: number;
+    metadata?: any;
+  }): Promise<Message> {
+    const message = this.create({
+      ...messageData,
+      status: MessageStatus.SENT,
+    });
+    return this.save(message);
+  }
+
+  /**
+   * 사용자 탈퇴 시 메시지 익명화
+   */
+  static async anonymizeUserMessages(userId: number, userType: 'user' | 'admin'): Promise<number> {
+    const result = await this.update(
+      { senderId: userId },
+      {
+        isFromDeletedUser: true,
+        deletedUserType: userType,
+        senderId: undefined,
+      }
+    );
+    return result.affected || 0;
+  }
+
+  /**
+   * Planet 삭제 시 관련 메시지 정리
+   */
+  static async cleanupByPlanet(planetId: number): Promise<number> {
+    const repository = this.getRepository();
+    const result = await repository.softDelete({ planetId });
+    return result.affected || 0;
+  }
+
+  /**
+   * 오래된 메시지 정리 (하드 삭제)
+   */
+  static async cleanupOldMessages(daysOld: number): Promise<number> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+    
+    const repository = this.getRepository();
+    const result = await repository
+      .createQueryBuilder()
+      .delete()
+      .where('deletedAt < :cutoffDate', { cutoffDate })
+      .execute();
+    
+    return result.affected || 0;
+  }
 
   /**
    * 비즈니스 로직 메서드

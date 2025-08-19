@@ -7,7 +7,6 @@ import {
   Min,
 } from 'class-validator';
 import {
-  BaseEntity,
   BeforeInsert,
   BeforeUpdate,
   Column,
@@ -17,6 +16,7 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { BaseActiveRecord } from '../../common/entities/base-active-record.entity';
 import { User } from '../user/user.entity';
 import { Gender } from './enums/gender.enum';
 
@@ -29,7 +29,7 @@ import { Gender } from './enums/gender.enum';
 // 복합 인덱스 - 성능 향상
 @Index(['gender', 'age']) // 성별별 나이대 조회
 @Index(['occupation', 'age']) // 직업별 나이대 조회
-export class Profile extends BaseEntity {
+export class Profile extends BaseActiveRecord {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -104,8 +104,84 @@ export class Profile extends BaseEntity {
   occupation?: string;
 
   /**
-   * 생성/수정 시간 (BaseEntity에서 상속)
+   * Active Record 정적 메서드
    */
+
+  /**
+   * 사용자 ID로 프로필 찾기
+   */
+  static async findByUserId(userId: number): Promise<Profile | null> {
+    return this.findOne({
+      where: { userId },
+      relations: ['user'],
+    });
+  }
+
+  /**
+   * 닉네임으로 프로필 찾기
+   */
+  static async findByNickname(nickname: string): Promise<Profile | null> {
+    return this.findOne({
+      where: { nickname },
+      relations: ['user'],
+    });
+  }
+
+  /**
+   * 나이대별 프로필 조회
+   */
+  static async findByAgeRange(minAge: number, maxAge: number): Promise<Profile[]> {
+    const repository = this.getRepository();
+    return repository
+      .createQueryBuilder('profile')
+      .where('profile.age >= :minAge', { minAge })
+      .andWhere('profile.age <= :maxAge', { maxAge })
+      .orderBy('profile.age', 'ASC')
+      .getMany();
+  }
+
+  /**
+   * 성별별 프로필 조회
+   */
+  static async findByGender(gender: Gender): Promise<Profile[]> {
+    return this.find({
+      where: { gender },
+      order: { age: 'ASC' },
+    });
+  }
+
+  /**
+   * 직업별 프로필 조회
+   */
+  static async findByOccupation(occupation: string): Promise<Profile[]> {
+    return this.find({
+      where: { occupation },
+      order: { age: 'ASC' },
+    });
+  }
+
+  /**
+   * 프로필 생성
+   */
+  static async createProfile(profileData: {
+    userId: number;
+    nickname: string;
+    name: string;
+    gender?: Gender;
+    age?: number;
+    occupation?: string;
+  }): Promise<Profile> {
+    const profile = this.create(profileData as any);
+    return this.save(profile) as Promise<Profile>;
+  }
+
+  /**
+   * 프로필 완성도별 조회
+   */
+  static async findByCompletionRate(minRate: number): Promise<Profile[]> {
+    const profiles = await this.find();
+    return profiles.filter(profile => profile.getCompletionRate() >= minRate);
+  }
 
   /**
    * 비즈니스 로직 메서드

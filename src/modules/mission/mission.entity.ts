@@ -6,14 +6,12 @@ import {
   IsBoolean,
   IsObject,
 } from 'class-validator';
+import { BaseActiveRecord } from "../../common/entities/base-active-record.entity";
 import {
-  BaseEntity,
   Column,
-  CreateDateColumn,
   Entity,
   Index,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
 } from 'typeorm';
 import { MissionType } from './enums/mission-type.enum';
 import { MissionTarget } from './enums/mission-target.enum';
@@ -22,8 +20,8 @@ import { Exclude } from 'class-transformer';
 @Entity('missions')
 @Index(['type', 'target']) // 미션 타입별 조회 최적화
 @Index(['startAt', 'endAt']) // 기간별 조회 최적화
-@Index(['isActive']) // 활성 미션 조회 최적화
-export class Mission extends BaseEntity {
+@Index(['active']) // 활성 미션 조회 최적화
+export class Mission extends BaseActiveRecord {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -103,7 +101,7 @@ export class Mission extends BaseEntity {
     comment: '미션 활성화 여부',
   })
   @IsBoolean()
-  isActive: boolean;
+  active: boolean;
 
   /**
    * 미션 설정
@@ -124,16 +122,6 @@ export class Mission extends BaseEntity {
   @IsBoolean()
   allowResubmission: boolean;
 
-  /**
-   * 생성/수정 시간
-   */
-  @CreateDateColumn({ comment: '미션 생성 시간' })
-  @Exclude()
-  createdAt: Date;
-
-  @UpdateDateColumn({ comment: '미션 수정 시간' })
-  @Exclude()
-  updatedAt: Date;
 
   /**
    * 비즈니스 로직 메서드
@@ -144,7 +132,7 @@ export class Mission extends BaseEntity {
    */
   isOngoing(): boolean {
     const now = new Date();
-    return this.isActive && now >= this.startAt && now <= this.endAt;
+    return this.active && now >= this.startAt && now <= this.endAt;
   }
 
   /**
@@ -165,7 +153,7 @@ export class Mission extends BaseEntity {
    * 미션 참여 가능 여부 확인
    */
   canParticipate(): boolean {
-    return this.isActive && this.isOngoing();
+    return this.active && this.isOngoing();
   }
 
   /**
@@ -195,7 +183,7 @@ export class Mission extends BaseEntity {
    * 미션 상태 정보 반환
    */
   getStatus(): {
-    isActive: boolean;
+    active: boolean;
     isOngoing: boolean;
     isExpired: boolean;
     isUpcoming: boolean;
@@ -203,7 +191,7 @@ export class Mission extends BaseEntity {
     hoursRemaining: number;
   } {
     return {
-      isActive: this.isActive,
+      active: this.active,
       isOngoing: this.isOngoing(),
       isExpired: this.isExpired(),
       isUpcoming: this.isUpcoming(),
@@ -231,5 +219,105 @@ export class Mission extends BaseEntity {
         typeof q.optionB === 'string' &&
         typeof q.order === 'number',
     );
+  }
+
+  /**
+   * Active Record Static Methods
+   */
+
+  /**
+   * 활성 미션 조회
+   */
+  static async findActiveMissions(): Promise<Mission[]> {
+    const now = new Date();
+    return this.find({
+      where: {
+        active: true,
+        startAt: new Date(now.getTime() - 24 * 60 * 60 * 1000), // LessThanOrEqual
+        endAt: new Date(now.getTime() + 24 * 60 * 60 * 1000), // MoreThanOrEqual
+      },
+      order: { startAt: 'ASC' },
+    });
+  }
+
+  /**
+   * 타입별 미션 조회
+   */
+  static async findByType(type: MissionType): Promise<Mission[]> {
+    return this.find({
+      where: { type },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * 대상별 미션 조회
+   */
+  static async findByTarget(target: MissionTarget): Promise<Mission[]> {
+    return this.find({
+      where: { target },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * 진행 중인 미션 조회
+   */
+  static async findOngoingMissions(): Promise<Mission[]> {
+    const now = new Date();
+    const query = this.createQueryBuilder('mission')
+      .where('mission.active = :active', { active: true })
+      .andWhere('mission.startAt <= :now', { now })
+      .andWhere('mission.endAt >= :now', { now })
+      .orderBy('mission.startAt', 'ASC');
+    
+    return query.getMany();
+  }
+
+  /**
+   * 미션 생성
+   */
+  static async createMission(missionData: {
+    type: MissionType;
+    target: MissionTarget;
+    title: string;
+    description?: string;
+    content?: any;
+    startAt: Date;
+    endAt: Date;
+    maxSubmissions?: number;
+    allowResubmission?: boolean;
+  }): Promise<Mission> {
+    const mission = this.create({
+      ...missionData,
+      active: true,
+    });
+
+    return await mission.save();
+  }
+
+  /**
+   * 미션 활성화/비활성화
+   */
+  static async toggleActive(missionId: number): Promise<Mission | null> {
+    const mission = await this.findById(missionId);
+    if (mission) {
+      mission.active = !mission.active;
+      return await mission.save();
+    }
+    return null;
+  }
+
+  /**
+   * 만료된 미션 정리
+   */
+  static async cleanupExpiredMissions(): Promise<number> {
+    const now = new Date();
+    const result = await this.update(
+      { endAt: new Date(now.getTime() - 24 * 60 * 60 * 1000), active: true },
+      { active: false }
+    );
+    
+    return result.affected || 0;
   }
 }

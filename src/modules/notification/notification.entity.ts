@@ -7,16 +7,14 @@ import {
   IsString,
 } from 'class-validator';
 import {
-  BaseEntity,
   Column,
-  CreateDateColumn,
   Entity,
   Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
 } from 'typeorm';
+import { BaseActiveRecord } from '../../common/entities/base-active-record.entity';
 import { Planet } from '../planet/planet.entity';
 import { Travel } from '../travel/travel.entity';
 import { User } from '../user/user.entity';
@@ -32,7 +30,7 @@ import { NotificationChannel } from './enums/notification-channel.enum';
 @Index(['status', 'scheduledAt']) // 예약된 대기 알림
 @Index(['travelId', 'type']) // Travel별 알림 타입
 @Index(['planetId', 'type']) // Planet별 알림 타입
-export class Notification extends BaseEntity {
+export class Notification extends BaseActiveRecord {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -225,16 +223,12 @@ export class Notification extends BaseEntity {
   /**
    * 시간 정보
    */
-  @CreateDateColumn({ comment: '알림 생성 시간' })
   @IsOptional()
   @IsDateString()
   @Index() // 생성 시간 정렬 최적화
-  createdAt: Date;
 
-  @UpdateDateColumn({ comment: '알림 정보 수정 시간' })
   @IsOptional()
   @IsDateString()
-  updatedAt: Date;
 
   /**
    * 비즈니스 로직 메서드

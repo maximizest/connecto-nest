@@ -1,18 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { CrudService } from '@foryourdev/nestjs-crud';
 import { MissionTravel } from './mission-travel.entity';
 
+/**
+ * MissionTravel Service - Active Record Pattern
+ * 
+ * Repository 주입 없이 MissionTravel 엔티티의 Active Record 메서드를 활용합니다.
+ */
 @Injectable()
-export class MissionTravelService extends CrudService<MissionTravel> {
-  public readonly repository: Repository<MissionTravel>;
-  constructor(
-    @InjectRepository(MissionTravel)
-    repository: Repository<MissionTravel>,
-  ) {
-    super(repository);
-    this.repository = repository;
+export class MissionTravelService {
+  /**
+   * ID로 조회
+   */
+  async findById(id: number) {
+    return MissionTravel.findById(id);
   }
 
   /**
@@ -23,20 +23,20 @@ export class MissionTravelService extends CrudService<MissionTravel> {
     travelId: number,
     planetId?: number,
   ): Promise<MissionTravel> {
-    const missionTravel = this.repository.create({
+    const missionTravel = MissionTravel.create({
       missionId,
       travelId,
       planetId,
-      assignedAt: new Date(),
+      active: true,
     });
-    return await this.repository.save(missionTravel);
+    return await missionTravel.save();
   }
 
   /**
    * 여행의 미션 목록 조회
    */
   async getMissionsForTravel(travelId: number): Promise<MissionTravel[]> {
-    return await this.repository.find({
+    return await MissionTravel.find({
       where: { travelId },
       relations: ['mission', 'planet'],
     });
@@ -46,7 +46,7 @@ export class MissionTravelService extends CrudService<MissionTravel> {
    * 미션이 할당된 여행 목록 조회
    */
   async getTravelsForMission(missionId: number): Promise<MissionTravel[]> {
-    return await this.repository.find({
+    return await MissionTravel.find({
       where: { missionId },
       relations: ['travel', 'planet'],
     });
@@ -56,9 +56,39 @@ export class MissionTravelService extends CrudService<MissionTravel> {
    * 미션 할당 해제
    */
   async unassignMission(missionId: number, travelId: number): Promise<void> {
-    await this.repository.delete({
+    await MissionTravel.delete({
       missionId,
       travelId,
     });
+  }
+
+  /**
+   * 활성 미션 할당 조회
+   */
+  async getActiveMissionTravels() {
+    return MissionTravel.find({
+      where: { active: true },
+      relations: ['mission', 'travel'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * 미션 할당 활성화/비활성화
+   */
+  async toggleActive(id: number) {
+    const missionTravel = await MissionTravel.findById(id);
+    if (missionTravel) {
+      missionTravel.active = !missionTravel.active;
+      return await missionTravel.save();
+    }
+    return null;
+  }
+
+  /**
+   * 수 조회
+   */
+  async count() {
+    return MissionTravel.count();
   }
 }

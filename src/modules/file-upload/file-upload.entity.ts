@@ -8,18 +8,16 @@ import {
   MaxLength,
 } from 'class-validator';
 import {
-  BaseEntity,
   BeforeInsert,
   BeforeUpdate,
   Column,
-  CreateDateColumn,
   Entity,
   Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
 } from 'typeorm';
+import { BaseActiveRecord } from '../../common/entities/base-active-record.entity';
 import { User } from '../user/user.entity';
 import { FileUploadStatus } from './enums/file-upload-status.enum';
 import { FileUploadType } from './enums/file-upload-type.enum';
@@ -31,7 +29,7 @@ import { FileUploadType } from './enums/file-upload-type.enum';
 // 복합 인덱스 - 성능 향상
 @Index(['userId', 'status']) // 사용자별 상태 조회 최적화
 @Index(['status', 'createdAt']) // 상태별 시간순 조회
-export class FileUpload extends BaseEntity {
+export class FileUpload extends BaseActiveRecord {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -117,14 +115,10 @@ export class FileUpload extends BaseEntity {
   @IsOptional()
   metadata?: Record<string, any>;
 
-  @CreateDateColumn({ comment: '생성 시간' })
   @IsDateString()
   @Index() // 시간별 정렬
-  createdAt: Date;
 
-  @UpdateDateColumn({ comment: '수정 시간' })
   @IsDateString()
-  updatedAt: Date;
 
   /**
    * 비즈니스 로직 메서드

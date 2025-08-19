@@ -1,16 +1,14 @@
 import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
 import {
-  BaseEntity,
   Column,
-  CreateDateColumn,
   Entity,
   Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
 } from 'typeorm';
+import { BaseActiveRecord } from '../../common/entities/base-active-record.entity';
 import { Accommodation } from '../accommodation/accommodation.entity';
 import { TravelStatus } from './enums/travel-status.enum';
 import { TravelVisibility } from './enums/travel-visibility.enum';
@@ -19,7 +17,7 @@ import { TravelVisibility } from './enums/travel-visibility.enum';
 // 복합 인덱스 - 성능 향상
 @Index(['status', 'endDate']) // 상태별 만료일 조회
 @Index(['visibility', 'status']) // 공개 설정별 상태 조회
-export class Travel extends BaseEntity {
+export class Travel extends BaseActiveRecord {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -123,18 +121,6 @@ export class Travel extends BaseEntity {
   @Index() // 초대 코드 검색 최적화
   inviteCode?: string;
 
-  /**
-   * 생성/수정 시간
-   */
-  @CreateDateColumn({ comment: '여행 생성 시간' })
-  @IsOptional()
-  @IsDateString()
-  createdAt: Date;
-
-  @UpdateDateColumn({ comment: '여행 정보 수정 시간' })
-  @IsOptional()
-  @IsDateString()
-  updatedAt: Date;
 
   /**
    * 관계 설정
@@ -147,6 +133,125 @@ export class Travel extends BaseEntity {
 
   @OneToMany('MissionTravel', 'travel')
   missionTravels: any[];
+
+  /**
+   * Active Record 정적 메서드
+   */
+
+  /**
+   * 활성 여행 목록 조회
+   */
+  static async findActiveTravel(): Promise<Travel[]> {
+    return this.find({
+      where: { status: TravelStatus.ACTIVE },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * 공개 여행 목록 조회
+   */
+  static async findPublicTravel(): Promise<Travel[]> {
+    return this.find({
+      where: { 
+        visibility: TravelVisibility.PUBLIC,
+        status: TravelStatus.ACTIVE 
+      },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * 만료된 여행 목록 조회
+   */
+  static async findExpiredTravel(): Promise<Travel[]> {
+    return this.find({
+      where: { status: TravelStatus.EXPIRED },
+      order: { endDate: 'DESC' },
+    });
+  }
+
+  /**
+   * 초대 코드로 여행 찾기
+   */
+  static async findByInviteCode(inviteCode: string): Promise<Travel | null> {
+    return this.findOne({
+      where: { inviteCode },
+    });
+  }
+
+  /**
+   * 숙소별 여행 조회
+   */
+  static async findByAccommodation(accommodationId: number): Promise<Travel[]> {
+    return this.find({
+      where: { accommodationId },
+      order: { startDate: 'ASC' },
+    });
+  }
+
+  /**
+   * 기간별 여행 조회
+   */
+  static async findByDateRange(startDate: Date, endDate: Date): Promise<Travel[]> {
+    const repository = this.getRepository();
+    return repository
+      .createQueryBuilder('travel')
+      .where('travel.startDate >= :startDate', { startDate })
+      .andWhere('travel.endDate <= :endDate', { endDate })
+      .orderBy('travel.startDate', 'ASC')
+      .getMany();
+  }
+
+  /**
+   * 여행 생성
+   */
+  static async createTravel(travelData: {
+    title: string;
+    description?: string;
+    startDate: Date;
+    endDate: Date;
+    maxMembers: number;
+    visibility: TravelVisibility;
+    accommodationId?: number;
+  }): Promise<Travel> {
+    const travel = this.create({
+      ...travelData,
+      status: TravelStatus.ACTIVE,
+      currentMembers: 1, // 생성자 포함
+      inviteCode: this.generateInviteCode(),
+    } as any);
+    return this.save(travel) as Promise<Travel>;
+  }
+
+  /**
+   * 초대 코드 생성
+   */
+  private static generateInviteCode(): string {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+  }
+
+  /**
+   * 여행 상태 업데이트
+   */
+  static async updateStatus(travelId: number, status: TravelStatus): Promise<void> {
+    await this.update(travelId, { status });
+  }
+
+  /**
+   * 만료된 여행들 자동 만료 처리
+   */
+  static async expireOldTravel(): Promise<number> {
+    const now = new Date();
+    const repository = this.getRepository();
+    const result = await repository
+      .createQueryBuilder()
+      .update(Travel)
+      .set({ status: TravelStatus.EXPIRED })
+      .where('endDate < :now', { now })
+      .execute();
+    return result.affected || 0;
+  }
 
   /**
    * 비즈니스 로직 메서드

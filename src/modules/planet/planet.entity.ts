@@ -6,17 +6,15 @@ import {
   IsString,
 } from 'class-validator';
 import {
-  BaseEntity,
   Column,
-  CreateDateColumn,
   Entity,
   Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
 } from 'typeorm';
+import { BaseActiveRecord } from '../../common/entities/base-active-record.entity';
 import { Travel } from '../travel/travel.entity';
 import { PlanetType } from './enums/planet-type.enum';
 import { PlanetStatus } from './enums/planet-status.enum';
@@ -43,7 +41,7 @@ interface TimeRestriction {
 // 복합 인덱스 - 성능 향상
 @Index(['travelId', 'type']) // Travel 내 타입별 조회
 @Index(['travelId', 'status']) // Travel 내 상태별 조회
-export class Planet extends BaseEntity {
+export class Planet extends BaseActiveRecord {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -121,24 +119,113 @@ export class Planet extends BaseEntity {
   @IsJSON()
   timeRestriction?: TimeRestriction;
 
-  /**
-   * 생성/수정 시간
-   */
-  @CreateDateColumn({ comment: 'Planet 생성 시간' })
-  @IsOptional()
-  @IsDateString()
-  createdAt: Date;
-
-  @UpdateDateColumn({ comment: 'Planet 정보 수정 시간' })
-  @IsOptional()
-  @IsDateString()
-  updatedAt: Date;
 
   /**
    * 관계 설정
    */
   @OneToMany('PlanetUser', 'planet')
   planetUsers: any[];
+
+  /**
+   * Active Record 정적 메서드
+   */
+
+  /**
+   * Travel의 모든 Planet 조회
+   */
+  static async findByTravel(travelId: number): Promise<Planet[]> {
+    return this.find({
+      where: { travelId },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  /**
+   * Travel의 활성 Planet 조회
+   */
+  static async findActivePlanetsByTravel(travelId: number): Promise<Planet[]> {
+    return this.find({
+      where: { 
+        travelId, 
+        status: PlanetStatus.ACTIVE 
+      },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  /**
+   * 타입별 Planet 조회
+   */
+  static async findByType(type: PlanetType): Promise<Planet[]> {
+    return this.find({
+      where: { type },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Travel의 단체 채팅방 조회
+   */
+  static async findGroupPlanetsByTravel(travelId: number): Promise<Planet[]> {
+    return this.find({
+      where: { 
+        travelId, 
+        type: PlanetType.GROUP,
+        status: PlanetStatus.ACTIVE 
+      },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  /**
+   * Travel의 1:1 채팅방 조회
+   */
+  static async findDirectPlanetsByTravel(travelId: number): Promise<Planet[]> {
+    return this.find({
+      where: { 
+        travelId, 
+        type: PlanetType.DIRECT,
+        status: PlanetStatus.ACTIVE 
+      },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  /**
+   * Planet 생성
+   */
+  static async createPlanet(planetData: {
+    name: string;
+    description?: string;
+    type: PlanetType;
+    travelId: number;
+    imageUrl?: string;
+    timeRestriction?: TimeRestriction;
+  }): Promise<Planet> {
+    const planet = this.create({
+      ...planetData,
+      status: PlanetStatus.ACTIVE,
+    });
+    return this.save(planet);
+  }
+
+  /**
+   * Planet 상태 업데이트
+   */
+  static async updateStatus(planetId: number, status: PlanetStatus): Promise<void> {
+    await this.update(planetId, { status });
+  }
+
+  /**
+   * Travel의 모든 Planet 비활성화
+   */
+  static async deactivateByTravel(travelId: number): Promise<number> {
+    const result = await this.update(
+      { travelId }, 
+      { status: PlanetStatus.INACTIVE }
+    );
+    return result.affected || 0;
+  }
 
   /**
    * 비즈니스 로직 메서드

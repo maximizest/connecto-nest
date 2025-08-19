@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Planet } from '../planet/planet.entity';
-import { User } from '../user/user.entity';
 import { PlanetUserController } from './api/v1/planet-user.controller';
-import { PlanetUser } from './planet-user.entity';
 import { PlanetUserService } from './planet-user.service';
 
+/**
+ * PlanetUser 모듈 - Active Record Pattern
+ * 
+ * Repository 주입 없이 PlanetUser 엔티티의 Active Record 메서드를 활용합니다.
+ */
 @Module({
-  imports: [TypeOrmModule.forFeature([PlanetUser, Planet, User])],
   controllers: [PlanetUserController],
   providers: [PlanetUserService],
   exports: [PlanetUserService],

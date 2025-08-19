@@ -1,14 +1,13 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Planet } from '../planet/planet.entity';
-import { TravelUser } from '../travel-user/travel-user.entity';
-import { User } from '../user/user.entity';
 import { TravelController } from './api/v1/travel.controller';
-import { Travel } from './travel.entity';
 import { TravelService } from './travel.service';
 
+/**
+ * Travel 모듈 - Active Record Pattern
+ * 
+ * Repository 주입 없이 Travel 엔티티의 Active Record 메서드를 활용합니다.
+ */
 @Module({
-  imports: [TypeOrmModule.forFeature([Travel, Planet, User, TravelUser])],
   controllers: [TravelController],
   providers: [TravelService],
   exports: [TravelService],

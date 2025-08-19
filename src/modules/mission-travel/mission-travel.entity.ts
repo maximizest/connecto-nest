@@ -1,8 +1,7 @@
 import { IsOptional, IsDateString } from 'class-validator';
+import { BaseActiveRecord } from "../../common/entities/base-active-record.entity";
 import {
-  BaseEntity,
   Column,
-  CreateDateColumn,
   Entity,
   Index,
   JoinColumn,
@@ -17,7 +16,7 @@ import { Exclude } from 'class-transformer';
 @Unique(['missionId', 'travelId']) // 중복 할당 방지
 @Index(['travelId']) // 여행별 미션 조회 최적화
 @Index(['missionId']) // 미션별 여행 조회 최적화
-export class MissionTravel extends BaseEntity {
+export class MissionTravel extends BaseActiveRecord {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -68,7 +67,7 @@ export class MissionTravel extends BaseEntity {
     default: true,
     comment: '미션 활성화 여부',
   })
-  isActive: boolean;
+  active: boolean;
 
   @Column({
     type: 'int',
@@ -78,11 +77,9 @@ export class MissionTravel extends BaseEntity {
   submissionCount: number;
 
   /**
-   * 생성 시간
+   * 미션 할당 시간
+   * BaseActiveRecord의 createdAt이 할당 시간 역할을 함
    */
-  @CreateDateColumn({ comment: '미션 할당 시간' })
-  @Exclude()
-  assignedAt: Date;
 
   /**
    * 관계 설정
@@ -120,7 +117,7 @@ export class MissionTravel extends BaseEntity {
    * 제출 가능 여부 확인
    */
   canSubmit(maxSubmissions?: number): boolean {
-    if (!this.isActive) return false;
+    if (!this.active) return false;
     if (!maxSubmissions) return true;
     return this.submissionCount < maxSubmissions;
   }
@@ -136,13 +133,13 @@ export class MissionTravel extends BaseEntity {
    * 미션 비활성화
    */
   deactivate(): void {
-    this.isActive = false;
+    this.active = false;
   }
 
   /**
    * 미션 활성화
    */
   activate(): void {
-    this.isActive = true;
+    this.active = true;
   }
 }

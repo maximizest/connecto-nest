@@ -1,29 +1,108 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { CrudService } from '@foryourdev/nestjs-crud';
-import { Repository } from 'typeorm';
 import { TravelUser } from './travel-user.entity';
+import { TravelUserRole } from './enums/travel-user-role.enum';
+import { TravelUserStatus } from './enums/travel-user-status.enum';
 
 /**
- * TravelUser 서비스
- *
- * @foryourdev/nestjs-crud의 CrudService를 상속받아
- * 표준 CRUD 작업(index, show, create, update, destroy)을 제공합니다.
- *
- * 주요 기능:
- * - Travel 멤버 관리 (가입, 탈퇴, 권한 변경)
- * - 초대 코드 검증 및 가입 처리
- * - 멤버 목록 조회 및 필터링
+ * TravelUser Service - Active Record Pattern
+ * 
+ * Repository 주입 없이 TravelUser 엔티티의 Active Record 메서드를 활용합니다.
  */
 @Injectable()
-export class TravelUserService extends CrudService<TravelUser> {
-  public readonly repository: Repository<TravelUser>;
+export class TravelUserService {
+  /**
+   * ID로 TravelUser 조회
+   */
+  async findById(id: number) {
+    return TravelUser.findById(id);
+  }
 
-  constructor(
-    @InjectRepository(TravelUser)
-    repository: Repository<TravelUser>,
-  ) {
-    super(repository);
-    this.repository = repository;
+  /**
+   * Travel의 모든 멤버 조회
+   */
+  async findByTravel(travelId: number) {
+    return TravelUser.findByTravel(travelId);
+  }
+
+  /**
+   * Travel의 활성 멤버 조회
+   */
+  async findActiveMembersByTravel(travelId: number) {
+    return TravelUser.findActiveMembersByTravel(travelId);
+  }
+
+  /**
+   * 사용자의 모든 Travel 조회
+   */
+  async findByUser(userId: number) {
+    return TravelUser.findByUser(userId);
+  }
+
+  /**
+   * 사용자의 활성 Travel 조회
+   */
+  async findActiveByUser(userId: number) {
+    return TravelUser.findActiveByUser(userId);
+  }
+
+  /**
+   * Travel의 호스트 조회
+   */
+  async findHostsByTravel(travelId: number) {
+    return TravelUser.findHostsByTravel(travelId);
+  }
+
+  /**
+   * Travel의 역할별 멤버 조회
+   */
+  async findByTravelAndRole(travelId: number, role: TravelUserRole) {
+    return TravelUser.findByTravelAndRole(travelId, role);
+  }
+
+  /**
+   * 특정 사용자의 특정 Travel 멤버십 조회
+   */
+  async findMembership(travelId: number, userId: number) {
+    return TravelUser.findMembership(travelId, userId);
+  }
+
+  /**
+   * Travel 멤버 추가
+   */
+  async addMember(memberData: {
+    travelId: number;
+    userId: number;
+    role?: TravelUserRole;
+  }) {
+    return TravelUser.addMember(memberData);
+  }
+
+  /**
+   * Travel에서 멤버 제거
+   */
+  async removeMember(travelId: number, userId: number) {
+    return TravelUser.removeMember(travelId, userId);
+  }
+
+  /**
+   * TravelUser 업데이트
+   */
+  async updateTravelUser(id: number, updateData: Partial<TravelUser>) {
+    await TravelUser.update(id, updateData);
+    return TravelUser.findById(id);
+  }
+
+  /**
+   * Travel의 멤버 수 조회
+   */
+  async countActiveMembers(travelId: number) {
+    return TravelUser.countActiveMembers(travelId);
+  }
+
+  /**
+   * TravelUser 수 조회
+   */
+  async count() {
+    return TravelUser.count();
   }
 }

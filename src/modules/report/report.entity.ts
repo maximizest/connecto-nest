@@ -4,12 +4,10 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
-  CreateDateColumn,
-  UpdateDateColumn,
   Index,
-  BaseEntity,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
+import { BaseActiveRecord } from '../../common/entities/base-active-record.entity';
 import { User } from '../user/user.entity';
 import { Travel } from '../travel/travel.entity';
 import { Planet } from '../planet/planet.entity';
@@ -51,7 +49,7 @@ export enum ReportContext {
 @Index(['status', 'createdAt'])
 @Index(['travelId', 'status'])
 @Index(['planetId', 'status'])
-export class Report extends BaseEntity {
+export class Report extends BaseActiveRecord {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -152,11 +150,7 @@ export class Report extends BaseEntity {
 
   // ==================== 타임스탬프 ====================
 
-  @CreateDateColumn()
-  createdAt: Date;
 
-  @UpdateDateColumn()
-  updatedAt: Date;
 
   // ==================== 메서드 ====================
 
