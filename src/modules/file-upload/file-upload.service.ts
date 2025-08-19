@@ -1,14 +1,23 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CrudService } from '@foryourdev/nestjs-crud';
 import { StorageService } from '../storage/storage.service';
 import { FileUpload } from './file-upload.entity';
 import { FileUploadStatus } from './enums/file-upload-status.enum';
 import { FileUploadType } from './enums/file-upload-type.enum';
 
 @Injectable()
-export class FileUploadService {
+export class FileUploadService extends CrudService<FileUpload> {
   private readonly logger = new Logger(FileUploadService.name);
 
-  constructor(private readonly storageService: StorageService) {}
+  constructor(
+    @InjectRepository(FileUpload)
+    private readonly fileUploadRepository: Repository<FileUpload>,
+    private readonly storageService: StorageService,
+  ) {
+    super(fileUploadRepository);
+  }
 
   /**
    * 새 파일 업로드 레코드 생성

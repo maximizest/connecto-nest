@@ -104,9 +104,7 @@ import { TravelUserService } from '../../travel-user.service';
 export class TravelUserController {
   private readonly logger = new Logger(TravelUserController.name);
 
-  constructor(
-    public readonly crudService: TravelUserService,
-  ) {}
+  constructor(public readonly crudService: TravelUserService) {}
 
   /**
    * 멤버십 조회 전 권한 확인 (여행에 참여한 유저만 조회 가능)
@@ -126,15 +124,13 @@ export class TravelUserController {
     }
 
     // 현재 유저가 해당 여행에 참여했는지 확인
-    const currentUserTravelMembership = await TravelUser.findOne(
-      {
-        where: {
-          travelId: targetTravelUser.travelId,
-          userId: user.id,
-          status: TravelUserStatus.ACTIVE,
-        },
+    const currentUserTravelMembership = await TravelUser.findOne({
+      where: {
+        travelId: targetTravelUser.travelId,
+        userId: user.id,
+        status: TravelUserStatus.ACTIVE,
       },
-    );
+    });
 
     if (!currentUserTravelMembership) {
       throw new ForbiddenException(

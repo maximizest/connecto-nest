@@ -1,4 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CrudService } from '@foryourdev/nestjs-crud';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RedisService } from '../cache/redis.service';
 import { Planet } from '../planet/planet.entity';
@@ -13,13 +16,17 @@ import { BulkNotificationOptions } from './types/bulk-notification-options.inter
 import { CreateNotificationOptions } from './types/create-notification-options.interface';
 
 @Injectable()
-export class NotificationService {
+export class NotificationService extends CrudService<Notification> {
   private readonly logger = new Logger(NotificationService.name);
 
   constructor(
+    @InjectRepository(Notification)
+    private readonly notificationRepository: Repository<Notification>,
     private readonly redisService: RedisService,
     private readonly eventEmitter: EventEmitter2,
-  ) {}
+  ) {
+    super(notificationRepository);
+  }
 
   /**
    * 단일 알림 생성 - 채널별로 개별 생성

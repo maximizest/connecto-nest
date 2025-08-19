@@ -1,13 +1,22 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CrudService } from '@foryourdev/nestjs-crud';
 import { MissionTravel } from './mission-travel.entity';
 
 /**
- * MissionTravel Service - Active Record Pattern
+ * MissionTravel Service - Hybrid Pattern (CrudService + Active Record)
  *
- * Repository 주입 없이 MissionTravel 엔티티의 Active Record 메서드를 활용합니다.
+ * CrudService를 확장하면서 MissionTravel 엔티티의 Active Record 메서드도 활용합니다.
  */
 @Injectable()
-export class MissionTravelService {
+export class MissionTravelService extends CrudService<MissionTravel> {
+  constructor(
+    @InjectRepository(MissionTravel)
+    private readonly missionTravelRepository: Repository<MissionTravel>,
+  ) {
+    super(missionTravelRepository);
+  }
   /**
    * ID로 조회
    */

@@ -1,15 +1,24 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CrudService } from '@foryourdev/nestjs-crud';
 import { Travel } from './travel.entity';
 import { TravelStatus } from './enums/travel-status.enum';
 import { TravelVisibility } from './enums/travel-visibility.enum';
 
 /**
- * Travel Service - Active Record Pattern
+ * Travel Service - Hybrid Pattern (CrudService + Active Record)
  *
- * Repository 주입 없이 Travel 엔티티의 Active Record 메서드를 활용합니다.
+ * CrudService를 확장하면서 Travel 엔티티의 Active Record 메서드도 활용합니다.
  */
 @Injectable()
-export class TravelService {
+export class TravelService extends CrudService<Travel> {
+  constructor(
+    @InjectRepository(Travel)
+    private readonly travelRepository: Repository<Travel>,
+  ) {
+    super(travelRepository);
+  }
   /**
    * 모든 여행 조회
    */

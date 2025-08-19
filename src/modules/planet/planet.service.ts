@@ -1,16 +1,25 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CrudService } from '@foryourdev/nestjs-crud';
 import { Planet } from './planet.entity';
 import { PlanetType } from './enums/planet-type.enum';
 import { PlanetStatus } from './enums/planet-status.enum';
 import { TimeRestrictionType } from './enums/time-restriction-type.enum';
 
 /**
- * Planet Service - Active Record Pattern
+ * Planet Service - Hybrid Pattern (CrudService + Active Record)
  *
- * Repository 주입 없이 Planet 엔티티의 Active Record 메서드를 활용합니다.
+ * CrudService를 확장하면서 Planet 엔티티의 Active Record 메서드도 활용합니다.
  */
 @Injectable()
-export class PlanetService {
+export class PlanetService extends CrudService<Planet> {
+  constructor(
+    @InjectRepository(Planet)
+    private readonly planetRepository: Repository<Planet>,
+  ) {
+    super(planetRepository);
+  }
   /**
    * ID로 Planet 조회
    */

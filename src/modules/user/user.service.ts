@@ -1,15 +1,24 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CrudService } from '@foryourdev/nestjs-crud';
 import { User } from './user.entity';
 import { UserRole } from './enums/user-role.enum';
 import { SocialProvider } from './enums/social-provider.enum';
 
 /**
- * User Service - Active Record Pattern
+ * User Service - Hybrid Pattern (CrudService + Active Record)
  *
- * Repository 주입 없이 User 엔티티의 Active Record 메서드를 활용합니다.
+ * CrudService를 확장하면서 User 엔티티의 Active Record 메서드도 활용합니다.
  */
 @Injectable()
-export class UserService {
+export class UserService extends CrudService<User> {
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+  ) {
+    super(userRepository);
+  }
   /**
    * 모든 사용자 조회
    */

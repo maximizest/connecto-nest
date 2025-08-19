@@ -1,11 +1,14 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CrudService } from '@foryourdev/nestjs-crud';
 import { PlanetUser } from './planet-user.entity';
 import { PlanetUserStatus } from './enums/planet-user-status.enum';
 
 /**
- * PlanetUser Service - Active Record Pattern
+ * PlanetUser Service - Hybrid Pattern (CrudService + Active Record)
  *
- * Repository 주입 없이 PlanetUser 엔티티의 Active Record 메서드를 활용합니다.
+ * CrudService를 확장하면서 PlanetUser 엔티티의 Active Record 메서드도 활용합니다.
  *
  * 주요 기능:
  * - Planet 멤버 관리 (초대, 수락, 거절)
@@ -13,7 +16,13 @@ import { PlanetUserStatus } from './enums/planet-user-status.enum';
  * - 직접 Planet 접근 권한 관리
  */
 @Injectable()
-export class PlanetUserService {
+export class PlanetUserService extends CrudService<PlanetUser> {
+  constructor(
+    @InjectRepository(PlanetUser)
+    private readonly planetUserRepository: Repository<PlanetUser>,
+  ) {
+    super(planetUserRepository);
+  }
   /**
    * ID로 PlanetUser 조회
    */

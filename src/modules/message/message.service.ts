@@ -1,16 +1,25 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CrudService } from '@foryourdev/nestjs-crud';
 import { Message } from './message.entity';
 import { MessageType } from './enums/message-type.enum';
 import { FileMetadata } from './types/file-metadata.interface';
 import { SystemMessageMetadata } from './types/system-message-metadata.interface';
 
 /**
- * Message Service - Active Record Pattern
+ * Message Service - Hybrid Pattern (CrudService + Active Record)
  *
- * Repository 주입 없이 Message 엔티티의 Active Record 메서드를 활용합니다.
+ * CrudService를 확장하면서 Message 엔티티의 Active Record 메서드도 활용합니다.
  */
 @Injectable()
-export class MessageService {
+export class MessageService extends CrudService<Message> {
+  constructor(
+    @InjectRepository(Message)
+    private readonly messageRepository: Repository<Message>,
+  ) {
+    super(messageRepository);
+  }
   /**
    * ID로 메시지 조회
    */

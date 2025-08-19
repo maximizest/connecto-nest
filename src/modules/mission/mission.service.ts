@@ -1,15 +1,24 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CrudService } from '@foryourdev/nestjs-crud';
 import { Mission } from './mission.entity';
 import { MissionType } from './enums/mission-type.enum';
 import { MissionTarget } from './enums/mission-target.enum';
 
 /**
- * Mission Service - Active Record Pattern
+ * Mission Service - Hybrid Pattern (CrudService + Active Record)
  *
- * Repository 주입 없이 Mission 엔티티의 Active Record 메서드를 활용합니다.
+ * CrudService를 확장하면서 Mission 엔티티의 Active Record 메서드도 활용합니다.
  */
 @Injectable()
-export class MissionService {
+export class MissionService extends CrudService<Mission> {
+  constructor(
+    @InjectRepository(Mission)
+    private readonly missionRepository: Repository<Mission>,
+  ) {
+    super(missionRepository);
+  }
   /**
    * ID로 미션 조회
    */

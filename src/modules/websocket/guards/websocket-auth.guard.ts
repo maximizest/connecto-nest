@@ -15,9 +15,7 @@ import { AuthenticatedSocket } from '../types/authenticated-socket.interface';
 export class WebSocketAuthGuard implements CanActivate {
   private readonly logger = new Logger(WebSocketAuthGuard.name);
 
-  constructor(
-    private readonly jwtService: JwtService,
-  ) {}
+  constructor(private readonly jwtService: JwtService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     try {

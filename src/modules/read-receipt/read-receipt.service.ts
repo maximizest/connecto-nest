@@ -1,4 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CrudService } from '@foryourdev/nestjs-crud';
 import { Message } from '../message/message.entity';
 import { PlanetUser } from '../planet-user/planet-user.entity';
 import { PlanetUserStatus } from '../planet-user/enums/planet-user-status.enum';
@@ -11,10 +14,15 @@ import { MessageReadReceipt } from './read-receipt.entity';
 import { PlanetReadStatus } from './types/planet-read-status.interface';
 
 @Injectable()
-export class ReadReceiptService {
+export class ReadReceiptService extends CrudService<MessageReadReceipt> {
   private readonly logger = new Logger(ReadReceiptService.name);
 
-  constructor() {}
+  constructor(
+    @InjectRepository(MessageReadReceipt)
+    private readonly readReceiptRepository: Repository<MessageReadReceipt>,
+  ) {
+    super(readReceiptRepository);
+  }
 
   /**
    * 메시지 읽음 처리

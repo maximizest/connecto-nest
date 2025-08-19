@@ -1,14 +1,23 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CrudService } from '@foryourdev/nestjs-crud';
 import { Profile } from './profile.entity';
 import { Gender } from './enums/gender.enum';
 
 /**
- * Profile Service - Active Record Pattern
+ * Profile Service - Hybrid Pattern (CrudService + Active Record)
  *
- * Repository 주입 없이 Profile 엔티티의 Active Record 메서드를 활용합니다.
+ * CrudService를 확장하면서 Profile 엔티티의 Active Record 메서드도 활용합니다.
  */
 @Injectable()
-export class ProfileService {
+export class ProfileService extends CrudService<Profile> {
+  constructor(
+    @InjectRepository(Profile)
+    private readonly profileRepository: Repository<Profile>,
+  ) {
+    super(profileRepository);
+  }
   /**
    * ID로 프로필 조회
    */

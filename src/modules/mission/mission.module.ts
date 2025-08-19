@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { MissionService } from './mission.service';
 import { MissionController } from './api/v1/mission.controller';
+import { Mission } from './mission.entity';
 
 /**
- * Mission Module - Active Record Pattern
+ * Mission Module - Hybrid Pattern (CrudService + Active Record)
  *
  * 미션 시스템을 담당하는 모듈입니다.
- * Repository 주입 없이 Mission 엔티티의 Active Record 메서드를 활용합니다.
+ * CrudService를 확장하면서 Mission 엔티티의 Active Record 메서드도 활용합니다.
  *
  * 주요 기능:
  * - 미션 생성 및 관리 (이미지, 비디오, 밸런스 게임)
@@ -21,6 +23,7 @@ import { MissionController } from './api/v1/mission.controller';
  * - 타입별 핸들러 패턴으로 새로운 미션 타입 쉽게 추가
  */
 @Module({
+  imports: [TypeOrmModule.forFeature([Mission])],
   controllers: [MissionController],
   providers: [MissionService],
   exports: [MissionService],

@@ -1,13 +1,16 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserController } from './api/v1/user.controller';
 import { UserService } from './user.service';
+import { User } from './user.entity';
 
 /**
- * User 모듈 - Active Record Pattern
+ * User 모듈 - Hybrid Pattern (CrudService + Active Record)
  *
- * Repository 주입 없이 User 엔티티의 Active Record 메서드를 활용합니다.
+ * CrudService를 확장하면서 User 엔티티의 Active Record 메서드도 활용합니다.
  */
 @Module({
+  imports: [TypeOrmModule.forFeature([User])],
   controllers: [UserController],
   providers: [UserService],
   exports: [UserService],

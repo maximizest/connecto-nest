@@ -76,9 +76,7 @@ import { User } from '../../../user/user.entity';
 export class PlanetUserController {
   private readonly logger = new Logger(PlanetUserController.name);
 
-  constructor(
-    public readonly crudService: PlanetUserService,
-  ) {}
+  constructor(public readonly crudService: PlanetUserService) {}
 
   /**
    * PlanetUser 조회 전 권한 확인 (행성에 참여한 유저만 조회 가능)
