@@ -10,9 +10,9 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Mission } from './mission.entity';
-import { MissionType } from './enums/mission-type.enum';
-import { SubmissionStatus } from './enums/submission-status.enum';
+import { Mission } from '../mission/mission.entity';
+import { MissionType } from '../mission/enums/mission-type.enum';
+import { SubmissionStatus } from '../mission/enums/submission-status.enum';
 import { Exclude } from 'class-transformer';
 
 @Entity('mission_submissions')
@@ -131,7 +131,7 @@ export class MissionSubmission extends BaseEntity {
   /**
    * 관계 설정
    */
-  @ManyToOne(() => Mission, (mission) => mission.submissions, {
+  @ManyToOne(() => Mission, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'missionId' })

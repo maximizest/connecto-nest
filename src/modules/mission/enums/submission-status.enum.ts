@@ -1,5 +1,7 @@
 export enum SubmissionStatus {
   PENDING = 'PENDING',
+  SUBMITTED = 'SUBMITTED',
   COMPLETED = 'COMPLETED',
+  APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
 }

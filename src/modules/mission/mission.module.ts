@@ -1,11 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Mission } from './mission.entity';
-import { MissionTravel } from './mission-travel.entity';
-import { MissionSubmission } from './mission-submission.entity';
 import { MissionService } from './mission.service';
 import { MissionController } from './api/v1/mission.controller';
-import { MissionGateway } from './mission.gateway';
 
 /**
  * Mission Module
@@ -26,11 +23,9 @@ import { MissionGateway } from './mission.gateway';
  * - 타입별 핸들러 패턴으로 새로운 미션 타입 쉽게 추가
  */
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Mission, MissionTravel, MissionSubmission]),
-  ],
+  imports: [TypeOrmModule.forFeature([Mission])],
   controllers: [MissionController],
-  providers: [MissionService, MissionGateway],
+  providers: [MissionService],
   exports: [MissionService],
 })
 export class MissionModule {}

@@ -10,7 +10,7 @@ import {
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm';
-import { Mission } from './mission.entity';
+import { Mission } from '../mission/mission.entity';
 import { Exclude } from 'class-transformer';
 
 @Entity('mission_travels')
@@ -87,7 +87,7 @@ export class MissionTravel extends BaseEntity {
   /**
    * 관계 설정
    */
-  @ManyToOne(() => Mission, (mission) => mission.missionTravels, {
+  @ManyToOne(() => Mission, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'missionId' })

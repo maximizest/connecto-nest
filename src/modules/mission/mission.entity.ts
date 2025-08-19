@@ -12,7 +12,6 @@ import {
   CreateDateColumn,
   Entity,
   Index,
-  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -135,15 +134,6 @@ export class Mission extends BaseEntity {
   @UpdateDateColumn({ comment: '미션 수정 시간' })
   @Exclude()
   updatedAt: Date;
-
-  /**
-   * 관계 설정
-   */
-  @OneToMany('MissionTravel', 'mission')
-  missionTravels: any[];
-
-  @OneToMany('MissionSubmission', 'mission')
-  submissions: any[];
 
   /**
    * 비즈니스 로직 메서드
