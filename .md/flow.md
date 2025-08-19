@@ -223,7 +223,7 @@ GET /api/v1/travels/{travelId}?include=travelUsers,planets
 graph TD
     A[Planet 입장] --> B[메시지 입력]
     B --> C{Rate Limit 확인}
-    
+
     C -->|초과| D[429 Too Many Requests]
     C -->|통과| E{메시지 타입}
 
@@ -252,22 +252,22 @@ graph TD
 graph TD
     A[WebSocket 연결] --> B[ChatGateway]
     B --> C[message:new 이벤트]
-    
+
     C --> D[클라이언트 수신]
     D --> E{현재 화면?}
-    
+
     E -->|채팅방 내| F[화면에 표시]
     E -->|다른 화면| G[알림 표시]
-    
+
     F --> H[자동 읽음 처리]
     H --> I[readMessage 이벤트]
-    
+
     I --> J[ReadReceiptService]
     J --> K[읽음 상태 저장]
-    
+
     K --> L[message:read 브로드캐스트]
     L --> M[발신자에게 읽음 표시]
-    
+
     G --> N[배지 카운트 증가]
     N --> O[푸시 알림 트리거]
 ```
@@ -275,51 +275,53 @@ graph TD
 ### 4.3 WebSocket 이벤트 목록
 
 #### EnhancedWebSocketGateway 이벤트 (/chat namespace)
-| 이벤트 명 | 방향 | 설명 | 인증 필요 |
-|----------|------|------|----------|
-| ping | C→S | 연결 상태 확인 | ✅ |
-| join-room | C→S | 채팅방 참여 | ✅ |
-| leave-room | C→S | 채팅방 퇴장 | ✅ |
-| typing | C→S | 타이핑 상태 알림 | ✅ |
-| pong | S→C | ping 응답 | - |
-| connected | S→C | 연결 성공 | - |
-| room-joined | S→C | 방 참여 완료 | - |
-| room-left | S→C | 방 퇴장 완료 | - |
-| user-joined | S→C | 다른 사용자 참여 | - |
-| user-left | S→C | 다른 사용자 퇴장 | - |
-| user-typing | S→C | 사용자 타이핑 중 | - |
-| error | S→C | 에러 발생 | - |
+
+| 이벤트 명   | 방향 | 설명             | 인증 필요 |
+| ----------- | ---- | ---------------- | --------- |
+| ping        | C→S  | 연결 상태 확인   | ✅        |
+| join-room   | C→S  | 채팅방 참여      | ✅        |
+| leave-room  | C→S  | 채팅방 퇴장      | ✅        |
+| typing      | C→S  | 타이핑 상태 알림 | ✅        |
+| pong        | S→C  | ping 응답        | -         |
+| connected   | S→C  | 연결 성공        | -         |
+| room-joined | S→C  | 방 참여 완료     | -         |
+| room-left   | S→C  | 방 퇴장 완료     | -         |
+| user-joined | S→C  | 다른 사용자 참여 | -         |
+| user-left   | S→C  | 다른 사용자 퇴장 | -         |
+| user-typing | S→C  | 사용자 타이핑 중 | -         |
+| error       | S→C  | 에러 발생        | -         |
 
 #### ChatGateway 이벤트
-| 이벤트 명 | 방향 | 설명 | Rate Limit |
-|----------|------|------|------------|
-| message:send | C→S | 메시지 전송 | 30/min |
-| message:edit | C→S | 메시지 수정 | 10/min |
-| message:delete | C→S | 메시지 삭제 | 10/min |
-| message:restore | C→S | 메시지 복구 | 10/min |
-| message:read | C→S | 메시지 읽음 | - |
-| messages:read_multiple | C→S | 여러 메시지 읽음 | - |
-| planet:read_all | C→S | Planet 전체 읽음 | - |
-| planet:get_unread_count | C→S | 읽지 않은 메시지 수 조회 | - |
-| user:get_all_unread_counts | C→S | 모든 Planet의 읽지 않은 수 | - |
-| user:update_location | C→S | 위치 업데이트 | - |
-| room:join | C→S | 채팅방 참여 | 10/min |
-| room:leave | C→S | 채팅방 퇴장 | - |
-| room:get_info | C→S | 채팅방 정보 조회 | - |
-| typing:start | C→S | 타이핑 시작 | 10/10s |
-| typing:stop | C→S | 타이핑 중지 | - |
-| typing:advanced_start | C→S | 고급 타이핑 시작 | - |
-| typing:advanced_stop | C→S | 고급 타이핑 중지 | - |
-| typing:update | C→S | 타이핑 상태 업데이트 | - |
-| typing:get_status | C→S | 타이핑 상태 조회 | - |
-| typing:get_users | C→S | 타이핑 사용자 목록 | - |
-| typing:get_analytics | C→S | 타이핑 분석 데이터 | - |
-| notifications:subscribe | C→S | 알림 구독 | - |
-| notifications:unsubscribe | C→S | 알림 구독 해제 | - |
-| notifications:update_status | C→S | 알림 상태 업데이트 | - |
-| notifications:get_list | C→S | 알림 목록 조회 | - |
 
-*C→S: Client to Server, S→C: Server to Client*
+| 이벤트 명                   | 방향 | 설명                       | Rate Limit |
+| --------------------------- | ---- | -------------------------- | ---------- |
+| message:send                | C→S  | 메시지 전송                | 30/min     |
+| message:edit                | C→S  | 메시지 수정                | 10/min     |
+| message:delete              | C→S  | 메시지 삭제                | 10/min     |
+| message:restore             | C→S  | 메시지 복구                | 10/min     |
+| message:read                | C→S  | 메시지 읽음                | -          |
+| messages:read_multiple      | C→S  | 여러 메시지 읽음           | -          |
+| planet:read_all             | C→S  | Planet 전체 읽음           | -          |
+| planet:get_unread_count     | C→S  | 읽지 않은 메시지 수 조회   | -          |
+| user:get_all_unread_counts  | C→S  | 모든 Planet의 읽지 않은 수 | -          |
+| user:update_location        | C→S  | 위치 업데이트              | -          |
+| room:join                   | C→S  | 채팅방 참여                | 10/min     |
+| room:leave                  | C→S  | 채팅방 퇴장                | -          |
+| room:get_info               | C→S  | 채팅방 정보 조회           | -          |
+| typing:start                | C→S  | 타이핑 시작                | 10/10s     |
+| typing:stop                 | C→S  | 타이핑 중지                | -          |
+| typing:advanced_start       | C→S  | 고급 타이핑 시작           | -          |
+| typing:advanced_stop        | C→S  | 고급 타이핑 중지           | -          |
+| typing:update               | C→S  | 타이핑 상태 업데이트       | -          |
+| typing:get_status           | C→S  | 타이핑 상태 조회           | -          |
+| typing:get_users            | C→S  | 타이핑 사용자 목록         | -          |
+| typing:get_analytics        | C→S  | 타이핑 분석 데이터         | -          |
+| notifications:subscribe     | C→S  | 알림 구독                  | -          |
+| notifications:unsubscribe   | C→S  | 알림 구독 해제             | -          |
+| notifications:update_status | C→S  | 알림 상태 업데이트         | -          |
+| notifications:get_list      | C→S  | 알림 목록 조회             | -          |
+
+_C→S: Client to Server, S→C: Server to Client_
 
 ### 4.4 상세 단계
 
@@ -331,7 +333,7 @@ socket.emit('sendMessage', {
   type: 'TEXT',
   planetId: 123,
   content: '안녕하세요!',
-  replyToMessageId: null
+  replyToMessageId: null,
 });
 
 // 서버 응답
@@ -441,31 +443,31 @@ graph TD
 graph TD
     A[새 메시지 발생] --> B[NotificationService.create]
     B --> C{알림 타입}
-    
+
     C -->|MESSAGE| D[메시지 알림]
     C -->|MENTION| E[멘션 알림]
     C -->|REPLY| F[답글 알림]
     C -->|BANNED| G[차단 알림]
     C -->|SYSTEM| H[시스템 알림]
-    
+
     D --> I{채널 선택}
     E --> I
     F --> I
     G --> I
     H --> I
-    
+
     I -->|IN_APP| J[인앱 알림 생성]
     I -->|PUSH| K[푸시 알림 생성]
     I -->|EMAIL| L[이메일 알림 생성]
     I -->|WEBSOCKET| M[WebSocket 알림 생성]
-    
+
     K --> N[PushNotificationService]
     N --> O{플랫폼}
-    
+
     O -->|iOS| P[APNS 전송]
     O -->|Android| Q[FCM 전송]
     O -->|Web| R[Web Push 전송]
-    
+
     P --> S[디바이스 알림]
     Q --> S
     R --> S
@@ -477,20 +479,20 @@ graph TD
 graph TD
     A[앱 시작] --> B[푸시 토큰 생성]
     B --> C[POST /api/v1/notifications/push-token]
-    
+
     C --> D{토큰 유효성 확인}
     D -->|유효| E[토큰 저장]
     D -->|무효| F[에러 반환]
-    
+
     E --> G{플랫폼 타입}
     G -->|iOS| H[APNS 토큰]
     G -->|Android| I[FCM 토큰]
     G -->|Web| J[Web Push 토큰]
-    
+
     H --> K[사용자별 토큰 매핑]
     I --> K
     J --> K
-    
+
     K --> L[디바이스별 관리]
     L --> M[토큰 만료 추적]
 ```
@@ -684,25 +686,25 @@ graph TD
 graph TD
     A[관리자 대시보드] --> B[사용자 선택]
     B --> C[POST /api/v1/admin/users/:userId/force-logout]
-    
+
     C --> D[사용자 상태 확인]
     D --> E[User.sessionVersion 증가]
-    
+
     E --> F[SessionManager.invalidateUserSessions]
     F --> G[모든 Redis 세션 삭제]
-    
+
     G --> H[TokenBlacklist.blacklistUserSessions]
     H --> I[모든 토큰 블랙리스트 추가]
-    
+
     I --> J[ConnectionManager.forceDisconnectUser]
     J --> K[WebSocket 연결 즉시 종료]
-    
+
     K --> L[감사 로그 기록]
     L --> M[User.lastForcedLogout = now]
-    
+
     M --> N[이벤트 발생]
     N --> O[user.force.logout 이벤트]
-    
+
     O --> P[성공 응답]
 ```
 
@@ -712,21 +714,21 @@ graph TD
 graph TD
     A[사용자 앱 사용 중] --> B[API 요청]
     B --> C{Enhanced Auth Guard}
-    
+
     C --> D[토큰 블랙리스트 확인]
     D --> E{블랙리스트?}
-    
+
     E -->|Yes| F[401 Unauthorized]
     E -->|No| G[세션 유효성 확인]
-    
+
     G --> H{sessionVersion 비교}
     H -->|불일치| F
     H -->|일치| I[요청 처리]
-    
+
     F --> J[클라이언트 로그아웃 처리]
     J --> K[WebSocket 연결 종료]
     K --> L[로그인 화면으로 이동]
-    
+
     L --> M[강제 로그아웃 안내 메시지]
 ```
 
@@ -737,6 +739,7 @@ GET /api/v1/admin/users/:userId/sessions
 ```
 
 응답:
+
 ```json
 {
   "sessions": [
@@ -764,19 +767,19 @@ GET /api/v1/admin/users/:userId/sessions
 graph TD
     A[로그인 성공] --> B[JWT 토큰 발급]
     B --> C[SessionManager.createSession]
-    
+
     C --> D[세션 ID 생성]
     D --> E[세션 데이터 저장]
-    
+
     E --> F[Redis 저장]
     F --> G["session:{sessionId}"]
     F --> H["user:{userId}:sessions"]
     F --> I["device:{deviceId}:session"]
-    
+
     G --> J[24시간 TTL]
     H --> K[사용자 세션 리스트]
     I --> L[디바이스 매핑]
-    
+
     L --> M[세션 활성 상태]
 ```
 
@@ -786,17 +789,17 @@ graph TD
 graph TD
     A[토큰 무효화 필요] --> B[TokenBlacklist.blacklistToken]
     B --> C[토큰 해시 생성]
-    
+
     C --> D[Redis 저장]
     D --> E[blacklist:token:hash]
     D --> F[blacklist:user:userId]
-    
+
     E --> G[TTL = 토큰 만료 시간]
     F --> H[사용자 레벨 블랙리스트]
-    
+
     I[API 요청 시] --> J[토큰 검증]
     J --> K[isTokenBlacklisted 확인]
-    
+
     K --> L{블랙리스트?}
     L -->|Yes| M[401 Unauthorized]
     L -->|No| N[요청 허용]
@@ -805,26 +808,27 @@ graph TD
 ### 10.3 WebSocket 연결 관리 (Dual Gateway System + Redis Adapter)
 
 #### EnhancedWebSocketGateway (인증 및 연결 관리)
+
 ```mermaid
 graph TD
     A[WebSocket 연결 요청] --> B[토큰 추출]
     B --> C{토큰 있음?}
-    
+
     C -->|No| D[연결 거부]
     C -->|Yes| E[TokenBlacklist 확인]
-    
+
     E --> F{블랙리스트?}
     F -->|Yes| G[연결 거부 및 에러 메시지]
     F -->|No| H[JWT 검증]
-    
+
     H --> I{유효한 토큰?}
     I -->|No| J[401 Unauthorized]
     I -->|Yes| K[사용자 조회]
-    
+
     K --> L{차단된 사용자?}
     L -->|Yes| M[연결 거부]
     L -->|No| N[ConnectionManager.registerConnection]
-    
+
     N --> O[연결 등록]
     O --> P[Redis Adapter 설정]
     P --> Q[멀티 레플리카 동기화]
@@ -832,42 +836,44 @@ graph TD
 ```
 
 #### ChatGateway (채팅 기능 + Redis Adapter)
+
 ```mermaid
 graph TD
     A[인증된 연결] --> B[Redis Adapter 초기화]
     B --> C[채팅 이벤트 수신]
     C --> D{Rate Limit 확인}
-    
+
     D -->|초과| E[Rate Limit 에러]
     D -->|통과| F{이벤트 타입}
-    
+
     F -->|joinRoom| G[Room 참여]
     F -->|sendMessage| H[메시지 전송]
     F -->|typing| I[타이핑 표시]
     F -->|readMessage| J[읽음 처리]
-    
+
     G --> K[WebSocketRoomService]
     H --> L[Redis Pub/Sub 브로드캐스트]
     I --> M[TypingIndicatorService]
     J --> N[ReadReceiptService]
-    
+
     L --> O[모든 레플리카 동기화]
     O --> P[WebSocketBroadcastService]
 ```
 
 #### Redis Adapter 멀티 레플리카 동작
+
 ```mermaid
 graph TD
     A[클라이언트 A - 레플리카 1] --> B[메시지 전송]
     B --> C[Redis Pub/Sub]
-    
+
     C --> D[레플리카 1 처리]
     C --> E[레플리카 2 동기화]
     C --> F[레플리카 3 동기화]
-    
+
     E --> G[클라이언트 B - 레플리카 2]
     F --> H[클라이언트 C - 레플리카 3]
-    
+
     G --> I[메시지 수신]
     H --> J[메시지 수신]
 ```
@@ -882,22 +888,22 @@ graph TD
 graph TD
     A[WebSocket 연결] --> B[EnhancedWebSocketGateway]
     B --> C[사용자 인증]
-    
+
     C --> D[ConnectionManager.registerConnection]
     D --> E[온라인 상태 업데이트]
-    
+
     E --> F[WebSocketRoomService]
     F --> G[Redis 저장]
-    
+
     G --> H[상태 브로드캐스트]
     H --> I{user:online 이벤트}
-    
+
     I -->|같은 Planet| J[온라인 표시]
     I -->|친구 목록| K[온라인 표시]
-    
+
     L[WebSocket 종료] --> M[handleDisconnect]
     M --> N[오프라인 상태]
-    
+
     N --> O[Redis 삭제]
     O --> P[user:offline 브로드캐스트]
 ```
@@ -908,20 +914,20 @@ graph TD
 graph TD
     A[텍스트 입력 시작] --> B[typing 이벤트]
     B --> C{Rate Limit 확인}
-    
+
     C -->|초과| D[무시]
     C -->|통과| E[TypingIndicatorService]
-    
+
     E --> F[타이핑 상태 저장]
     F --> G[같은 Planet 사용자에게 브로드캐스트]
-    
+
     G --> H[타이핑 표시]
     H --> I[3초 타이머 시작]
-    
+
     I --> J{계속 타이핑?}
     J -->|Yes| K[타이머 리셋]
     J -->|No| L[타이핑 표시 제거]
-    
+
     K --> I
 ```
 
@@ -1062,57 +1068,57 @@ graph TD
 graph TD
     A[Client] --> B[WebSocket Connection]
     B --> C{Gateway Type}
-    
+
     C -->|Auth/Connection| D[EnhancedWebSocketGateway]
     C -->|Chat/Messaging| E[ChatGateway]
-    
+
     D --> F[ConnectionManagerService]
     D --> G[TokenBlacklistService]
     D --> H[SessionManagerService]
     D --> R[RedisAdapterService]
-    
+
     E --> I[WebSocketRoomService]
     E --> J[WebSocketBroadcastService]
     E --> K[TypingIndicatorService]
     E --> L[RateLimitService]
     E --> R
-    
+
     I --> M[Redis Pub/Sub]
     J --> M
     K --> M
     R --> M
-    
+
     M --> N[멀티 레플리카 동기화]
     N --> O[모든 서버 인스턴스]
 ```
 
 ### 15.2 WebSocket 서비스 역할
 
-| 서비스 | 역할 | 주요 기능 |
-|---------|------|----------|
-| ConnectionManagerService | 연결 관리 | 사용자/디바이스별 연결 추적, 강제 연결 종료 |
-| WebSocketRoomService | 방 관리 | 채팅방 참여/퇴장, 온라인 상태 |
-| WebSocketBroadcastService | 메시지 브로드캐스트 | 방/사용자별 메시지 전송 |
-| TypingIndicatorService | 타이핑 표시 | 타이핑 상태 관리 및 전파 |
-| RateLimitService | 속도 제한 | 액션별 Rate Limiting |
-| TokenBlacklistService | 토큰 블랙리스트 | 무효화된 토큰 관리, 강제 로그아웃 지원 |
-| SessionManagerService | 세션 관리 | 사용자 세션 추적, TTL 관리 |
-| **RedisAdapterService** | **멀티 레플리카 동기화** | **Socket.io Redis Adapter 관리, 서버 간 이벤트 전파** |
-| **DistributedEventService** | **분산 이벤트 처리** | **EventEmitter2 이벤트를 모든 레플리카에 전파** |
-| **DistributedCacheService** | **분산 캐시 동기화** | **캐시 무효화를 모든 레플리카에 동기화** |
-| **ReplicaAwareLoggingInterceptor** | **레플리카 인식 로깅** | **레플리카 ID를 모든 로그에 포함** |
+| 서비스                             | 역할                     | 주요 기능                                             |
+| ---------------------------------- | ------------------------ | ----------------------------------------------------- |
+| ConnectionManagerService           | 연결 관리                | 사용자/디바이스별 연결 추적, 강제 연결 종료           |
+| WebSocketRoomService               | 방 관리                  | 채팅방 참여/퇴장, 온라인 상태                         |
+| WebSocketBroadcastService          | 메시지 브로드캐스트      | 방/사용자별 메시지 전송                               |
+| TypingIndicatorService             | 타이핑 표시              | 타이핑 상태 관리 및 전파                              |
+| RateLimitService                   | 속도 제한                | 액션별 Rate Limiting                                  |
+| TokenBlacklistService              | 토큰 블랙리스트          | 무효화된 토큰 관리, 강제 로그아웃 지원                |
+| SessionManagerService              | 세션 관리                | 사용자 세션 추적, TTL 관리                            |
+| **RedisAdapterService**            | **멀티 레플리카 동기화** | **Socket.io Redis Adapter 관리, 서버 간 이벤트 전파** |
+| **DistributedEventService**        | **분산 이벤트 처리**     | **EventEmitter2 이벤트를 모든 레플리카에 전파**       |
+| **DistributedCacheService**        | **분산 캐시 동기화**     | **캐시 무효화를 모든 레플리카에 동기화**              |
+| **ReplicaAwareLoggingInterceptor** | **레플리카 인식 로깅**   | **레플리카 ID를 모든 로그에 포함**                    |
 
 ### 15.3 기타 핵심 서비스
 
-| 서비스 | 모듈 | 역할 | 주요 기능 |
-|---------|------|------|----------|
-| StorageService | storage | 파일 저장소 | Cloudflare R2 통합, 파일 업로드/다운로드 |
-| RedisService | cache | 캐싱 | Redis 기반 캐싱, Pub/Sub, 분산 락 |
-| PushNotificationService | notification | 푸시 알림 | FCM 기반 푸시 알림 전송 |
-| MessagePaginationService | message | 메시지 페이징 | 커서 기반 페이지네이션 |
-| CrudMetadataService | schema | CRUD 메타데이터 | 엔티티 CRUD 설정 관리 |
-| SecurityValidationService | schema | 보안 검증 | 엔티티 보안 규칙 검증 |
-| SchedulerService | scheduler | 스케줄링 | 배치 작업, 정기 작업 관리 (Redis 락으로 중복 실행 방지) |
+| 서비스                    | 모듈         | 역할            | 주요 기능                                               |
+| ------------------------- | ------------ | --------------- | ------------------------------------------------------- |
+| StorageService            | storage      | 파일 저장소     | Cloudflare R2 통합, 파일 업로드/다운로드                |
+| RedisService              | cache        | 캐싱            | Redis 기반 캐싱, Pub/Sub, 분산 락                       |
+| PushNotificationService   | notification | 푸시 알림       | FCM 기반 푸시 알림 전송                                 |
+| MessagePaginationService  | message      | 메시지 페이징   | 커서 기반 페이지네이션                                  |
+| CrudMetadataService       | schema       | CRUD 메타데이터 | 엔티티 CRUD 설정 관리                                   |
+| SecurityValidationService | schema       | 보안 검증       | 엔티티 보안 규칙 검증                                   |
+| SchedulerService          | scheduler    | 스케줄링        | 배치 작업, 정기 작업 관리 (Redis 락으로 중복 실행 방지) |
 
 ---
 
@@ -1123,18 +1129,18 @@ graph TD
 ```mermaid
 graph TD
     A[사용자 역할] --> B{역할 확인}
-    
+
     B -->|ADMIN| C[모든 레벨 벤 가능]
     B -->|HOST| D[자신의 Travel만]
     B -->|USER| E[벤 권한 없음]
-    
+
     C --> F[플랫폼 벤]
     C --> G[Travel 벤]
     C --> H[Planet 차단]
-    
+
     D --> I[Travel 벤 - HOST인 경우]
     D --> J[Planet 차단 - Travel 내]
-    
+
     E --> K[권한 없음 에러]
 ```
 
@@ -1143,22 +1149,22 @@ graph TD
 ```mermaid
 graph TD
     A[벤 해제 요청] --> B{레벨 확인}
-    
+
     B -->|플랫폼| C[POST /api/v1/moderation/unban/platform/:userId]
     B -->|Travel| D[POST /api/v1/moderation/unban/travel/:travelId/:userId]
-    
+
     C --> E{ADMIN 권한?}
     E -->|Yes| F[User.unbanUser]
     E -->|No| G[403 Forbidden]
-    
+
     D --> H{권한 확인}
     H -->|ADMIN| I[TravelUser.unbanUser]
     H -->|HOST| J{자신의 Travel?}
     H -->|USER| K[403 Forbidden]
-    
+
     J -->|Yes| I
     J -->|No| K
-    
+
     F --> L[벤 해제 완료]
     I --> L
 ```
@@ -1174,20 +1180,20 @@ graph TD
     A[Railway 로드 밸런서] --> B[레플리카 1]
     A --> C[레플리카 2]
     A --> D[레플리카 N]
-    
+
     B --> E[Redis Cluster]
     C --> E
     D --> E
-    
+
     E --> F[Pub/Sub 채널]
     E --> G[캐시 저장소]
     E --> H[세션 저장소]
     E --> I[분산 락]
-    
+
     F --> J[WebSocket 이벤트 동기화]
     F --> K[EventEmitter 이벤트 동기화]
     F --> L[캐시 무효화 동기화]
-    
+
     B --> M[PostgreSQL]
     C --> M
     D --> M
@@ -1199,17 +1205,17 @@ graph TD
 graph TD
     A[클라이언트 A] --> B[레플리카 1]
     C[클라이언트 B] --> D[레플리카 2]
-    
+
     B --> E[메시지 전송]
     E --> F[Redis Adapter]
     F --> G[Redis Pub/Sub]
-    
+
     G --> H[레플리카 1 브로드캐스트]
     G --> I[레플리카 2 브로드캐스트]
-    
+
     H --> J[로컬 클라이언트에게 전송]
     I --> K[로컬 클라이언트에게 전송]
-    
+
     J --> A
     K --> C
 ```
@@ -1219,28 +1225,28 @@ graph TD
 ```mermaid
 graph TD
     A[스케줄 작업 트리거] --> B{Redis 락 획득 시도}
-    
+
     B -->|레플리카 1 성공| C[작업 실행]
     B -->|레플리카 2 실패| D[스킵]
     B -->|레플리카 N 실패| E[스킵]
-    
+
     C --> F[작업 완료]
     F --> G[락 해제]
-    
+
     D --> H[다음 스케줄 대기]
     E --> H
 ```
 
 ### 17.4 분산 환경 서비스 동작
 
-| 기능 | 문제점 | 해결 방법 | 구현 |
-|------|--------|----------|------|
-| WebSocket 메시지 | 다른 레플리카 클라이언트에게 전달 안됨 | Redis Adapter | RedisAdapterService |
-| 스케줄러 | 모든 레플리카에서 중복 실행 | Redis 분산 락 | SchedulerService (기존) |
-| EventEmitter | 로컬 이벤트만 처리 | Redis Pub/Sub 전파 | DistributedEventService |
-| 캐시 무효화 | 다른 레플리카 캐시 유지 | 분산 캐시 무효화 | DistributedCacheService |
-| 로깅 | 레플리카 구분 불가 | 레플리카 ID 포함 | ReplicaAwareLoggingInterceptor |
-| Rate Limiting | 제거됨 (현재 사용 안함) | - | - |
+| 기능             | 문제점                                 | 해결 방법          | 구현                           |
+| ---------------- | -------------------------------------- | ------------------ | ------------------------------ |
+| WebSocket 메시지 | 다른 레플리카 클라이언트에게 전달 안됨 | Redis Adapter      | RedisAdapterService            |
+| 스케줄러         | 모든 레플리카에서 중복 실행            | Redis 분산 락      | SchedulerService (기존)        |
+| EventEmitter     | 로컬 이벤트만 처리                     | Redis Pub/Sub 전파 | DistributedEventService        |
+| 캐시 무효화      | 다른 레플리카 캐시 유지                | 분산 캐시 무효화   | DistributedCacheService        |
+| 로깅             | 레플리카 구분 불가                     | 레플리카 ID 포함   | ReplicaAwareLoggingInterceptor |
+| Rate Limiting    | 제거됨 (현재 사용 안함)                | -                  | -                              |
 
 ### 17.5 환경 변수 설정
 
@@ -1268,20 +1274,20 @@ JWT_SECRET=...
 graph TD
     A[WebSocket 이벤트] --> B[RateLimitService]
     B --> C{액션 타입}
-    
+
     C -->|메시지 전송| D[MessageSendRateLimit]
     C -->|파일 업로드| E[FileUploadRateLimit]
     C -->|방 참여| F[RoomJoinRateLimit]
     C -->|타이핑| G[TypingRateLimit]
-    
+
     D --> H{제한 확인}
     E --> H
     F --> H
     G --> H
-    
+
     H -->|초과| I[429 에러 및 남은 시간]
     H -->|통과| J[액션 실행]
-    
+
     I --> K[클라이언트에 에러 전송]
     J --> L[정상 처리]
 ```
@@ -1290,12 +1296,12 @@ graph TD
 
 > **참고**: Rate Limiting 기능은 현재 제거된 상태입니다. 필요시 재구현 가능합니다.
 
-| 액션 | 제한 | 시간 창 | 설명 |
-|------|------|---------|------|
-| 메시지 전송 | 30개 | 60초 | 분당 30개 메시지 |
-| 파일 업로드 | 10개 | 60초 | 분당 10개 파일 |
-| 방 참여 | 10개 | 60초 | 분당 10개 방 참여 |
-| 타이핑 표시 | 10개 | 10초 | 10초당 10회 |
+| 액션        | 제한 | 시간 창 | 설명              |
+| ----------- | ---- | ------- | ----------------- |
+| 메시지 전송 | 30개 | 60초    | 분당 30개 메시지  |
+| 파일 업로드 | 10개 | 60초    | 분당 10개 파일    |
+| 방 참여     | 10개 | 60초    | 분당 10개 방 참여 |
+| 타이핑 표시 | 10개 | 10초    | 10초당 10회       |
 
 ---
 
@@ -1310,22 +1316,22 @@ graph TD
     B -->|Planet| D[Planet 참여 확인]
     B -->|Message| E[Message 접근 권한 확인]
     B -->|User Profile| F[직접 신고 가능]
-    
+
     C --> G{권한 확인}
     D --> G
     E --> G
     F --> G
-    
+
     G -->|권한 있음| H[신고 정보 입력]
     G -->|권한 없음| I[403 에러]
-    
+
     H --> J[중복 신고 확인]
     J -->|중복| K[이미 신고됨 알림]
     J -->|신규| L[신고 생성]
-    
+
     L --> M[신고 상태: PENDING]
     M --> N[신고 목록에 추가]
-    
+
     N --> O{관리자 처리}
     O -->|검토 중| P[상태: REVIEWING]
     O -->|해결됨| Q[상태: RESOLVED]
@@ -1334,16 +1340,17 @@ graph TD
 
 ### 19.2 Report API 엔드포인트
 
-| 메서드 | 경로 | 설명 | 권한 | 구현 상태 |
-|--------|------|------|------|----------|
-| GET | /api/v1/reports | 본인 신고 목록 조회 | 인증 필요 | ✅ 구현됨 |
-| GET | /api/v1/reports/:id | 본인 신고 상세 조회 | 인증 필요 | ✅ 구현됨 |
-| POST | /api/v1/reports | 신고 생성 | 인증 필요 | ✅ 구현됨 |
+| 메서드 | 경로                | 설명                  | 권한      | 구현 상태 |
+| ------ | ------------------- | --------------------- | --------- | --------- |
+| GET    | /api/v1/reports     | 본인 신고 목록 조회   | 인증 필요 | ✅ 구현됨 |
+| GET    | /api/v1/reports/:id | 본인 신고 상세 조회   | 인증 필요 | ✅ 구현됨 |
+| POST   | /api/v1/reports     | 신고 생성             | 인증 필요 | ✅ 구현됨 |
 | DELETE | /api/v1/reports/:id | 신고 취소 (PENDING만) | 인증 필요 | ✅ 구현됨 |
 
 ### 19.3 신고 유형 및 컨텍스트
 
 #### 신고 유형 (ReportType)
+
 - `SPAM`: 스팸
 - `HARASSMENT`: 괴롭힘
 - `INAPPROPRIATE_CONTENT`: 부적절한 콘텐츠
@@ -1354,6 +1361,7 @@ graph TD
 - `OTHER`: 기타
 
 #### 신고 컨텍스트 (ReportContext)
+
 - `TRAVEL`: Travel 내에서의 활동
 - `PLANET`: Planet 내에서의 활동
 - `MESSAGE`: 특정 메시지
@@ -1361,24 +1369,27 @@ graph TD
 
 ### 19.4 신고 처리 후 조치
 
-| 신고 대상 | 가능한 조치 |
-|-----------|------------|
-| User | 계정 정지 (isBanned) |
+| 신고 대상     | 가능한 조치                             |
+| ------------- | --------------------------------------- |
+| User          | 계정 정지 (isBanned)                    |
 | Travel 사용자 | Travel 추방 (TravelUser status: BANNED) |
-| Planet 사용자 | Planet 음소거 (PlanetUser muteUntil) |
-| Message | 메시지 삭제 또는 숨김 처리 |
+| Planet 사용자 | Planet 음소거 (PlanetUser muteUntil)    |
+| Message       | 메시지 삭제 또는 숨김 처리              |
 
 ### 19.5 신고 검증 규칙
 
 #### 자기 신고 방지
+
 - 사용자는 자기 자신을 신고할 수 없음
 - 시도 시 BadRequestException 발생
 
 #### 중복 신고 방지
+
 - 동일한 컨텍스트에서 동일한 대상에 대한 PENDING 상태 신고가 있으면 중복으로 간주
 - 중복 신고 시 "이미 신고한 내용입니다" 에러 반환
 
 #### 컨텍스트별 권한 검증
+
 - **Travel**: 신고자가 해당 Travel의 TravelUser여야 함
 - **Planet**: 신고자가 해당 Planet의 PlanetUser여야 함
 - **Message**: 신고자가 메시지가 속한 Planet의 멤버여야 함
@@ -1387,11 +1398,13 @@ graph TD
 ### 19.6 구현 아키텍처
 
 #### Active Record 패턴
+
 - Repository 패턴 대신 TypeORM의 Active Record 패턴 사용
 - Entity가 BaseEntity를 상속받아 직접 DB 작업 수행
 - 예: `Report.findOne()`, `report.save()`, `report.remove()`
 
 #### @foryourdev/nestjs-crud 통합
+
 - 표준 CRUD 작업을 자동화
 - 필터링, 정렬, 페이지네이션 자동 지원
 - BeforeShow, BeforeCreate 등 훅을 통한 권한 검증
@@ -1427,6 +1440,7 @@ graph TD
 ### 19.8 데이터베이스 스키마
 
 #### Report 테이블
+
 - 인덱스: `reporterId + status`, `reportedUserId + status`, `status + createdAt`, `travelId + status`, `planetId + status`
 - 외래 키: reporter → users, reportedUser → users, travel → travels, planet → planets, message → messages
 - 관리자 전용 필드: `reviewedBy`, `adminNotes` (`@Exclude()` 데코레이터로 일반 사용자에게 숨김)
@@ -1457,10 +1471,10 @@ graph TD
     A[Accommodation<br/>숙박 업소] --> B[Travel 1<br/>여행 그룹]
     A --> C[Travel 2<br/>여행 그룹]
     A --> D[Travel N<br/>여행 그룹]
-    
+
     B --> E[Planet A<br/>채팅방]
     B --> F[Planet B<br/>채팅방]
-    
+
     C --> G[Planet C<br/>채팅방]
     C --> H[Planet D<br/>채팅방]
 ```
@@ -1474,19 +1488,19 @@ graph TD
 export class Accommodation extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
-  
+
   @Column({ type: 'varchar', length: 255 })
-  name: string;  // 숙소명
-  
+  name: string; // 숙소명
+
   @Column({ type: 'text', nullable: true })
-  description: string | null;  // 숙소설명
-  
+  description: string | null; // 숙소설명
+
   @OneToMany(() => Travel, (travel) => travel.accommodation)
-  travels: Travel[];  // 관련 여행 목록
-  
+  travels: Travel[]; // 관련 여행 목록
+
   @CreateDateColumn()
   createdAt: Date;
-  
+
   @UpdateDateColumn()
   updatedAt: Date;
 }
@@ -1498,17 +1512,17 @@ export class Accommodation extends BaseEntity {
 @Entity('travels')
 export class Travel extends BaseEntity {
   // ... 기존 필드들 ...
-  
+
   @Column({ nullable: true })
   accommodationId: number | null;
-  
+
   @ManyToOne(() => Accommodation, (accommodation) => accommodation.travels, {
     nullable: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn({ name: 'accommodationId' })
   accommodation: Accommodation | null;
-  
+
   // ... 나머지 필드들 ...
 }
 ```
@@ -1526,11 +1540,13 @@ GET /api/v1/accommodations
 ```
 
 **Query Parameters:**
+
 - `name`: 숙소명으로 필터링
 - `createdAt`: 생성일로 필터링
 - `include`: travels (관련 여행 정보 포함)
 
 **Response:**
+
 ```json
 {
   "data": [
@@ -1567,12 +1583,15 @@ GET /api/v1/accommodations/:id
 ```
 
 **Path Parameters:**
+
 - `id`: 숙박 업소 ID
 
 **Query Parameters:**
+
 - `include`: travels (관련 여행 정보 포함)
 
 **Response:**
+
 ```json
 {
   "id": 1,
@@ -1659,7 +1678,7 @@ erDiagram
     TRAVEL ||--o{ TRAVEL_USER : has
     PLANET ||--o{ PLANET_USER : has
     PLANET ||--o{ MESSAGE : contains
-    
+
     ACCOMMODATION {
         int id PK
         string name
@@ -1667,7 +1686,7 @@ erDiagram
         datetime createdAt
         datetime updatedAt
     }
-    
+
     TRAVEL {
         int id PK
         int accommodationId FK "nullable"
@@ -1702,11 +1721,11 @@ CREATE TABLE "accommodations" (
 );
 
 -- Travel 테이블에 외래 키 추가
-ALTER TABLE "travels" 
+ALTER TABLE "travels"
 ADD COLUMN "accommodationId" integer,
-ADD CONSTRAINT "FK_accommodation_travel" 
-    FOREIGN KEY ("accommodationId") 
-    REFERENCES "accommodations"("id") 
+ADD CONSTRAINT "FK_accommodation_travel"
+    FOREIGN KEY ("accommodationId")
+    REFERENCES "accommodations"("id")
     ON DELETE SET NULL;
 
 -- 인덱스 추가
@@ -1724,6 +1743,7 @@ CREATE INDEX "IDX_travel_accommodation" ON "travels" ("accommodationId");
 ### 21.2 아키텍처 변경사항
 
 #### Before: Repository Pattern
+
 ```typescript
 // 기존 Repository 패턴
 @Injectable()
@@ -1734,7 +1754,7 @@ export class UserService extends CrudService<User> {
   ) {
     super(repository);
   }
-  
+
   async findByEmail(email: string) {
     return this.repository.findOne({ where: { email } });
   }
@@ -1742,6 +1762,7 @@ export class UserService extends CrudService<User> {
 ```
 
 #### After: Active Record Pattern
+
 ```typescript
 // 새로운 Active Record 패턴
 @Injectable()
@@ -1783,6 +1804,7 @@ export abstract class BaseActiveRecord extends BaseEntity {
 ### 21.4 마이그레이션 완료 현황
 
 #### 완전 마이그레이션 엔티티 (Active Record)
+
 - ✅ **User**: 소셜 로그인, 사용자 관리
 - ✅ **Travel**: 여행 그룹 관리
 - ✅ **Planet**: 채팅방 관리
@@ -1800,6 +1822,7 @@ export abstract class BaseActiveRecord extends BaseEntity {
 - ✅ **MissionSubmission**: 미션 제출 (엔티티만)
 
 #### 서비스 마이그레이션 완료
+
 - ✅ UserService
 - ✅ TravelService
 - ✅ PlanetService
@@ -1812,21 +1835,25 @@ export abstract class BaseActiveRecord extends BaseEntity {
 - ✅ MissionTravelService
 
 #### 모듈 정리 완료
+
 - ✅ TypeOrmModule.forFeature 제거: 10개 모듈
 - ✅ Repository 의존성 제거 완료
 
 ### 21.5 주요 변경사항
 
 #### 1. 타임스탬프 필드 정리
+
 - Mission, MissionTravel 엔티티의 중복 타임스탬프 필드 제거
 - BaseActiveRecord의 createdAt/updatedAt 활용
 - MissionTravel의 assignedAt 필드 제거 (createdAt이 할당 시간 역할)
 
 #### 2. 프로퍼티 이름 충돌 해결
+
 - Mission.isActive → Mission.active (boolean 프로퍼티)
 - BaseActiveRecord.isActive() 메서드와 충돌 방지
 
 #### 3. Active Record 정적 메서드 추가
+
 각 엔티티에 도메인 특화 정적 메서드 추가:
 
 ```typescript
@@ -1840,7 +1867,7 @@ static async createSocialUser(userData: {...}): Promise<User> {
   return this.save(user);
 }
 
-// Mission 엔티티 예시  
+// Mission 엔티티 예시
 static async findActiveMissions(): Promise<Mission[]> {
   const now = new Date();
   const query = this.createQueryBuilder('mission')
@@ -1854,12 +1881,14 @@ static async findActiveMissions(): Promise<Mission[]> {
 ### 21.6 성능 및 구조 개선
 
 #### 장점
+
 1. **코드 간소화**: Repository 주입 제거로 보일러플레이트 코드 감소
 2. **직관적 API**: 엔티티에서 직접 메서드 호출
 3. **타입 안전성**: TypeScript와 더 나은 통합
 4. **유지보수성**: 비즈니스 로직과 데이터 액세스 로직이 한 곳에 위치
 
 #### 메모리 및 성능
+
 - Repository 인스턴스 제거로 메모리 사용량 감소
 - 의존성 주입 오버헤드 제거
 - 동일한 TypeORM 쿼리 빌더 사용으로 성능 동일
@@ -1878,6 +1907,7 @@ yarn typecheck ✓
 ### 21.8 향후 작업
 
 #### 남은 서비스 마이그레이션 (선택사항)
+
 - ReadReceiptService (복잡한 쿼리 포함)
 - NotificationService
 - FileUploadService
@@ -1885,15 +1915,13 @@ yarn typecheck ✓
 - WebSocket 관련 서비스들
 
 #### 테스트 업데이트
+
 - 테스트 팩토리 Active Record 패턴 적용
 - E2E 테스트 검증
 
 ### 21.9 마이그레이션 명령 기록
 
 ```typescript
-// 마이그레이션 요청
-"액티브 레코드 코드 스타일을 선호한다. 
-코드베이스의 모든 리포지토리 패턴을 액티브 레코드 패턴으로 수정하라."
 
 // 결과
 - 18개 엔티티 마이그레이션 완료
