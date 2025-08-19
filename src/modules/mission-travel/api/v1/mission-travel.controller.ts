@@ -9,9 +9,8 @@ import { AuthGuard } from '../../../../guards/auth.guard';
 @Crud({
   entity: MissionTravel,
   allowedFilters: ['missionId', 'travelId', 'planetId', 'assignedAt'],
-  allowedParams: ['missionId', 'travelId', 'planetId'],
   allowedIncludes: ['mission', 'travel', 'planet'],
-  only: ['index', 'show', 'create', 'destroy'],
+  only: ['index', 'show'], // create, destroy routes removed
 })
 export class MissionTravelController {
   constructor(public readonly crudService: MissionTravelService) {}

@@ -1,5 +1,4 @@
 import {
-  BeforeCreate,
   BeforeUpdate,
   BeforeShow,
   Crud,
@@ -31,7 +30,7 @@ import { CurrentUserData } from '../../../../common/decorators/current-user.deco
 @Controller({ path: 'profiles', version: '1' })
 @Crud({
   entity: Profile,
-  only: ['index', 'show', 'create', 'update'],
+  only: ['index', 'show', 'update'], // create route removed
   allowedFilters: [
     'userId',
     'nickname',
@@ -51,9 +50,6 @@ import { CurrentUserData } from '../../../../common/decorators/current-user.deco
     show: {
       allowedIncludes: ['user'],
     },
-    create: {
-      allowedParams: ['nickname', 'name', 'gender', 'age', 'occupation'],
-    },
     update: {
       allowedParams: ['nickname', 'name', 'gender', 'age', 'occupation'],
     },
@@ -63,27 +59,6 @@ import { CurrentUserData } from '../../../../common/decorators/current-user.deco
 export class ProfileController {
   constructor(public readonly crudService: ProfileService) {}
 
-  /**
-   * 프로필 생성 전 검증
-   */
-  @BeforeCreate()
-  async beforeCreate(body: any, context: any): Promise<any> {
-    const currentUser: CurrentUserData = context.request?.user;
-
-    // 현재 사용자의 프로필이 이미 존재하는지 확인
-    const existingProfile = await Profile.findOne({
-      where: { userId: currentUser.id },
-    });
-
-    if (existingProfile) {
-      throw new BadRequestException('프로필이 이미 존재합니다.');
-    }
-
-    // 현재 로그인한 사용자의 프로필로 설정
-    body.userId = currentUser.id;
-
-    return body;
-  }
 
   /**
    * 프로필 수정 전 권한 확인

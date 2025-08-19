@@ -32,19 +32,8 @@ import { MissionService } from '../../mission.service';
 @Controller({ path: 'missions', version: '1' })
 @Crud({
   entity: Mission,
-  only: ['index', 'show', 'create', 'update', 'destroy'],
+  only: ['index', 'show'], // create, update, destroy routes removed
   allowedFilters: ['type', 'target', 'isActive', 'startAt', 'endAt'],
-  allowedParams: [
-    'title',
-    'description',
-    'type',
-    'target',
-    'metadata',
-    'startAt',
-    'endAt',
-    'maxSubmissions',
-    'allowResubmission',
-  ],
   allowedIncludes: [],
 })
 @UseGuards(AuthGuard)
