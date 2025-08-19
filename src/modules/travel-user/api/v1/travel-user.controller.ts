@@ -277,7 +277,6 @@ export class TravelUserController {
       // 활성 가입인 경우에만 후속 처리
       if (entity.status === TravelUserStatus.ACTIVE) {
         // Note: memberCount field does not exist in Travel entity
-        // TODO: Add memberCount field to Travel entity if member count tracking is needed
 
         // 해당 Travel의 모든 GROUP Planet에 자동 참여 처리
         const groupPlanets = await Planet.find({
@@ -300,7 +299,6 @@ export class TravelUserController {
           await planetUser.save();
 
           // Note: memberCount field does not exist in Planet entity
-          // TODO: Add memberCount field to Planet entity if member count tracking is needed
 
           this.logger.log(
             `User auto-joined group planet: userId=${entity.userId}, planetId=${planet.id}`,
