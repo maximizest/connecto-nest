@@ -1929,16 +1929,3 @@ yarn typecheck ✓
 - 10개 모듈 Repository 의존성 제거
 - 빌드 및 타입 체크 성공
 ```
-
----
-
-## 🔗 관련 문서
-
-- [API Routes Documentation](./routes.md)
-- [Entity Relationship Diagram](./entity-relationship-diagram.md)
-- [Database Schema](./schema.md)
-- [WebSocket Events](./websocket.md)
-- [Error Codes](./errors.md)
-- [Project Index](../PROJECT_INDEX.md)
-- [CLAUDE.md](../CLAUDE.md)
-- [Active Record Migration Log](./active-record-migration.md)
