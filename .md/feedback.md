@@ -19,10 +19,12 @@
 - Repository 패턴에서 성공적으로 마이그레이션
 - TypeOrmModule.forFeature 제거로 모듈 단순화
 
-### 2. CRUD 표준화
+### 2. CRUD 표준화 및 자동 검증
 - @foryourdev/nestjs-crud 라이브러리 활용한 표준 API
 - 일관된 필터링, 정렬, 페이지네이션
 - allowedFilters, allowedParams로 보안 강화
+- **엔티티에 정의된 class-validator 데코레이터를 자동으로 DTO 검증에 활용**
+- **별도의 DTO 클래스 없이도 입력값 검증 자동 처리**
 
 ### 3. Guard 체계
 - AuthGuard: JWT + 블랙리스트 + 사용자 차단 통합
@@ -154,22 +156,35 @@ async createTravelWithPlanets(data: CreateTravelDto) {
 }
 ```
 
-### 6. DTO 검증 강화 필요
+### 6. 엔티티 검증 데코레이터 일관성
 
-**문제점**: 일부 컨트롤러에서 DTO 클래스 없이 직접 body 처리
+**현재 상태**: nestjs-crud는 엔티티의 class-validator 데코레이터를 자동으로 활용하여 DTO 검증 수행
 
-**개선안**: 모든 엔드포인트에 명시적 DTO 적용
+**개선 필요 사항**: 
+- 일부 엔티티 필드에 class-validator 데코레이터가 누락됨
+- 커스텀 엔드포인트(Auth, Schema 등)는 여전히 별도 DTO 클래스 필요
+
+**개선안**: 
 ```typescript
-// dto/create-travel.dto.ts
-export class CreateTravelDto {
+// 엔티티에 검증 데코레이터 추가
+export class Travel extends BaseActiveRecord {
+  @Column()
   @IsString()
   @MinLength(2)
   @MaxLength(100)
   name: string;
   
+  @Column()
   @IsDateString()
-  @IsAfter(new Date())
-  endDate: string;
+  @IsFutureDate() // 커스텀 데코레이터
+  endDate: Date;
+}
+
+// 커스텀 엔드포인트용 DTO는 별도 생성
+export class CustomEndpointDto {
+  @IsString()
+  @IsNotEmpty()
+  customField: string;
 }
 ```
 
@@ -219,7 +234,7 @@ throw new NotFoundException(
 ### 단기 개선 (Medium Priority)
 1. Repository 패턴 완전 제거
 2. 중복 권한 검증 로직 통합
-3. DTO 검증 강화
+3. 엔티티 필드의 class-validator 데코레이터 보완
 
 ### 장기 개선 (Low Priority)
 1. i18n 국제화 도입
