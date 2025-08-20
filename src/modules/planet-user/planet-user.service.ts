@@ -29,7 +29,10 @@ export class PlanetUserService extends CrudService<PlanetUser> {
       { planetId, userId },
       { status: PlanetUserStatus.BANNED },
     );
-    return PlanetUser.findMembership(planetId, userId);
+    return PlanetUser.findOne({
+      where: { planetId, userId },
+      relations: ['user', 'planet'],
+    });
   }
 
   /**
@@ -40,6 +43,9 @@ export class PlanetUserService extends CrudService<PlanetUser> {
       { planetId, userId },
       { status: PlanetUserStatus.ACTIVE },
     );
-    return PlanetUser.findMembership(planetId, userId);
+    return PlanetUser.findOne({
+      where: { planetId, userId },
+      relations: ['user', 'planet'],
+    });
   }
 }

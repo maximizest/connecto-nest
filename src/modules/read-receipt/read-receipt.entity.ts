@@ -373,52 +373,12 @@ export class MessageReadReceipt extends BaseActiveRecord {
     return parseInt(result.count) || 0;
   }
 
-  /**
-   * Planet의 사용자별 읽음 영수증 조회
-   */
-  static async findByPlanetAndUser(
-    planetId: number,
-    userId: number,
-  ): Promise<MessageReadReceipt[]> {
-    return this.find({
-      where: { planetId, userId },
-      relations: ['message', 'user', 'planet'],
-      order: { readAt: 'DESC' },
-    });
-  }
-
-  /**
-   * 메시지별 모든 읽음 영수증 조회
-   */
-  static async findByMessage(messageId: number): Promise<MessageReadReceipt[]> {
-    return this.find({
-      where: { messageId },
-      relations: ['user'],
-      order: { readAt: 'ASC' },
-    });
-  }
-
-  /**
-   * 메시지의 읽음 카운트 조회
-   */
-  static async getMessageReadCount(messageId: number): Promise<number> {
-    return this.count({
-      where: { messageId, isRead: true },
-    });
-  }
-
-  /**
-   * 사용자의 마지막 읽음 영수증 조회
-   */
-  static async getLastReadReceiptInPlanet(
-    planetId: number,
-    userId: number,
-  ): Promise<MessageReadReceipt | null> {
-    return this.findOne({
-      where: { planetId, userId },
-      order: { readAt: 'DESC' },
-    });
-  }
+  // Simple finder methods removed - use TypeORM queries directly in controllers
+  // Examples:
+  // MessageReadReceipt.find({ where: { planetId, userId }, relations: ['message', 'user', 'planet'], order: { readAt: 'DESC' } })
+  // MessageReadReceipt.find({ where: { messageId }, relations: ['user'], order: { readAt: 'ASC' } })
+  // MessageReadReceipt.count({ where: { messageId, isRead: true } })
+  // MessageReadReceipt.findOne({ where: { planetId, userId }, order: { readAt: 'DESC' } })
 
   /**
    * 사용자 탈퇴 시 영수증 정리

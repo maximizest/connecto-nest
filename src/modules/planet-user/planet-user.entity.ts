@@ -175,70 +175,13 @@ export class PlanetUser extends BaseActiveRecord {
    * Active Record Static Methods
    */
 
-  /**
-   * Planet의 모든 멤버 조회
-   */
-  static async findByPlanet(planetId: number): Promise<PlanetUser[]> {
-    return this.find({
-      where: { planetId },
-      relations: ['user', 'planet'],
-      order: { joinedAt: 'ASC' },
-    });
-  }
-
-  /**
-   * Planet의 활성 멤버 조회
-   */
-  static async findActiveMembersByPlanet(
-    planetId: number,
-  ): Promise<PlanetUser[]> {
-    return this.find({
-      where: {
-        planetId,
-        status: PlanetUserStatus.ACTIVE,
-      },
-      relations: ['user', 'planet'],
-      order: { joinedAt: 'ASC' },
-    });
-  }
-
-  /**
-   * 사용자의 모든 Planet 조회
-   */
-  static async findByUser(userId: number): Promise<PlanetUser[]> {
-    return this.find({
-      where: { userId },
-      relations: ['user', 'planet'],
-      order: { joinedAt: 'DESC' },
-    });
-  }
-
-  /**
-   * 사용자의 활성 Planet 조회
-   */
-  static async findActiveByUser(userId: number): Promise<PlanetUser[]> {
-    return this.find({
-      where: {
-        userId,
-        status: PlanetUserStatus.ACTIVE,
-      },
-      relations: ['user', 'planet'],
-      order: { joinedAt: 'DESC' },
-    });
-  }
-
-  /**
-   * 특정 사용자의 특정 Planet 멤버십 조회
-   */
-  static async findMembership(
-    planetId: number,
-    userId: number,
-  ): Promise<PlanetUser | null> {
-    return this.findOne({
-      where: { planetId, userId },
-      relations: ['user', 'planet'],
-    });
-  }
+  // Simple finder methods removed - use TypeORM queries directly in controllers
+  // Examples:
+  // PlanetUser.find({ where: { planetId }, relations: ['user', 'planet'], order: { joinedAt: 'ASC' } })
+  // PlanetUser.find({ where: { planetId, status: PlanetUserStatus.ACTIVE }, relations: ['user', 'planet'], order: { joinedAt: 'ASC' } })
+  // PlanetUser.find({ where: { userId }, relations: ['user', 'planet'], order: { joinedAt: 'DESC' } })
+  // PlanetUser.find({ where: { userId, status: PlanetUserStatus.ACTIVE }, relations: ['user', 'planet'], order: { joinedAt: 'DESC' } })
+  // PlanetUser.findOne({ where: { planetId, userId }, relations: ['user', 'planet'] })
 
   /**
    * Planet 멤버 추가
@@ -264,7 +207,10 @@ export class PlanetUser extends BaseActiveRecord {
     planetId: number,
     userId: number,
   ): Promise<boolean> {
-    const planetUser = await this.findMembership(planetId, userId);
+    const planetUser = await this.findOne({
+      where: { planetId, userId },
+      relations: ['user', 'planet'],
+    });
     if (planetUser) {
       await planetUser.remove();
       return true;

@@ -219,54 +219,12 @@ export class Mission extends BaseActiveRecord {
    * Active Record Static Methods
    */
 
-  /**
-   * 활성 미션 조회
-   */
-  static async findActiveMissions(): Promise<Mission[]> {
-    const now = new Date();
-    return this.find({
-      where: {
-        active: true,
-        startAt: new Date(now.getTime() - 24 * 60 * 60 * 1000), // LessThanOrEqual
-        endAt: new Date(now.getTime() + 24 * 60 * 60 * 1000), // MoreThanOrEqual
-      },
-      order: { startAt: 'ASC' },
-    });
-  }
-
-  /**
-   * 타입별 미션 조회
-   */
-  static async findByType(type: MissionType): Promise<Mission[]> {
-    return this.find({
-      where: { type },
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-  /**
-   * 대상별 미션 조회
-   */
-  static async findByTarget(target: MissionTarget): Promise<Mission[]> {
-    return this.find({
-      where: { target },
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-  /**
-   * 진행 중인 미션 조회
-   */
-  static async findOngoingMissions(): Promise<Mission[]> {
-    const now = new Date();
-    const query = this.createQueryBuilder('mission')
-      .where('mission.active = :active', { active: true })
-      .andWhere('mission.startAt <= :now', { now })
-      .andWhere('mission.endAt >= :now', { now })
-      .orderBy('mission.startAt', 'ASC');
-
-    return query.getMany();
-  }
+  // Simple finder methods removed - use TypeORM queries directly in controllers
+  // Examples:
+  // Mission.find({ where: { active: true }, order: { startAt: 'ASC' } })
+  // Mission.find({ where: { type }, order: { createdAt: 'DESC' } })
+  // Mission.find({ where: { target }, order: { createdAt: 'DESC' } })
+  // Mission.createQueryBuilder('mission').where('mission.active = :active', { active: true }).andWhere('mission.startAt <= :now', { now }).andWhere('mission.endAt >= :now', { now }).orderBy('mission.startAt', 'ASC').getMany()
 
   /**
    * 미션 생성

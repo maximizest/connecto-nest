@@ -59,6 +59,9 @@ export class MissionController {
    */
   @Get('active')
   async getActiveMissions() {
-    return await Mission.findActiveMissions();
+    return await Mission.find({
+      where: { active: true },
+      order: { startAt: 'ASC' },
+    });
   }
 }
