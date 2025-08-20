@@ -16,10 +16,10 @@
 ## 개요
 
 ### 통계
-- **총 컨트롤러 수**: 19개
-- **CRUD 컨트롤러**: 13개 (68%)
-- **커스텀 컨트롤러**: 6개 (32%)
-- **인증 필요 컨트롤러**: 18개 (95%)
+- **총 컨트롤러 수**: 20개
+- **CRUD 컨트롤러**: 14개 (70%)
+- **커스텀 컨트롤러**: 6개 (30%)
+- **인증 필요 컨트롤러**: 19개 (95%)
 - **관리자 전용 컨트롤러**: 2개
 
 ### 기술 스택
@@ -141,16 +141,26 @@
 - **경로**: `/api/v1/notifications`
 - **인증**: `AuthGuard`
 - **CRUD 작업**: `index`, `show`, `update`
-- **주요 기능**: 알림 관리 및 푸시 토큰 관리
+- **주요 기능**: 알림 관리
 - **커스텀 엔드포인트**:
   ```
-  POST /api/v1/notifications/push-token           - 푸시 토큰 등록
-  POST /api/v1/notifications/push-token/unregister - 푸시 토큰 해제
-  GET  /api/v1/notifications/push-tokens          - 내 푸시 토큰 목록
   POST /api/v1/notifications/test                 - 테스트 알림 (개발용)
   ```
+- **특징**: 푸시 토큰 관리는 별도의 PushTokenController로 분리됨
 
-### 11. Report Controller
+### 11. PushToken Controller
+- **경로**: `/api/v1/push-tokens`
+- **인증**: `AuthGuard`
+- **CRUD 작업**: `index`, `show`, `create`, `update`, `destroy`
+- **주요 기능**: FCM/APNS 푸시 토큰 관리
+- **특수 기능**:
+  - Upsert 로직 (deviceId 기준으로 자동 생성/업데이트)
+  - 본인 토큰만 조회/수정/삭제 가능
+  - Soft delete 지원 (비활성화)
+  - 플랫폼별 관리 (ios/android/web)
+  - 실패 횟수 추적 및 자동 비활성화
+
+### 12. Report Controller
 - **경로**: `/api/v1/reports`
 - **인증**: `AuthGuard`
 - **CRUD 작업**: `index`, `show`, `create`, `destroy`
@@ -160,13 +170,13 @@
   - 중복 신고 방지
   - PENDING 상태만 취소 가능
 
-### 12. Accommodation Controller
+### 13. Accommodation Controller
 - **경로**: `/api/v1/accommodations`
 - **인증**: `AuthGuard`
 - **CRUD 작업**: `index`, `show` (읽기 전용)
 - **주요 기능**: 숙박 시설 정보 조회
 
-### 13. Mission 관련 Controllers
+### 14. Mission 관련 Controllers
 
 #### Mission Controller
 - **경로**: `/api/v1/missions`
@@ -305,7 +315,7 @@ socket.on('user-online-status', data)         // 온라인 상태
 
 ## Active Record 패턴 마이그레이션 현황
 
-2025년 1월 20일 기준으로 다음 서비스들이 Active Record 패턴으로 마이그레이션되었습니다:
+2025년 1월 21일 기준으로 다음 서비스들이 Active Record 패턴으로 마이그레이션되었습니다:
 
 ### 완료된 마이그레이션
 - ✅ User, Profile, Travel, TravelUser
@@ -313,6 +323,7 @@ socket.on('user-online-status', data)         // 온라인 상태
 - ✅ FileUpload, Notification, Report
 - ✅ Mission, MissionSubmission, MissionTravel
 - ✅ ReadReceipt (부분 마이그레이션)
+- ✅ PushToken (신규 분리)
 
 ### 마이그레이션 영향
 - Repository 패턴 → Active Record 패턴
@@ -323,7 +334,15 @@ socket.on('user-online-status', data)         // 온라인 상태
 ### 최근 개선사항 (2025-01-21)
 - **Guard 통합**: EnhancedAuthGuard 기능을 AuthGuard에 통합 (토큰 블랙리스트, 사용자 밴 검증)
 - **성능 최적화**: AuthGuard 67-75% 성능 향상 (병렬 처리, 캐싱)
-- **ReadReceipt API 단순화**: 커스텀 엔드포인트 제거, CRUD 패턴 활용
+- **ReadReceipt API 개선**: 
+  - 커스텀 messageIds 필드 제거
+  - nestjs-crud 네이티브 벌크 생성 지원 활용
+  - POST body에 배열 전송 시 자동 벌크 처리
+- **PushToken 도메인 분리**:
+  - NotificationController에서 독립적인 PushTokenController로 분리
+  - RESTful 원칙 준수 (가상 Notification 엔티티 제거)
+  - Redis 임시 저장 → PostgreSQL 영구 저장으로 전환
+  - Active Record 패턴 적용
 - **코드 정리**: 불필요한 엔티티 메서드 제거, 직접 TypeORM 쿼리 사용
 
 ---

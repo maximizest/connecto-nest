@@ -1,23 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
-import { RedisService } from '../../cache/redis.service';
-import { User } from '../../user/user.entity';
+import { PushToken } from '../../push-token/push-token.entity';
 import { Notification } from '../notification.entity';
 import { PushPayload } from '../types/push-payload.interface';
 import { PushResult } from '../types/push-result.interface';
-import { PushToken } from '../types/push-token.interface';
+import { RedisService } from '../../cache/redis.service';
 
 @Injectable()
 export class PushNotificationService {
   private readonly logger = new Logger(PushNotificationService.name);
 
-  // Redis 캐시 키
-  private readonly PUSH_TOKEN_KEY = 'push:token';
+  // Redis 캐시 키 (통계용)
   private readonly PUSH_STATS_KEY = 'push:stats';
-  private readonly PUSH_QUEUE_KEY = 'push:queue';
-
-  // 캐시 TTL
-  private readonly PUSH_TOKEN_TTL = 86400 * 30; // 30일
   private readonly PUSH_STATS_TTL = 86400; // 1일
 
   constructor(
@@ -26,7 +20,8 @@ export class PushNotificationService {
   ) {}
 
   /**
-   * 푸시 토큰 등록
+   * 푸시 토큰 등록 (새로운 PushToken 엔티티 사용)
+   * @deprecated PushTokenController를 사용하세요
    */
   async registerPushToken(
     userId: number,
@@ -36,34 +31,14 @@ export class PushNotificationService {
     appVersion?: string,
   ): Promise<void> {
     try {
-      const pushToken: PushToken = {
+      // PushToken 엔티티의 upsert 메서드 사용
+      await PushToken.upsertToken({
         userId,
         token,
-        platform,
+        platform: platform as any,
         deviceId,
         appVersion,
-        createdAt: new Date(),
-        lastUsedAt: new Date(),
-        isActive: true,
-      };
-
-      // Redis에 토큰 저장
-      const tokenKey = `${this.PUSH_TOKEN_KEY}:${userId}:${deviceId}`;
-      await this.redisService.setJson(tokenKey, pushToken, this.PUSH_TOKEN_TTL);
-
-      // 사용자별 토큰 목록 업데이트
-      const userTokensKey = `${this.PUSH_TOKEN_KEY}:user:${userId}`;
-      const userTokens =
-        ((await this.redisService.getJson(userTokensKey)) as string[]) || [];
-
-      if (!userTokens.includes(deviceId)) {
-        userTokens.push(deviceId);
-        await this.redisService.setJson(
-          userTokensKey,
-          userTokens,
-          this.PUSH_TOKEN_TTL,
-        );
-      }
+      });
 
       this.logger.log(
         `Push token registered: userId=${userId}, platform=${platform}, deviceId=${deviceId}`,
@@ -75,29 +50,12 @@ export class PushNotificationService {
   }
 
   /**
-   * 푸시 토큰 해제
+   * 푸시 토큰 해제 (새로운 PushToken 엔티티 사용)
+   * @deprecated PushTokenController를 사용하세요
    */
   async unregisterPushToken(userId: number, deviceId: string): Promise<void> {
     try {
-      // 개별 토큰 삭제
-      const tokenKey = `${this.PUSH_TOKEN_KEY}:${userId}:${deviceId}`;
-      await this.redisService.del(tokenKey);
-
-      // 사용자 토큰 목록에서 제거
-      const userTokensKey = `${this.PUSH_TOKEN_KEY}:user:${userId}`;
-      const userTokens =
-        ((await this.redisService.getJson(userTokensKey)) as string[]) || [];
-      const updatedTokens = userTokens.filter((token) => token !== deviceId);
-
-      if (updatedTokens.length > 0) {
-        await this.redisService.setJson(
-          userTokensKey,
-          updatedTokens,
-          this.PUSH_TOKEN_TTL,
-        );
-      } else {
-        await this.redisService.del(userTokensKey);
-      }
+      await PushToken.deactivateToken(userId, deviceId);
 
       this.logger.log(
         `Push token unregistered: userId=${userId}, deviceId=${deviceId}`,
@@ -109,26 +67,12 @@ export class PushNotificationService {
   }
 
   /**
-   * 사용자의 활성 푸시 토큰 조회
+   * 사용자의 활성 푸시 토큰 조회 (새로운 PushToken 엔티티 사용)
+   * @deprecated PushTokenController를 사용하세요
    */
   async getUserPushTokens(userId: number): Promise<PushToken[]> {
     try {
-      const userTokensKey = `${this.PUSH_TOKEN_KEY}:user:${userId}`;
-      const deviceIds =
-        ((await this.redisService.getJson(userTokensKey)) as string[]) || [];
-
-      const pushTokens: PushToken[] = [];
-
-      for (const deviceId of deviceIds) {
-        const tokenKey = `${this.PUSH_TOKEN_KEY}:${userId}:${deviceId}`;
-        const pushToken = await this.redisService.getJson<PushToken>(tokenKey);
-
-        if (pushToken && pushToken.isActive) {
-          pushTokens.push(pushToken);
-        }
-      }
-
-      return pushTokens;
+      return await PushToken.findByUserId(userId);
     } catch (_error) {
       this.logger.error(`Failed to get user push tokens: ${_error.message}`);
       return [];
@@ -146,8 +90,8 @@ export class PushNotificationService {
     try {
       const { notification, payload } = data;
 
-      // 사용자의 푸시 토큰 조회
-      const pushTokens = await this.getUserPushTokens(notification.userId);
+      // 사용자의 푸시 토큰 조회 (PushToken 엔티티 사용)
+      const pushTokens = await PushToken.findByUserId(notification.userId);
 
       if (pushTokens.length === 0) {
         this.logger.warn(
@@ -170,6 +114,11 @@ export class PushNotificationService {
             result.invalidTokens?.includes(pushToken.token)
           ) {
             await this.markTokenAsInactive(pushToken);
+          }
+
+          // 성공한 경우 사용 시간 업데이트
+          if (result.success) {
+            await PushToken.recordUsage(pushToken.id);
           }
         } catch (_error) {
           this.logger.error(
@@ -280,7 +229,7 @@ export class PushNotificationService {
   }
 
   /**
-   * 푸시 전송 결과 기록
+   * 푸시 전송 결과 기록 (Redis 사용)
    */
   private async recordPushResult(
     notificationId: number,
@@ -310,7 +259,7 @@ export class PushNotificationService {
   }
 
   /**
-   * 푸시 통계 업데이트
+   * 푸시 통계 업데이트 (Redis 사용)
    */
   private async updatePushStats(
     platform: string,
@@ -350,17 +299,15 @@ export class PushNotificationService {
   }
 
   /**
-   * 토큰을 비활성화로 표시
+   * 토큰을 비활성화로 표시 (PushToken 엔티티 사용)
    */
   private async markTokenAsInactive(pushToken: PushToken): Promise<void> {
     try {
-      pushToken.isActive = false;
-
-      const tokenKey = `${this.PUSH_TOKEN_KEY}:${pushToken.userId}:${pushToken.deviceId}`;
-      await this.redisService.setJson(tokenKey, pushToken, this.PUSH_TOKEN_TTL);
+      // 실패 횟수 증가
+      await PushToken.incrementFailure(pushToken.id);
 
       this.logger.log(
-        `Push token marked as inactive: userId=${pushToken.userId}, deviceId=${pushToken.deviceId}`,
+        `Push token failure incremented: userId=${pushToken.userId}, deviceId=${pushToken.deviceId}`,
       );
     } catch (_error) {
       this.logger.error(`Failed to mark token as inactive: ${_error.message}`);
@@ -368,7 +315,7 @@ export class PushNotificationService {
   }
 
   /**
-   * 푸시 통계 조회
+   * 푸시 통계 조회 (Redis 사용)
    */
   async getPushStats(date?: string): Promise<any> {
     try {
@@ -402,23 +349,17 @@ export class PushNotificationService {
 
       for (const userId of userIds) {
         try {
-          const pushTokens = await this.getUserPushTokens(userId);
+          const pushTokens = await PushToken.findByUserId(userId);
 
           for (const pushToken of pushTokens) {
             const result = await this.sendPushToDevice(pushToken, payload);
 
             if (result.success) {
               sent++;
+              await PushToken.recordUsage(pushToken.id);
             } else {
               failed++;
-            }
-
-            // 무효한 토큰 처리
-            if (
-              !result.success &&
-              result.invalidTokens?.includes(pushToken.token)
-            ) {
-              await this.markTokenAsInactive(pushToken);
+              await PushToken.incrementFailure(pushToken.id);
             }
           }
         } catch (_error) {
@@ -445,11 +386,20 @@ export class PushNotificationService {
    */
   async cleanupInactiveTokens(): Promise<number> {
     try {
-      // 실제 구현에서는 더 정교한 로직 필요
-      // 현재는 기본적인 예시만 제공
+      // 30일 이상 사용하지 않았거나 실패 횟수가 5회 이상인 토큰 정리
+      const result = await PushToken.createQueryBuilder('pushToken')
+        .where('pushToken.isTokenActive = :isActive', { isActive: false })
+        .orWhere('pushToken.failureCount >= :maxFailures', { maxFailures: 5 })
+        .orWhere('pushToken.lastUsedAt < :cutoffDate', {
+          cutoffDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        })
+        .delete()
+        .execute();
 
-      this.logger.log('Cleaned up inactive push tokens');
-      return 0;
+      const deletedCount = result.affected || 0;
+
+      this.logger.log(`Cleaned up ${deletedCount} inactive push tokens`);
+      return deletedCount;
     } catch (_error) {
       this.logger.error(`Failed to cleanup inactive tokens: ${_error.message}`);
       return 0;

@@ -14,6 +14,7 @@ import { Notification } from '../modules/notification/notification.entity';
 import { PlanetUser } from '../modules/planet-user/planet-user.entity';
 import { Planet } from '../modules/planet/planet.entity';
 import { Profile } from '../modules/profile/profile.entity';
+import { PushToken } from '../modules/push-token/push-token.entity';
 import { MessageReadReceipt } from '../modules/read-receipt/read-receipt.entity';
 import { Report } from '../modules/report/report.entity';
 import { TravelUser } from '../modules/travel-user/travel-user.entity';
@@ -46,6 +47,7 @@ dotenv.config();
 export const ENTITIES = [
   User,
   Profile, // User와 1:1 관계의 프로필 정보
+  PushToken, // 푸시 토큰 관리
   Accommodation, // 숙박 업소
   Travel,
   TravelUser,
