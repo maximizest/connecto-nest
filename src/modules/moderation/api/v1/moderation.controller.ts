@@ -14,6 +14,8 @@ import {
 } from '../../../../common/decorators/current-user.decorator';
 import { validateBanPermission } from '../../../../common/helpers/role-based-permission.helper';
 import { AuthGuard } from '../../../../guards/auth.guard';
+import { AdminGuard } from '../../../../guards/admin.guard';
+import { HostGuard } from '../../../../guards/host.guard';
 import { Planet } from '../../../planet/planet.entity';
 import { Travel } from '../../../travel/travel.entity';
 import { TravelUser } from '../../../travel-user/travel-user.entity';
@@ -32,7 +34,6 @@ import { UserRole } from '../../../user/enums/user-role.enum';
  * - USER: 벤 권한 없음
  */
 @Controller({ path: 'moderation', version: '1' })
-@UseGuards(AuthGuard)
 export class ModerationController {
   private readonly logger = new Logger(ModerationController.name);
 
@@ -43,6 +44,7 @@ export class ModerationController {
    * POST /api/v1/moderation/ban/platform/:userId
    */
   @Post('ban/platform/:userId')
+  @UseGuards(AdminGuard)
   async banUserFromPlatform(
     @Param('userId') targetUserId: number,
     @Body() body: { reason?: string },
@@ -51,16 +53,7 @@ export class ModerationController {
     const bannerUser = currentUser as User;
 
     try {
-      // 벤 권한 확인
-      const permission = await validateBanPermission(
-        bannerUser.id,
-        targetUserId,
-        'platform',
-      );
-
-      if (!permission.canBan) {
-        throw new ForbiddenException(permission.reason);
-      }
+      // AdminGuard에서 이미 ADMIN 권한 확인됨
 
       // 대상 사용자 조회
       const targetUser = await User.findOne({
@@ -107,6 +100,7 @@ export class ModerationController {
    * POST /api/v1/moderation/unban/platform/:userId
    */
   @Post('unban/platform/:userId')
+  @UseGuards(AdminGuard)
   async unbanUserFromPlatform(
     @Param('userId') targetUserId: number,
     @CurrentUser() currentUser: CurrentUserData,
@@ -114,10 +108,7 @@ export class ModerationController {
     const bannerUser = currentUser as User;
 
     try {
-      // ADMIN 권한 확인
-      if (bannerUser.role !== UserRole.ADMIN) {
-        throw new ForbiddenException('관리자만 플랫폼 벤 해제가 가능합니다.');
-      }
+      // AdminGuard에서 이미 ADMIN 권한 확인됨
 
       // 대상 사용자 조회
       const targetUser = await User.findOne({
@@ -162,6 +153,7 @@ export class ModerationController {
    * POST /api/v1/moderation/ban/travel/:travelId/:userId
    */
   @Post('ban/travel/:travelId/:userId')
+  @UseGuards(HostGuard)
   async banUserFromTravel(
     @Param('travelId') travelId: number,
     @Param('userId') targetUserId: number,
@@ -171,17 +163,7 @@ export class ModerationController {
     const bannerUser = currentUser as User;
 
     try {
-      // 벤 권한 확인
-      const permission = await validateBanPermission(
-        bannerUser.id,
-        targetUserId,
-        'travel',
-        travelId,
-      );
-
-      if (!permission.canBan) {
-        throw new ForbiddenException(permission.reason);
-      }
+      // HostGuard에서 이미 HOST/ADMIN 권한 확인됨
 
       // Travel 조회
       const travel = await Travel.findOne({
@@ -240,6 +222,7 @@ export class ModerationController {
    * POST /api/v1/moderation/unban/travel/:travelId/:userId
    */
   @Post('unban/travel/:travelId/:userId')
+  @UseGuards(HostGuard)
   async unbanUserFromTravel(
     @Param('travelId') travelId: number,
     @Param('userId') targetUserId: number,
@@ -248,17 +231,7 @@ export class ModerationController {
     const bannerUser = currentUser as User;
 
     try {
-      // 벤 해제 권한 확인 (벤과 동일한 권한)
-      const permission = await validateBanPermission(
-        bannerUser.id,
-        targetUserId,
-        'travel',
-        travelId,
-      );
-
-      if (!permission.canBan) {
-        throw new ForbiddenException(permission.reason);
-      }
+      // HostGuard에서 이미 HOST/ADMIN 권한 확인됨
 
       // Travel 조회
       const travel = await Travel.findOne({
