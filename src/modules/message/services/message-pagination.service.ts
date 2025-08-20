@@ -10,6 +10,7 @@ import { RedisService } from '../../cache/redis.service';
 import { Message } from '../message.entity';
 import { MessageType } from '../enums/message-type.enum';
 import { CursorData } from '../types/cursor-data.interface';
+import { SanitizationUtil } from '../../../common/utils/sanitization.util';
 
 /**
  * 메시지 최적화 페이지네이션 서비스
@@ -120,10 +121,13 @@ export class MessagePaginationService {
       // Planet 필터링
       queryBuilder.andWhere('message.planetId = :planetId', { planetId });
 
-      // 전문 검색
+      // 검색어 정제 (SQL Injection 방지)
+      const sanitizedQuery = SanitizationUtil.sanitizeSearchQuery(searchQuery);
+
+      // 전문 검색 - 파라미터화된 쿼리 사용
       queryBuilder.andWhere(
         "to_tsvector('korean', message.searchableText) @@ plainto_tsquery('korean', :searchQuery)",
-        { searchQuery },
+        { searchQuery: sanitizedQuery },
       );
 
       // 삭제된 메시지 제외
@@ -132,12 +136,13 @@ export class MessagePaginationService {
       // 커서 페이지네이션 적용
       this.applyCursorPagination(queryBuilder, query);
 
-      // 관련성 점수 순으로 정렬
+      // 관련성 점수 순으로 정렬 - sanitizedQuery 사용
       queryBuilder
         .addSelect(
           "ts_rank(to_tsvector('korean', message.searchableText), plainto_tsquery('korean', :searchQuery))",
           'relevance_score',
         )
+        .setParameter('searchQuery', sanitizedQuery) // 이미 정제된 쿼리 사용
         .orderBy('relevance_score', 'DESC')
         .addOrderBy('message.createdAt', 'DESC');
 

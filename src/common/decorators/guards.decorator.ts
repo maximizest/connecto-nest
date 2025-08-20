@@ -8,9 +8,7 @@ import { AdminGuard } from '../../guards/admin.guard';
  * JWT 토큰 검증 + 블랙리스트 + 차단 상태 확인
  */
 export const RequireAuth = () => {
-  return applyDecorators(
-    UseGuards(AuthGuard)
-  );
+  return applyDecorators(UseGuards(AuthGuard));
 };
 
 /**
@@ -18,9 +16,7 @@ export const RequireAuth = () => {
  * Travel의 HOST 또는 플랫폼 ADMIN만 접근 가능
  */
 export const RequireHost = () => {
-  return applyDecorators(
-    UseGuards(HostGuard)
-  );
+  return applyDecorators(UseGuards(HostGuard));
 };
 
 /**
@@ -28,9 +24,7 @@ export const RequireHost = () => {
  * 플랫폼 ADMIN만 접근 가능
  */
 export const RequireAdmin = () => {
-  return applyDecorators(
-    UseGuards(AdminGuard)
-  );
+  return applyDecorators(UseGuards(AdminGuard));
 };
 
 /**
@@ -39,7 +33,7 @@ export const RequireAdmin = () => {
  */
 export const RequireOwner = () => {
   return applyDecorators(
-    UseGuards(AuthGuard)
+    UseGuards(AuthGuard),
     // OwnerGuard는 필요시 추가 구현
   );
 };

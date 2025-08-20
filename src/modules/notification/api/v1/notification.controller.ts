@@ -21,7 +21,7 @@ import { NotificationService } from '../../notification.service';
  * - 알림 읽음 처리
  * - 알림 설정 관리
  * - 알림 통계 조회
- * 
+ *
  * 푸시 토큰 관리는 별도의 PushTokenController에서 처리합니다.
  */
 @Controller({ path: 'notifications', version: '1' })
@@ -60,9 +60,7 @@ import { NotificationService } from '../../notification.service';
 export class NotificationController {
   private readonly logger = new Logger(NotificationController.name);
 
-  constructor(
-    public readonly crudService: NotificationService,
-  ) {}
+  constructor(public readonly crudService: NotificationService) {}
 
   @BeforeCreate()
   async beforeCreate(body: any, context: any) {

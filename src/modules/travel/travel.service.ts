@@ -15,9 +15,7 @@ import { PlanetStatus } from '../planet/enums/planet-status.enum';
  */
 @Injectable()
 export class TravelService extends CrudService<Travel> {
-  constructor(
-    private dataSource: DataSource,
-  ) {
+  constructor(private dataSource: DataSource) {
     super(Travel.getRepository());
   }
 
@@ -26,7 +24,7 @@ export class TravelService extends CrudService<Travel> {
    * Travel과 기본 Planet들을 하나의 트랜잭션으로 생성
    */
   async createTravelWithPlanets(travelData: Partial<Travel>): Promise<Travel> {
-    return await this.dataSource.transaction(async manager => {
+    return await this.dataSource.transaction(async (manager) => {
       // Travel 생성
       const travel = manager.create(Travel, travelData);
       const savedTravel = await manager.save(travel);
@@ -46,7 +44,7 @@ export class TravelService extends CrudService<Travel> {
           description: `${savedTravel.name} 여행 공지사항`,
           type: PlanetType.ANNOUNCEMENT,
           status: PlanetStatus.ACTIVE,
-        }
+        },
       ];
 
       await manager.insert(Planet, planets);

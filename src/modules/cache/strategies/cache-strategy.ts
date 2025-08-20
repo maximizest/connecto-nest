@@ -45,7 +45,7 @@ export class CacheStrategy {
       CacheKeyBuilder.build('travel', 'list', '*'),
       CacheKeyBuilder.build('travel', 'members', travelId.toString()),
     ];
-    
+
     for (const pattern of keys) {
       if (pattern.includes('*')) {
         const matchedKeys = await this.redisService.keys(pattern);
@@ -87,12 +87,20 @@ export class CacheStrategy {
   }
 
   async cacheRecentMessages(planetId: number, data: any): Promise<void> {
-    const key = CacheKeyBuilder.build('planet', 'messages', planetId.toString());
+    const key = CacheKeyBuilder.build(
+      'planet',
+      'messages',
+      planetId.toString(),
+    );
     await this.redisService.set(key, JSON.stringify(data), 30); // 30초
   }
 
   async getCachedRecentMessages(planetId: number): Promise<any> {
-    const key = CacheKeyBuilder.build('planet', 'messages', planetId.toString());
+    const key = CacheKeyBuilder.build(
+      'planet',
+      'messages',
+      planetId.toString(),
+    );
     const cached = await this.redisService.get(key);
     return cached ? JSON.parse(cached) : null;
   }
@@ -103,7 +111,7 @@ export class CacheStrategy {
       CacheKeyBuilder.build('planet', 'members', planetId.toString()),
       CacheKeyBuilder.build('planet', 'messages', planetId.toString()),
     ];
-    
+
     await this.redisService.del(...keys);
   }
 
@@ -140,7 +148,7 @@ export class CacheStrategy {
       CacheKeyBuilder.build('user', 'profile', userId.toString()),
       CacheKeyBuilder.build('user', 'permissions', userId.toString()),
     ];
-    
+
     await this.redisService.del(...keys);
   }
 
@@ -150,7 +158,7 @@ export class CacheStrategy {
   async invalidateAllCache(): Promise<void> {
     const pattern = 'cache:*';
     const keys = await this.redisService.keys(pattern);
-    
+
     if (keys.length > 0) {
       const chunks = this.chunkArray(keys, 1000); // 1000개씩 나누어 삭제
       for (const chunk of chunks) {
@@ -170,13 +178,13 @@ export class CacheStrategy {
   }> {
     const info = await this.redisService.info('memory');
     const keys = await this.redisService.keys('cache:*');
-    
+
     const patterns: { [key: string]: number } = {};
     for (const key of keys) {
       const prefix = key.split(':')[1] || 'unknown';
       patterns[prefix] = (patterns[prefix] || 0) + 1;
     }
-    
+
     return {
       totalKeys: keys.length,
       memoryUsage: this.extractMemoryUsage(info),

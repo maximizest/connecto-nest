@@ -1,5 +1,15 @@
 import { Logger } from '@nestjs/common';
-import { IsDateString, IsEnum, IsOptional, IsString, MinLength, MaxLength, IsUrl, IsInt, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MinLength,
+  MaxLength,
+  IsUrl,
+  IsInt,
+  Min,
+} from 'class-validator';
 import {
   AfterInsert,
   Column,
@@ -348,7 +358,7 @@ export class Travel extends BaseActiveRecord {
    * Travel 생성 후 자동으로 기본 Planet 생성
    * - 여행 참여자 단체 채팅 1개
    * - 공지사항 채팅 1개
-   * 
+   *
    * N+1 쿼리 문제 해결: 벌크 insert 사용
    */
   @AfterInsert()
@@ -369,15 +379,20 @@ export class Travel extends BaseActiveRecord {
           description: `${this.name} 여행 공지사항`,
           type: PlanetType.ANNOUNCEMENT,
           status: PlanetStatus.ACTIVE,
-        }
+        },
       ];
-      
+
       // 단일 쿼리로 처리
       await Planet.insert(planets);
 
-      Travel.logger.log(`Default planets created for Travel ${this.id}: Group and Announcement`);
+      Travel.logger.log(
+        `Default planets created for Travel ${this.id}: Group and Announcement`,
+      );
     } catch (error) {
-      Travel.logger.error(`Failed to create default planets for Travel ${this.id}:`, error.stack);
+      Travel.logger.error(
+        `Failed to create default planets for Travel ${this.id}:`,
+        error.stack,
+      );
       // Travel 생성은 성공했으므로 에러를 throw하지 않고 로그만 남김
     }
   }

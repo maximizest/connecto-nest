@@ -72,12 +72,8 @@ export class CreatePushTokenTable1737000000000 implements MigrationInterface {
     await queryRunner.query(
       `DROP INDEX "public"."IDX_push_tokens_isTokenActive"`,
     );
-    await queryRunner.query(
-      `DROP INDEX "public"."IDX_push_tokens_platform"`,
-    );
-    await queryRunner.query(
-      `DROP INDEX "public"."IDX_push_tokens_token"`,
-    );
+    await queryRunner.query(`DROP INDEX "public"."IDX_push_tokens_platform"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_push_tokens_token"`);
     await queryRunner.query(
       `DROP INDEX "public"."IDX_push_tokens_userId_deviceId"`,
     );

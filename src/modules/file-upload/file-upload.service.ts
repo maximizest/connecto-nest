@@ -9,9 +9,7 @@ import { FileUploadType } from './enums/file-upload-type.enum';
 export class FileUploadService extends CrudService<FileUpload> {
   private readonly logger = new Logger(FileUploadService.name);
 
-  constructor(
-    private readonly storageService: StorageService,
-  ) {
+  constructor(private readonly storageService: StorageService) {
     super(FileUpload.getRepository());
   }
 

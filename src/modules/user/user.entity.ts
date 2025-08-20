@@ -20,6 +20,7 @@ import {
 import { BaseActiveRecord } from '../../common/entities/base-active-record.entity';
 import { SocialProvider } from './enums/social-provider.enum';
 import { UserRole } from './enums/user-role.enum';
+import { SanitizationUtil } from '../../common/utils/sanitization.util';
 
 @Entity('users')
 @Index(['socialId', 'provider'], {
@@ -421,6 +422,30 @@ export class User extends BaseActiveRecord {
    */
   @BeforeInsert()
   beforeInsert() {
+    // 입력값 정제 (XSS, SQL Injection 방지)
+    if (this.name) {
+      this.name = SanitizationUtil.sanitizeText(this.name, 100);
+    }
+
+    if (this.email) {
+      this.email = SanitizationUtil.sanitizeEmail(this.email);
+    }
+
+    if (this.phone) {
+      this.phone = SanitizationUtil.sanitizePhoneNumber(this.phone);
+    }
+
+    if (this.bannedReason) {
+      this.bannedReason = SanitizationUtil.sanitizeText(this.bannedReason, 500);
+    }
+
+    if (this.deletionReason) {
+      this.deletionReason = SanitizationUtil.sanitizeText(
+        this.deletionReason,
+        255,
+      );
+    }
+
     // ADMIN은 비밀번호 필수, 소셜 로그인 정보 없어야 함
     if (this.role === UserRole.ADMIN) {
       if (!this.password) {
@@ -446,6 +471,30 @@ export class User extends BaseActiveRecord {
    */
   @BeforeUpdate()
   beforeUpdate() {
+    // 입력값 정제 (XSS, SQL Injection 방지)
+    if (this.name) {
+      this.name = SanitizationUtil.sanitizeText(this.name, 100);
+    }
+
+    if (this.email) {
+      this.email = SanitizationUtil.sanitizeEmail(this.email);
+    }
+
+    if (this.phone) {
+      this.phone = SanitizationUtil.sanitizePhoneNumber(this.phone);
+    }
+
+    if (this.bannedReason) {
+      this.bannedReason = SanitizationUtil.sanitizeText(this.bannedReason, 500);
+    }
+
+    if (this.deletionReason) {
+      this.deletionReason = SanitizationUtil.sanitizeText(
+        this.deletionReason,
+        255,
+      );
+    }
+
     // 역할 변경 시 유효성 검사
     if (this.role === UserRole.ADMIN) {
       if (!this.password && !this.socialId) {

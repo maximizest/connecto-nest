@@ -7,11 +7,7 @@ import { CacheInvalidateInterceptor } from '../../common/interceptors/cache-inva
 @Global()
 @Module({
   imports: [RedisModule],
-  providers: [
-    CacheStrategy,
-    CacheInterceptor,
-    CacheInvalidateInterceptor,
-  ],
+  providers: [CacheStrategy, CacheInterceptor, CacheInvalidateInterceptor],
   controllers: [],
   exports: [
     RedisModule,

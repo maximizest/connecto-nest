@@ -136,7 +136,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     try {
       return await this.redis.del(...keys);
     } catch (_error) {
-      this.logger.error(`Redis DEL error for keys ${keys.join(', ')}:`, _error.message);
+      this.logger.error(
+        `Redis DEL error for keys ${keys.join(', ')}:`,
+        _error.message,
+      );
       return 0;
     }
   }

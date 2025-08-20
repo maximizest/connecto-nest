@@ -1,8 +1,5 @@
 import { Crud } from '@foryourdev/nestjs-crud';
-import {
-  Controller,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { Mission } from '../../mission.entity';
 import { MissionService } from '../../mission.service';

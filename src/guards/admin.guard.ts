@@ -30,7 +30,7 @@ export class AdminGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<Request>();
-    
+
     // AuthGuard에서 이미 조회한 사용자 엔티티 재사용
     const user = (request as any).userEntity as User;
 
@@ -41,15 +41,15 @@ export class AdminGuard implements CanActivate {
         where: { id: payload.id },
         select: ['id', 'email', 'role'],
       });
-      
+
       if (!dbUser) {
         throw new ForbiddenException('사용자를 찾을 수 없습니다');
       }
-      
+
       if (dbUser.role !== UserRole.ADMIN) {
         throw new ForbiddenException('관리자 권한이 필요합니다');
       }
-      
+
       return true;
     }
 

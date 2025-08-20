@@ -89,7 +89,8 @@ export class AuthGuard implements CanActivate {
       if (isTokenBlacklisted) {
         // 프로덕션에서는 로깅 최소화
         if (process.env.NODE_ENV !== 'production') {
-          const blacklistInfo = await this.tokenBlacklistService.getBlacklistInfo(token);
+          const blacklistInfo =
+            await this.tokenBlacklistService.getBlacklistInfo(token);
           this.logger.warn(
             `Blacklisted token used: reason=${blacklistInfo?.reason}, userId=${blacklistInfo?.userId}`,
           );
@@ -103,7 +104,8 @@ export class AuthGuard implements CanActivate {
       if (isUserBlacklisted) {
         // 프로덕션에서는 로깅 최소화
         if (process.env.NODE_ENV !== 'production') {
-          const userBlacklistInfo = await this.tokenBlacklistService.getUserBlacklistInfo(payload.id);
+          const userBlacklistInfo =
+            await this.tokenBlacklistService.getUserBlacklistInfo(payload.id);
           this.logger.warn(
             `User blacklisted: userId=${payload.id}, reason=${userBlacklistInfo?.reason}`,
           );

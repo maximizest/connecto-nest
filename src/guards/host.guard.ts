@@ -18,7 +18,7 @@ import { AuthGuard } from './auth.guard';
  * AuthGuard를 먼저 실행한 후 HOST 또는 ADMIN 권한을 확인합니다.
  * - ADMIN: 모든 Travel에 대한 권한
  * - HOST: 자신이 HOST인 Travel에 대한 권한만
- * 
+ *
  * Travel ID는 다음 우선순위로 추출:
  * 1. URL 파라미터의 travelId
  * 2. Request body의 travelId
@@ -37,7 +37,7 @@ export class HostGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<Request>();
-    
+
     // AuthGuard에서 이미 조회한 사용자 엔티티 재사용
     const user = (request as any).userEntity as User;
     const payload = (request as any).user as CurrentUserData;
@@ -49,10 +49,10 @@ export class HostGuard implements CanActivate {
 
     // Travel ID 추출 (다양한 소스에서)
     let travelId: number | undefined;
-    
+
     // 1. URL 파라미터에서 travelId 추출
     if (request.params?.travelId) {
-      travelId = parseInt(request.params.travelId as string, 10);
+      travelId = parseInt(request.params.travelId, 10);
     }
     // 2. Body에서 travelId 추출
     else if (request.body?.travelId) {
@@ -70,7 +70,7 @@ export class HostGuard implements CanActivate {
 
     // 사용자가 해당 Travel의 HOST인지 확인
     const travelUser = await TravelUser.findOne({
-      where: { 
+      where: {
         userId: payload.id,
         travelId: travelId,
       },

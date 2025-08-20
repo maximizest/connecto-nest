@@ -23,7 +23,7 @@ export enum PushTokenPlatform {
 
 /**
  * Push Token Entity
- * 
+ *
  * 사용자의 푸시 알림 토큰을 관리합니다.
  * FCM/APNS 토큰을 저장하고 디바이스별로 관리합니다.
  */

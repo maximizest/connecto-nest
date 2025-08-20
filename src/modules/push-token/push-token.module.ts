@@ -4,7 +4,7 @@ import { PushTokenController } from './api/v1/push-token.controller';
 
 /**
  * Push Token Module
- * 
+ *
  * 푸시 토큰 관리 모듈
  * Active Record 패턴 사용으로 TypeOrmModule.forFeature 불필요
  */

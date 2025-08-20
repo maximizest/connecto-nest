@@ -1,8 +1,4 @@
-import {
-  AfterCreate,
-  BeforeCreate,
-  Crud,
-} from '@foryourdev/nestjs-crud';
+import { AfterCreate, BeforeCreate, Crud } from '@foryourdev/nestjs-crud';
 import {
   Controller,
   Logger,
@@ -104,25 +100,28 @@ export class ReadReceiptController {
   @BeforeCreate()
   async beforeCreate(body: any, context: any): Promise<any> {
     const user: User = context.request?.user;
-    
+
     // nestjs-crud가 배열을 전달하는 경우 (bulk creation)
     if (Array.isArray(body)) {
       const processedReceipts: any[] = [];
       const updatedReceipts: MessageReadReceipt[] = [];
-      
+
       for (const item of body) {
         // 각 아이템에 사용자 정보 추가
         item.userId = user.id;
-        
+
         // 메시지 접근 권한 검증 및 planetId 설정
-        const message = await this.validateMessageAccess(item.messageId, user.id);
+        const message = await this.validateMessageAccess(
+          item.messageId,
+          user.id,
+        );
         item.planetId = message.planetId;
-        
+
         // 기존 읽음 확인 체크 (upsert 로직)
         const existing = await MessageReadReceipt.findOne({
           where: { messageId: item.messageId, userId: user.id },
         });
-        
+
         if (existing) {
           // 이미 읽음 처리된 경우 업데이트
           existing.readAt = new Date();
@@ -135,7 +134,7 @@ export class ReadReceiptController {
             lastSessionId: item.sessionId,
             updatedAt: new Date().toISOString(),
           };
-          
+
           updatedReceipts.push(await existing.save());
         } else {
           // 새 읽음 확인 생성을 위한 데이터 준비
@@ -148,11 +147,11 @@ export class ReadReceiptController {
             sessionId: item.sessionId,
             createdAt: new Date().toISOString(),
           };
-          
+
           processedReceipts.push(item);
         }
       }
-      
+
       // 업데이트된 엔티티들에 대한 이벤트 발생
       updatedReceipts.forEach((receipt) => {
         this.eventEmitter.emit('message.read', {
@@ -165,18 +164,18 @@ export class ReadReceiptController {
           isUpdate: true,
         });
       });
-      
+
       this.logger.log(
         `Bulk read receipts processing: new=${processedReceipts.length}, updated=${updatedReceipts.length}, userId=${user.id}`,
       );
-      
+
       // 새로 생성할 데이터만 반환 (nestjs-crud가 bulk create 진행)
       return processedReceipts.length > 0 ? processedReceipts : null;
     }
-    
+
     // 단일 객체 처리
     body.userId = user.id;
-    
+
     // 메시지 접근 권한 검증
     const message = await this.validateMessageAccess(body.messageId, user.id);
     body.planetId = message.planetId;
@@ -247,7 +246,7 @@ export class ReadReceiptController {
     if (!entity) return;
 
     const user: User = context.request?.user;
-    
+
     // 배열 처리 (bulk creation)
     if (Array.isArray(entity)) {
       entity.forEach((receipt) => {
@@ -261,7 +260,7 @@ export class ReadReceiptController {
           isBulkCreate: true,
         });
       });
-      
+
       this.logger.log(
         `Bulk read receipts created: count=${entity.length}, userId=${user.id}`,
       );
@@ -285,7 +284,6 @@ export class ReadReceiptController {
       `Read receipt ${context.isUpdate ? 'updated' : 'created'}: messageId=${entity.messageId}, userId=${user.id}`,
     );
   }
-
 
   /**
    * 메시지 접근 권한 검증

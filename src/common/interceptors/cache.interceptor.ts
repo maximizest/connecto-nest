@@ -25,9 +25,15 @@ export class CacheInterceptor implements NestInterceptor {
     private readonly redisService: RedisService,
   ) {}
 
-  async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
-    const cacheOptions = this.reflector.get<CacheOptions>('cache', context.getHandler());
-    
+  async intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Promise<Observable<any>> {
+    const cacheOptions = this.reflector.get<CacheOptions>(
+      'cache',
+      context.getHandler(),
+    );
+
     // 캐시 데코레이터가 없으면 통과
     if (!cacheOptions) {
       return next.handle();
@@ -35,7 +41,7 @@ export class CacheInterceptor implements NestInterceptor {
 
     const request = context.switchToHttp().getRequest();
     const cacheKey = this.generateCacheKey(context, cacheOptions);
-    
+
     try {
       // 캐시된 데이터 확인
       const cachedData = await this.redisService.get(cacheKey);
@@ -53,12 +59,8 @@ export class CacheInterceptor implements NestInterceptor {
       tap(async (data) => {
         try {
           const ttl = cacheOptions.ttl || this.DEFAULT_TTL;
-          await this.redisService.set(
-            cacheKey,
-            JSON.stringify(data),
-            ttl,
-          );
-          
+          await this.redisService.set(cacheKey, JSON.stringify(data), ttl);
+
           // 태그 기반 캐시 관리
           if (cacheOptions.tags) {
             for (const tag of cacheOptions.tags) {
@@ -66,7 +68,7 @@ export class CacheInterceptor implements NestInterceptor {
               await this.redisService.expire(`cache:tag:${tag}`, ttl);
             }
           }
-          
+
           this.logger.debug(`Cached data with key: ${cacheKey}, TTL: ${ttl}s`);
         } catch (error) {
           this.logger.error(`Cache write error for key ${cacheKey}:`, error);
@@ -75,11 +77,14 @@ export class CacheInterceptor implements NestInterceptor {
     );
   }
 
-  private generateCacheKey(context: ExecutionContext, options: CacheOptions): string {
+  private generateCacheKey(
+    context: ExecutionContext,
+    options: CacheOptions,
+  ): string {
     const request = context.switchToHttp().getRequest();
     const className = context.getClass().name;
     const methodName = context.getHandler().name;
-    
+
     if (options.key) {
       return CacheKeyBuilder.build(className, options.key);
     }
@@ -88,14 +93,14 @@ export class CacheInterceptor implements NestInterceptor {
     const params = request.params || {};
     const query = request.query || {};
     const userId = request.user?.id || 'anonymous';
-    
+
     const keyParts = [
       methodName,
       userId,
       JSON.stringify(params),
       JSON.stringify(query),
     ];
-    
+
     return CacheKeyBuilder.build(className, ...keyParts);
   }
 }

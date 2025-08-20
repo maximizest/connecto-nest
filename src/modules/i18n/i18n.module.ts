@@ -1,5 +1,11 @@
 import { Module, Global } from '@nestjs/common';
-import { I18nModule as NestI18nModule, I18nJsonLoader, QueryResolver, HeaderResolver, AcceptLanguageResolver } from 'nestjs-i18n';
+import {
+  I18nModule as NestI18nModule,
+  I18nJsonLoader,
+  QueryResolver,
+  HeaderResolver,
+  AcceptLanguageResolver,
+} from 'nestjs-i18n';
 import * as path from 'path';
 
 @Global()

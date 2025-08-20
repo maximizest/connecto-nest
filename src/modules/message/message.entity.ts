@@ -28,6 +28,7 @@ import { FileMetadata } from './types/file-metadata.interface';
 import { SystemMessageMetadata } from './types/system-message-metadata.interface';
 import { MessageType } from './enums/message-type.enum';
 import { MessageStatus } from './enums/message-status.enum';
+import { SanitizationUtil } from '../../common/utils/sanitization.util';
 
 @Entity('messages')
 // 복합 인덱스 - 성능 향상
@@ -697,7 +698,8 @@ export class Message extends BaseActiveRecord {
   // =================================================================
 
   /**
-   * 메시지 생성 전 기본값 설정
+   * 메시지 생성 전 기본값 설정 및 보안 검증
+   * - 입력값 정제 (XSS 방지)
    * - 검색용 텍스트 생성
    * - 기본 상태 설정
    */
@@ -707,6 +709,18 @@ export class Message extends BaseActiveRecord {
     this.status = this.status || MessageStatus.SENT;
     this.isEdited = this.isEdited || false;
 
+    // 텍스트 메시지 입력 정제 (XSS 방지)
+    if (this.type === MessageType.TEXT && this.content) {
+      this.content = SanitizationUtil.sanitizeText(this.content, 5000);
+    }
+
+    // 파일명 정제 (Path Traversal 방지)
+    if (this.fileMetadata && this.fileMetadata.originalName) {
+      this.fileMetadata.originalName = SanitizationUtil.sanitizeFileName(
+        this.fileMetadata.originalName,
+      );
+    }
+
     // 검색용 텍스트 생성
     this.updateSearchableText();
 
@@ -714,12 +728,18 @@ export class Message extends BaseActiveRecord {
   }
 
   /**
-   * 메시지 수정 전 처리
+   * 메시지 수정 전 처리 및 보안 검증
+   * - 입력값 정제 (XSS 방지)
    * - 편집 정보 업데이트
    * - 검색용 텍스트 재생성
    */
   @BeforeUpdate()
   beforeUpdate() {
+    // 텍스트 메시지 입력 정제 (XSS 방지)
+    if (this.type === MessageType.TEXT && this.content) {
+      this.content = SanitizationUtil.sanitizeText(this.content, 5000);
+    }
+
     // 검색용 텍스트 재생성 (내용이 변경된 경우)
     this.updateSearchableText();
 

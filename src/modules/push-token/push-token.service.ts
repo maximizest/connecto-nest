@@ -4,7 +4,7 @@ import { PushToken, PushTokenPlatform } from './push-token.entity';
 
 /**
  * Push Token Service
- * 
+ *
  * 푸시 토큰 관리를 위한 서비스
  * Active Record 패턴 활용
  */
@@ -30,11 +30,11 @@ export class PushTokenService extends CrudService<PushToken> {
   }): Promise<PushToken> {
     try {
       const pushToken = await PushToken.upsertToken(data);
-      
+
       this.logger.log(
         `Push token registered: userId=${data.userId}, deviceId=${data.deviceId}, platform=${data.platform}`,
       );
-      
+
       return pushToken;
     } catch (error) {
       this.logger.error(
@@ -51,7 +51,7 @@ export class PushTokenService extends CrudService<PushToken> {
   async unregisterToken(userId: number, deviceId: string): Promise<boolean> {
     try {
       const result = await PushToken.deactivateToken(userId, deviceId);
-      
+
       if (result) {
         this.logger.log(
           `Push token unregistered: userId=${userId}, deviceId=${deviceId}`,
@@ -61,7 +61,7 @@ export class PushTokenService extends CrudService<PushToken> {
           `Push token not found: userId=${userId}, deviceId=${deviceId}`,
         );
       }
-      
+
       return result;
     } catch (error) {
       this.logger.error(
@@ -78,11 +78,11 @@ export class PushTokenService extends CrudService<PushToken> {
   async getUserTokens(userId: number): Promise<PushToken[]> {
     try {
       const tokens = await PushToken.findByUserId(userId);
-      
+
       this.logger.debug(
         `Retrieved ${tokens.length} active tokens for user ${userId}`,
       );
-      
+
       return tokens;
     } catch (error) {
       this.logger.error(
@@ -117,7 +117,7 @@ export class PushTokenService extends CrudService<PushToken> {
   async recordSuccess(tokenId: number): Promise<void> {
     try {
       await PushToken.recordUsage(tokenId);
-      
+
       this.logger.debug(`Push success recorded for token ${tokenId}`);
     } catch (error) {
       this.logger.error(
@@ -133,7 +133,7 @@ export class PushTokenService extends CrudService<PushToken> {
   async recordFailure(tokenId: number): Promise<void> {
     try {
       await PushToken.incrementFailure(tokenId);
-      
+
       this.logger.warn(`Push failure recorded for token ${tokenId}`);
     } catch (error) {
       this.logger.error(
@@ -151,20 +151,23 @@ export class PushTokenService extends CrudService<PushToken> {
       // 30일 이상 사용되지 않은 토큰 삭제
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
+
       const result = await PushToken.createQueryBuilder()
         .delete()
-        .where('lastUsedAt < :date OR (isActive = false AND updatedAt < :date)', {
-          date: thirtyDaysAgo,
-        })
+        .where(
+          'lastUsedAt < :date OR (isActive = false AND updatedAt < :date)',
+          {
+            date: thirtyDaysAgo,
+          },
+        )
         .execute();
-      
+
       const deletedCount = result.affected || 0;
-      
+
       if (deletedCount > 0) {
         this.logger.log(`Cleaned up ${deletedCount} inactive push tokens`);
       }
-      
+
       return deletedCount;
     } catch (error) {
       this.logger.error(
@@ -187,25 +190,28 @@ export class PushTokenService extends CrudService<PushToken> {
       const stats = await PushToken.createQueryBuilder('token')
         .select('token.platform', 'platform')
         .addSelect('COUNT(*)', 'count')
-        .addSelect('SUM(CASE WHEN token.isActive = true THEN 1 ELSE 0 END)', 'active')
+        .addSelect(
+          'SUM(CASE WHEN token.isActive = true THEN 1 ELSE 0 END)',
+          'active',
+        )
         .groupBy('token.platform')
         .getRawMany();
-      
+
       const result = {
         total: 0,
         active: 0,
         byPlatform: {} as Record<PushTokenPlatform, number>,
       };
-      
-      stats.forEach(stat => {
+
+      stats.forEach((stat) => {
         const count = parseInt(stat.count);
         const active = parseInt(stat.active);
-        
+
         result.total += count;
         result.active += active;
         result.byPlatform[stat.platform as PushTokenPlatform] = count;
       });
-      
+
       return result;
     } catch (error) {
       this.logger.error(
