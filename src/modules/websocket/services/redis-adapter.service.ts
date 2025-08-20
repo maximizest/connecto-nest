@@ -92,9 +92,9 @@ export class RedisAdapterService implements OnModuleInit, OnModuleDestroy {
 
       this.isInitialized = true;
       this.logger.log('Redis adapter clients initialized successfully');
-    } catch (error) {
-      this.logger.error('Failed to initialize Redis clients:', error);
-      throw error;
+    } catch (_error) {
+      this.logger.error('Failed to initialize Redis clients:', _error);
+      throw _error;
     }
   }
 
@@ -127,7 +127,7 @@ export class RedisAdapterService implements OnModuleInit, OnModuleDestroy {
       }
 
       return options;
-    } catch (error) {
+    } catch (_error) {
       this.logger.warn('Failed to parse Redis URL, using defaults');
       return {
         port: 6379,
@@ -182,9 +182,9 @@ export class RedisAdapterService implements OnModuleInit, OnModuleDestroy {
       io.of('/').adapter.on('error', (err) => {
         this.logger.error('Redis adapter error:', err);
       });
-    } catch (error) {
-      this.logger.error('Failed to setup Redis adapter:', error);
-      throw error;
+    } catch (_error) {
+      this.logger.error('Failed to setup Redis adapter:', _error);
+      throw _error;
     }
   }
 
@@ -202,8 +202,8 @@ export class RedisAdapterService implements OnModuleInit, OnModuleDestroy {
       const subPing = await this.pingClient(this.subClient);
 
       return pubPing && subPing;
-    } catch (error) {
-      this.logger.error('Health check failed:', error);
+    } catch (_error) {
+      this.logger.error('Health check failed:', _error);
       return false;
     }
   }
@@ -215,8 +215,8 @@ export class RedisAdapterService implements OnModuleInit, OnModuleDestroy {
     try {
       const result = await client.ping();
       return result === 'PONG';
-    } catch (error) {
-      this.logger.error('Ping failed:', error);
+    } catch (_error) {
+      this.logger.error('Ping failed:', _error);
       return false;
     }
   }

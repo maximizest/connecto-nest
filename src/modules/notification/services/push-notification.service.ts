@@ -68,9 +68,9 @@ export class PushNotificationService {
       this.logger.log(
         `Push token registered: userId=${userId}, platform=${platform}, deviceId=${deviceId}`,
       );
-    } catch (error) {
-      this.logger.error(`Failed to register push token: ${error.message}`);
-      throw error;
+    } catch (_error) {
+      this.logger.error(`Failed to register push token: ${_error.message}`);
+      throw _error;
     }
   }
 
@@ -102,9 +102,9 @@ export class PushNotificationService {
       this.logger.log(
         `Push token unregistered: userId=${userId}, deviceId=${deviceId}`,
       );
-    } catch (error) {
-      this.logger.error(`Failed to unregister push token: ${error.message}`);
-      throw error;
+    } catch (_error) {
+      this.logger.error(`Failed to unregister push token: ${_error.message}`);
+      throw _error;
     }
   }
 
@@ -129,8 +129,8 @@ export class PushNotificationService {
       }
 
       return pushTokens;
-    } catch (error) {
-      this.logger.error(`Failed to get user push tokens: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to get user push tokens: ${_error.message}`);
       return [];
     }
   }
@@ -171,9 +171,9 @@ export class PushNotificationService {
           ) {
             await this.markTokenAsInactive(pushToken);
           }
-        } catch (error) {
+        } catch (_error) {
           this.logger.error(
-            `Failed to send push to device ${pushToken.deviceId}: ${error.message}`,
+            `Failed to send push to device ${pushToken.deviceId}: ${_error.message}`,
           );
         }
       }
@@ -181,8 +181,10 @@ export class PushNotificationService {
       this.logger.log(
         `Push notification sent to ${pushTokens.length} devices for notification ${notification.id}`,
       );
-    } catch (error) {
-      this.logger.error(`Failed to handle push notification: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(
+        `Failed to handle push notification: ${_error.message}`,
+      );
     }
   }
 
@@ -205,11 +207,11 @@ export class PushNotificationService {
         default:
           throw new Error(`Unsupported platform: ${pushToken.platform}`);
       }
-    } catch (error) {
-      this.logger.error(`Failed to send push to device: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to send push to device: ${_error.message}`);
       return {
         success: false,
-        error: error.message,
+        error: _error.message,
       };
     }
   }
@@ -302,8 +304,8 @@ export class PushNotificationService {
 
       // 통계 업데이트
       await this.updatePushStats(pushToken.platform, result.success);
-    } catch (error) {
-      this.logger.error(`Failed to record push result: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to record push result: ${_error.message}`);
     }
   }
 
@@ -342,8 +344,8 @@ export class PushNotificationService {
       }
 
       await this.redisService.setJson(statsKey, stats, this.PUSH_STATS_TTL);
-    } catch (error) {
-      this.logger.error(`Failed to update push stats: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to update push stats: ${_error.message}`);
     }
   }
 
@@ -360,8 +362,8 @@ export class PushNotificationService {
       this.logger.log(
         `Push token marked as inactive: userId=${pushToken.userId}, deviceId=${pushToken.deviceId}`,
       );
-    } catch (error) {
-      this.logger.error(`Failed to mark token as inactive: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to mark token as inactive: ${_error.message}`);
     }
   }
 
@@ -381,8 +383,8 @@ export class PushNotificationService {
           platforms: {},
         }
       );
-    } catch (error) {
-      this.logger.error(`Failed to get push stats: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to get push stats: ${_error.message}`);
       return null;
     }
   }
@@ -419,9 +421,9 @@ export class PushNotificationService {
               await this.markTokenAsInactive(pushToken);
             }
           }
-        } catch (error) {
+        } catch (_error) {
           this.logger.error(
-            `Failed to send batch push to user ${userId}: ${error.message}`,
+            `Failed to send batch push to user ${userId}: ${_error.message}`,
           );
           failed++;
         }
@@ -430,11 +432,11 @@ export class PushNotificationService {
       this.logger.log(`Batch push completed: sent=${sent}, failed=${failed}`);
 
       return { sent, failed };
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to send batch push notifications: ${error.message}`,
+        `Failed to send batch push notifications: ${_error.message}`,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -448,8 +450,8 @@ export class PushNotificationService {
 
       this.logger.log('Cleaned up inactive push tokens');
       return 0;
-    } catch (error) {
-      this.logger.error(`Failed to cleanup inactive tokens: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to cleanup inactive tokens: ${_error.message}`);
       return 0;
     }
   }

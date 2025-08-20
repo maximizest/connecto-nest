@@ -140,11 +140,11 @@ export class LoggingInterceptor implements NestInterceptor {
     try {
       const jsonString = JSON.stringify(data);
       return `${jsonString.length} bytes`;
-    } catch (error) {
+    } catch (_error: any) {
       // 순환 참조나 기타 JSON.stringify 에러가 발생한 경우
       if (
-        error instanceof TypeError &&
-        error.message.includes('circular structure')
+        _error instanceof TypeError &&
+        _error.message.includes('circular structure')
       ) {
         return 'circular reference detected';
       }

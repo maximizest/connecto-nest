@@ -97,9 +97,9 @@ export class AuthController {
             data.deviceId,
             data.appVersion,
           );
-        } catch (error) {
+        } catch (_error) {
           // 푸시 토큰 등록 실패해도 로그인은 성공
-          this.logger.error('푸시 토큰 등록 실패:', error);
+          this.logger.error('푸시 토큰 등록 실패:', _error);
         }
       }
 
@@ -112,12 +112,12 @@ export class AuthController {
           data.deviceId
         ),
       };
-    } catch (error) {
+    } catch (_error) {
       if (
-        error instanceof BadRequestException ||
-        error instanceof UnauthorizedException
+        _error instanceof BadRequestException ||
+        _error instanceof UnauthorizedException
       ) {
-        throw error;
+        throw _error;
       }
 
       throw new BadRequestException('소셜 로그인 처리 중 오류가 발생했습니다.');
@@ -160,9 +160,9 @@ export class AuthController {
       const newAccessToken = this.authService.generateAccessToken(payload);
 
       return { accessToken: newAccessToken };
-    } catch (error) {
-      if (error instanceof UnauthorizedException) {
-        throw error;
+    } catch (_error) {
+      if (_error instanceof UnauthorizedException) {
+        throw _error;
       }
 
       throw new UnauthorizedException(ERROR_MESSAGES.INVALID_REFRESH_TOKEN);
@@ -186,9 +186,9 @@ export class AuthController {
       await User.update(decoded.id, { refreshToken: undefined });
 
       return { message: SUCCESS_MESSAGES.LOGOUT_SUCCESS };
-    } catch (error) {
-      if (error instanceof UnauthorizedException) {
-        throw error;
+    } catch (_error) {
+      if (_error instanceof UnauthorizedException) {
+        throw _error;
       }
 
       throw new BadRequestException(ERROR_MESSAGES.LOGOUT_ERROR);
@@ -228,15 +228,15 @@ export class AuthController {
           role: user.role,
         },
       };
-    } catch (error) {
+    } catch (_error) {
       if (
-        error instanceof BadRequestException ||
-        error instanceof UnauthorizedException
+        _error instanceof BadRequestException ||
+        _error instanceof UnauthorizedException
       ) {
-        throw error;
+        throw _error;
       }
 
-      this.logger.error('관리자 로그인 처리 중 오류:', error);
+      this.logger.error('관리자 로그인 처리 중 오류:', _error);
       throw new BadRequestException(
         '관리자 로그인 처리 중 오류가 발생했습니다.',
       );
@@ -256,9 +256,9 @@ export class AuthController {
       });
 
       await profile.save();
-    } catch (error) {
+    } catch (_error) {
       // 프로필 생성 실패해도 로그인은 성공
-      this.logger.error('프로필 자동 생성 실패:', error);
+      this.logger.error('프로필 자동 생성 실패:', _error);
     }
   }
 }

@@ -141,7 +141,7 @@ export class RedisCleaner {
   async isConnected(): Promise<boolean> {
     try {
       return await this.redisService.healthCheck();
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }

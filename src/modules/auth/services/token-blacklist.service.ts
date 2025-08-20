@@ -51,12 +51,12 @@ export class TokenBlacklistService {
           `Token blacklisted: userId=${userId}, reason=${reason}, expiry=${expiry}s`,
         );
       }
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to blacklist token: ${error.message}`,
-        error.stack,
+        `Failed to blacklist token: ${_error.message}`,
+        _error.stack,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -68,10 +68,10 @@ export class TokenBlacklistService {
       const key = `blacklist:token:${token}`;
       const result = await this.redis.get(key);
       return !!result;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to check token blacklist: ${error.message}`,
-        error.stack,
+        `Failed to check token blacklist: ${_error.message}`,
+        _error.stack,
       );
       return false; // 에러 시 안전하게 false 반환
     }
@@ -101,12 +101,12 @@ export class TokenBlacklistService {
       this.logger.log(
         `All sessions blacklisted for user: userId=${userId}, reason=${reason}`,
       );
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to blacklist user sessions: ${error.message}`,
-        error.stack,
+        `Failed to blacklist user sessions: ${_error.message}`,
+        _error.stack,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -118,10 +118,10 @@ export class TokenBlacklistService {
       const key = `blacklist:user:${userId}:all`;
       const result = await this.redis.get(key);
       return !!result;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to check user blacklist: ${error.message}`,
-        error.stack,
+        `Failed to check user blacklist: ${_error.message}`,
+        _error.stack,
       );
       return false;
     }
@@ -135,10 +135,10 @@ export class TokenBlacklistService {
       const key = `blacklist:token:${token}`;
       const result = await this.redis.get(key);
       return result ? JSON.parse(result) : null;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to get blacklist info: ${error.message}`,
-        error.stack,
+        `Failed to get blacklist info: ${_error.message}`,
+        _error.stack,
       );
       return null;
     }
@@ -152,10 +152,10 @@ export class TokenBlacklistService {
       const key = `blacklist:user:${userId}`;
       const result = await this.redis.get(key);
       return result ? JSON.parse(result) : null;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to get user blacklist info: ${error.message}`,
-        error.stack,
+        `Failed to get user blacklist info: ${_error.message}`,
+        _error.stack,
       );
       return null;
     }
@@ -171,12 +171,12 @@ export class TokenBlacklistService {
         `blacklist:user:${userId}:all`,
       );
       this.logger.log(`User removed from blacklist: userId=${userId}`);
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to remove from blacklist: ${error.message}`,
-        error.stack,
+        `Failed to remove from blacklist: ${_error.message}`,
+        _error.stack,
       );
-      throw error;
+      throw _error;
     }
   }
 }

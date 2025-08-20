@@ -109,9 +109,9 @@ export class RateLimitService {
         remaining,
         resetTime,
       };
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Rate limit check failed for user ${userId}: ${error.message}`,
+        `Rate limit check failed for user ${userId}: ${_error.message}`,
       );
       // 에러 발생 시 허용 (안전한 실패)
       return {
@@ -161,9 +161,9 @@ export class RateLimitService {
       const key = `planet:rate_limit:${planetId}`;
       const config = await this.redisService.getJson(key);
       return config as DynamicRateLimitConfig;
-    } catch (error) {
+    } catch (_error) {
       this.logger.warn(
-        `Failed to get planet rate limit config ${planetId}: ${error.message}`,
+        `Failed to get planet rate limit config ${planetId}: ${_error.message}`,
       );
       return null;
     }
@@ -242,8 +242,8 @@ export class RateLimitService {
       const blockKey = `${RATE_LIMIT_BLOCKED_PREFIX}:${keyInfo.key}`;
       const blocked = await this.redisService.exists(blockKey);
       return blocked > 0; // Redis exists returns number, convert to boolean
-    } catch (error) {
-      this.logger.warn(`Failed to check block status: ${error.message}`);
+    } catch (_error) {
+      this.logger.warn(`Failed to check block status: ${_error.message}`);
       return false;
     }
   }
@@ -258,8 +258,8 @@ export class RateLimitService {
     try {
       const usage = await this.redisService.get(keyInfo.key);
       return usage ? parseInt(usage, 10) : 0;
-    } catch (error) {
-      this.logger.warn(`Failed to get current usage: ${error.message}`);
+    } catch (_error) {
+      this.logger.warn(`Failed to get current usage: ${_error.message}`);
       return 0;
     }
   }
@@ -276,8 +276,8 @@ export class RateLimitService {
       pipeline.incr(keyInfo.key);
       pipeline.expire(keyInfo.key, config.window);
       await pipeline.exec();
-    } catch (error) {
-      this.logger.warn(`Failed to increment usage: ${error.message}`);
+    } catch (_error) {
+      this.logger.warn(`Failed to increment usage: ${_error.message}`);
     }
   }
 
@@ -304,8 +304,8 @@ export class RateLimitService {
       this.logger.warn(
         `User ${keyInfo.userId} blocked for ${config.blockDuration}s due to rate limit: ${keyInfo.scope}:${keyInfo.action}`,
       );
-    } catch (error) {
-      this.logger.warn(`Failed to block user: ${error.message}`);
+    } catch (_error) {
+      this.logger.warn(`Failed to block user: ${_error.message}`);
     }
   }
 
@@ -319,7 +319,7 @@ export class RateLimitService {
     try {
       const ttl = await this.redisService['redis'].ttl(keyInfo.key);
       return Date.now() + (ttl > 0 ? ttl * 1000 : config.window * 1000);
-    } catch (error) {
+    } catch (_error) {
       return Date.now() + config.window * 1000;
     }
   }
@@ -384,9 +384,9 @@ export class RateLimitService {
       pipeline.expire(statsKey, 86400 * 7); // 7일 보관
 
       await pipeline.exec();
-    } catch (error) {
+    } catch (_error) {
       // 통계 업데이트 실패는 로깅만 하고 넘어감
-      this.logger.debug(`Failed to update stats: ${error.message}`);
+      this.logger.debug(`Failed to update stats: ${_error.message}`);
     }
   }
 
@@ -438,8 +438,8 @@ export class RateLimitService {
           windowEnd: new Date(resetTime).toISOString(),
         },
       };
-    } catch (error) {
-      this.logger.warn(`Failed to get rate limit stats: ${error.message}`);
+    } catch (_error) {
+      this.logger.warn(`Failed to get rate limit stats: ${_error.message}`);
       return null;
     }
   }
@@ -467,8 +467,8 @@ export class RateLimitService {
       );
 
       return true;
-    } catch (error) {
-      this.logger.error(`Failed to reset rate limit: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to reset rate limit: ${_error.message}`);
       return false;
     }
   }
@@ -485,9 +485,9 @@ export class RateLimitService {
       await this.redisService.setJson(key, config, 86400); // 24시간
 
       this.logger.log(`Planet ${planetId} rate limit config updated`);
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to update planet rate limit config: ${error.message}`,
+        `Failed to update planet rate limit config: ${_error.message}`,
       );
     }
   }
@@ -523,8 +523,8 @@ export class RateLimitService {
         redis: redisHealthy,
         activeBlocks: blockKeys.length,
       };
-    } catch (error) {
-      this.logger.error(`Rate limit health check failed: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Rate limit health check failed: ${_error.message}`);
       return {
         status: 'degraded',
         redis: false,

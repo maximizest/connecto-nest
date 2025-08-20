@@ -25,10 +25,10 @@ export class WebSocketService {
       this.logger.log(
         `User online status updated: userId=${userId}, isOnline=${isOnline}`,
       );
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to update user online status: ${error.message}`,
-        error.stack,
+        `Failed to update user online status: ${_error.message}`,
+        _error.stack,
       );
     }
   }

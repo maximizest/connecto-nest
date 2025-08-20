@@ -47,9 +47,9 @@ export class AdminGuard implements CanActivate {
       }
 
       (request as Request & { user: CurrentUserData }).user = payload;
-    } catch (error) {
-      if (error instanceof ForbiddenException) {
-        throw error;
+    } catch (_error) {
+      if (_error instanceof ForbiddenException) {
+        throw _error;
       }
       throw new UnauthorizedException('유효하지 않은 토큰입니다');
     }

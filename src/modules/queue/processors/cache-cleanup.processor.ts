@@ -74,9 +74,9 @@ export class CacheCleanupProcessor extends WorkerHost {
       );
 
       return result;
-    } catch (error) {
-      this.logger.error(`${job.name} failed: ${error.message}`, error.stack);
-      throw error;
+    } catch (_error) {
+      this.logger.error(`${job.name} failed: ${_error.message}`, _error.stack);
+      throw _error;
     }
   }
 
@@ -124,8 +124,8 @@ export class CacheCleanupProcessor extends WorkerHost {
             }
 
             // 곧 만료될 키는 Redis가 자동으로 처리하도록 놔둠
-          } catch (error) {
-            const errorMsg = `Failed to process key ${key}: ${error.message}`;
+          } catch (_error) {
+            const errorMsg = `Failed to process key ${key}: ${_error.message}`;
             this.logger.warn(errorMsg);
             result.errors.push(errorMsg);
           }
@@ -136,9 +136,9 @@ export class CacheCleanupProcessor extends WorkerHost {
       }
 
       await job.updateProgress(100);
-    } catch (error) {
-      this.logger.error('Cache cleanup error', error);
-      throw error;
+    } catch (_error) {
+      this.logger.error('Cache cleanup error', _error);
+      throw _error;
     }
   }
 
@@ -173,8 +173,8 @@ export class CacheCleanupProcessor extends WorkerHost {
               );
             }
           }
-        } catch (error) {
-          const errorMsg = `Failed to process big key ${key}: ${error.message}`;
+        } catch (_error) {
+          const errorMsg = `Failed to process big key ${key}: ${_error.message}`;
           this.logger.warn(errorMsg);
           result.errors.push(errorMsg);
         }
@@ -192,11 +192,11 @@ export class CacheCleanupProcessor extends WorkerHost {
         // MEMORY PURGE 명령 실행 (Redis 4.0+)
         await client.call('MEMORY', 'PURGE');
         this.logger.debug('Memory purge executed');
-      } catch (error) {
+      } catch (_error) {
         // 명령이 지원되지 않을 수 있음
         this.logger.debug(
           'Memory purge not supported or failed:',
-          error.message,
+          _error.message,
         );
       }
 
@@ -206,9 +206,9 @@ export class CacheCleanupProcessor extends WorkerHost {
       result.processedItems = bigKeys.length;
 
       await job.updateProgress(100);
-    } catch (error) {
-      this.logger.error('Memory optimization error', error);
-      throw error;
+    } catch (_error) {
+      this.logger.error('Memory optimization error', _error);
+      throw _error;
     }
   }
 
@@ -220,8 +220,8 @@ export class CacheCleanupProcessor extends WorkerHost {
       const info = await this.redisService.getClient().info('memory');
       const match = info.match(/used_memory:(\d+)/);
       return match ? parseInt(match[1], 10) : 0;
-    } catch (error) {
-      this.logger.error('Failed to get memory usage', error);
+    } catch (_error) {
+      this.logger.error('Failed to get memory usage', _error);
       return 0;
     }
   }
@@ -250,8 +250,8 @@ export class CacheCleanupProcessor extends WorkerHost {
         peakMemory: stats.used_memory_peak_human,
         memoryFragmentation: stats.mem_fragmentation_ratio,
       };
-    } catch (error) {
-      this.logger.error('Failed to get memory stats', error);
+    } catch (_error) {
+      this.logger.error('Failed to get memory stats', _error);
       return {};
     }
   }
@@ -282,8 +282,8 @@ export class CacheCleanupProcessor extends WorkerHost {
       }
 
       return bigKeys;
-    } catch (error) {
-      this.logger.error('Failed to find big keys', error);
+    } catch (_error) {
+      this.logger.error('Failed to find big keys', _error);
       return [];
     }
   }
@@ -308,8 +308,8 @@ export class CacheCleanupProcessor extends WorkerHost {
           this.logger.debug(`Deleted idle session: ${key}`);
         }
       }
-    } catch (error) {
-      this.logger.error('Failed to cleanup old sessions', error);
+    } catch (_error) {
+      this.logger.error('Failed to cleanup old sessions', _error);
     }
   }
 }

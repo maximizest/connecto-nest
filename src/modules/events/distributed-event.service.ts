@@ -39,8 +39,8 @@ export class DistributedEventService {
       await this.redisService.getClient().publish(channel, message);
 
       this.logger.debug(`Distributed event published: ${event}`);
-    } catch (error) {
-      this.logger.error(`Failed to emit distributed event: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to emit distributed event: ${_error.message}`);
       // 실패해도 로컬 이벤트는 이미 발행됨
     }
   }
@@ -71,17 +71,17 @@ export class DistributedEventService {
           this.logger.debug(
             `Distributed event received: ${parsed.event} from ${parsed.source}`,
           );
-        } catch (error) {
+        } catch (_error) {
           this.logger.error(
-            `Failed to process distributed event: ${error.message}`,
+            `Failed to process distributed event: ${_error.message}`,
           );
         }
       });
 
       this.logger.log('Distributed event subscriber initialized');
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to setup distributed event subscriber: ${error.message}`,
+        `Failed to setup distributed event subscriber: ${_error.message}`,
       );
     }
   }

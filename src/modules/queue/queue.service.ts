@@ -99,8 +99,8 @@ export class QueueService {
       );
 
       this.logger.log('✅ Scheduled jobs initialized successfully');
-    } catch (error) {
-      this.logger.error('Failed to initialize scheduled jobs', error);
+    } catch (_error) {
+      this.logger.error('Failed to initialize scheduled jobs', _error);
     }
   }
 

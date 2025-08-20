@@ -190,9 +190,9 @@ export class SchemaController {
         `Retrieved schema information for ${modelsInfo.length} entities`,
       );
       return crudResponse(modelsInfo);
-    } catch (error) {
-      this.logger.error('Failed to retrieve schema information', error);
-      throw error;
+    } catch (_error) {
+      this.logger.error('Failed to retrieve schema information', _error);
+      throw _error;
     }
   }
 
@@ -328,16 +328,16 @@ export class SchemaController {
 
       this.logger.log(`Retrieved detailed schema for entity: ${entityName}`);
       return crudResponse(entityInfo);
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
+    } catch (_error) {
+      if (_error instanceof NotFoundException) {
+        throw _error;
       }
 
       this.logger.error(
         `Failed to retrieve schema for entity: ${entityName}`,
-        error,
+        _error,
       );
-      throw error;
+      throw _error;
     }
   }
 

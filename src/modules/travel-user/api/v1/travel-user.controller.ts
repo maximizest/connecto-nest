@@ -315,10 +315,10 @@ export class TravelUserController {
       }
 
       return entity;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to process after travel join: ${error.message}`,
-        error.stack,
+        `Failed to process after travel join: ${_error.message}`,
+        _error.stack,
       );
 
       return entity;

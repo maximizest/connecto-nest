@@ -90,12 +90,12 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
       );
 
       return savedReceipt;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
         `Failed to mark message as read: messageId=${messageId}, userId=${userId}`,
-        error,
+        _error,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -176,12 +176,12 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
       );
 
       return receipts;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
         `Failed to batch mark messages as read: userId=${userId}`,
-        error,
+        _error,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -236,12 +236,12 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
       );
 
       return { processedCount: receipts.length, receipts };
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
         `Failed to mark all messages as read in planet: planetId=${planetId}, userId=${userId}`,
-        error,
+        _error,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -272,10 +272,10 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
       ]);
 
       return Math.max(0, totalMessages - readMessages);
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
         `Failed to get unread count: planetId=${planetId}, userId=${userId}`,
-        error,
+        _error,
       );
       return 0;
     }
@@ -323,10 +323,10 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
       }
 
       return results;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
         `Failed to get unread counts by user: userId=${userId}`,
-        error,
+        _error,
       );
       return [];
     }
@@ -345,10 +345,10 @@ export class ReadReceiptService extends CrudService<MessageReadReceipt> {
         readCount,
         firstReadAt: readCount === 1 ? new Date() : undefined,
       });
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
         `Failed to update message read count: messageId=${messageId}`,
-        error,
+        _error,
       );
     }
   }

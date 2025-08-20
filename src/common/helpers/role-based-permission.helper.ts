@@ -255,7 +255,8 @@ export async function validateChatPermission(
     }
 
     return { canChat: true };
-  } catch (error) {
-    return { canChat: false, reason: error.message };
+  } catch (_error: any) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    return { canChat: false, reason: _error.message };
   }
 }

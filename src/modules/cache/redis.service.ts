@@ -43,9 +43,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         this.logger.log(`🟢 ${environment} Redis is ready`);
       });
 
-      this.redis.on('error', (error) => {
+      this.redis.on('error', (_error) => {
         this.isConnected = false;
-        this.logger.error('❌ Redis connection error:', error.message);
+        this.logger.error('❌ Redis connection error:', _error.message);
       });
 
       this.redis.on('close', () => {
@@ -71,10 +71,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
           pingError.message,
         );
       }
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
         '❌ Redis initialization failed, continuing without caching:',
-        error.message,
+        _error.message,
       );
       // Redis 없이도 서비스가 계속 실행되도록 에러를 throw하지 않음
     }
@@ -112,8 +112,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     if (!this.checkConnection()) return null;
     try {
       return await this.redis.get(key);
-    } catch (error) {
-      this.logger.error(`Redis GET error for key ${key}:`, error.message);
+    } catch (_error) {
+      this.logger.error(`Redis GET error for key ${key}:`, _error.message);
       return null;
     }
   }
@@ -125,8 +125,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         return await this.redis.setex(key, ttl, value);
       }
       return await this.redis.set(key, value);
-    } catch (error) {
-      this.logger.error(`Redis SET error for key ${key}:`, error.message);
+    } catch (_error) {
+      this.logger.error(`Redis SET error for key ${key}:`, _error.message);
       return 'OK';
     }
   }
@@ -135,8 +135,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     if (!this.checkConnection()) return 0;
     try {
       return await this.redis.del(key);
-    } catch (error) {
-      this.logger.error(`Redis DEL error for key ${key}:`, error.message);
+    } catch (_error) {
+      this.logger.error(`Redis DEL error for key ${key}:`, _error.message);
       return 0;
     }
   }
@@ -145,8 +145,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     if (!this.checkConnection()) return 0;
     try {
       return await this.redis.exists(key);
-    } catch (error) {
-      this.logger.error(`Redis EXISTS error for key ${key}:`, error.message);
+    } catch (_error) {
+      this.logger.error(`Redis EXISTS error for key ${key}:`, _error.message);
       return 0;
     }
   }
@@ -155,8 +155,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     if (!this.checkConnection()) return 0;
     try {
       return await this.redis.incr(key);
-    } catch (error) {
-      this.logger.error(`Redis INCR error for key ${key}:`, error.message);
+    } catch (_error) {
+      this.logger.error(`Redis INCR error for key ${key}:`, _error.message);
       return 0;
     }
   }
@@ -165,8 +165,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     if (!this.checkConnection()) return 0;
     try {
       return await this.redis.expire(key, seconds);
-    } catch (error) {
-      this.logger.error(`Redis EXPIRE error for key ${key}:`, error.message);
+    } catch (_error) {
+      this.logger.error(`Redis EXPIRE error for key ${key}:`, _error.message);
       return 0;
     }
   }
@@ -175,8 +175,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     if (!this.checkConnection()) return -1;
     try {
       return await this.redis.ttl(key);
-    } catch (error) {
-      this.logger.error(`Redis TTL error for key ${key}:`, error.message);
+    } catch (_error) {
+      this.logger.error(`Redis TTL error for key ${key}:`, _error.message);
       return -1;
     }
   }
@@ -190,8 +190,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     try {
       return JSON.parse(value);
-    } catch (error) {
-      this.logger.error(`Failed to parse JSON for key ${key}:`, error);
+    } catch (_error) {
+      this.logger.error(`Failed to parse JSON for key ${key}:`, _error);
       return null;
     }
   }
@@ -259,8 +259,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     try {
       const result = await this.redis.ping();
       return result === 'PONG';
-    } catch (error) {
-      this.logger.error('Redis health check failed:', error.message);
+    } catch (_error) {
+      this.logger.error('Redis health check failed:', _error.message);
       this.isConnected = false;
       return false;
     }
@@ -290,8 +290,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       });
 
       return parsed;
-    } catch (error) {
-      this.logger.warn(`Failed to get Redis info: ${error.message}`);
+    } catch (_error) {
+      this.logger.warn(`Failed to get Redis info: ${_error.message}`);
       return {};
     }
   }
@@ -307,8 +307,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     try {
       const keys = await this.redis.keys(pattern);
       return keys.length;
-    } catch (error) {
-      this.logger.warn(`Failed to get key count: ${error.message}`);
+    } catch (_error) {
+      this.logger.warn(`Failed to get key count: ${_error.message}`);
       return 0;
     }
   }
@@ -324,8 +324,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     try {
       const info = await this.getInfo('memory');
       return info.used_memory_human || 'N/A';
-    } catch (error) {
-      this.logger.warn(`Failed to get memory usage: ${error.message}`);
+    } catch (_error) {
+      this.logger.warn(`Failed to get memory usage: ${_error.message}`);
       return 'N/A';
     }
   }
@@ -340,9 +340,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     try {
       return await this.redis.keys(pattern);
-    } catch (error) {
+    } catch (_error) {
       this.logger.warn(
-        `Failed to get keys with pattern ${pattern}: ${error.message}`,
+        `Failed to get keys with pattern ${pattern}: ${_error.message}`,
       );
       return [];
     }

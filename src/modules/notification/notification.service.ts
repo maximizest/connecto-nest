@@ -85,9 +85,9 @@ export class NotificationService extends CrudService<Notification> {
       );
 
       return notifications;
-    } catch (error) {
-      this.logger.error(`Failed to create notification: ${error.message}`);
-      throw error;
+    } catch (_error) {
+      this.logger.error(`Failed to create notification: ${_error.message}`);
+      throw _error;
     }
   }
 
@@ -154,11 +154,11 @@ export class NotificationService extends CrudService<Notification> {
       );
 
       return savedNotifications;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to create bulk notifications: ${error.message}`,
+        `Failed to create bulk notifications: ${_error.message}`,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -182,11 +182,11 @@ export class NotificationService extends CrudService<Notification> {
         this.logger.debug(
           `Notification ${notification.id} sent successfully to ${channel}`,
         );
-      } catch (error) {
+      } catch (_error) {
         this.logger.error(
-          `Failed to send to channel ${channel}: ${error.message}`,
+          `Failed to send to channel ${channel}: ${_error.message}`,
         );
-        notification.markAsFailed(error.message);
+        notification.markAsFailed(_error.message);
       }
 
       // 전송 결과 저장
@@ -198,11 +198,11 @@ export class NotificationService extends CrudService<Notification> {
         channel,
         timestamp: new Date(),
       });
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to send notification ${notification.id}: ${error.message}`,
+        `Failed to send notification ${notification.id}: ${_error.message}`,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -369,9 +369,9 @@ export class NotificationService extends CrudService<Notification> {
         total,
         hasMore: total > page * limit,
       };
-    } catch (error) {
-      this.logger.error(`Failed to get user notifications: ${error.message}`);
-      throw error;
+    } catch (_error) {
+      this.logger.error(`Failed to get user notifications: ${_error.message}`);
+      throw _error;
     }
   }
 
@@ -390,9 +390,9 @@ export class NotificationService extends CrudService<Notification> {
       this.logger.log(`Cleaned up ${deletedCount} expired notifications`);
 
       return deletedCount;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to cleanup expired notifications: ${error.message}`,
+        `Failed to cleanup expired notifications: ${_error.message}`,
       );
       return 0;
     }
@@ -417,9 +417,9 @@ export class NotificationService extends CrudService<Notification> {
         try {
           await this.sendNotification(notification);
           processedCount++;
-        } catch (error) {
+        } catch (_error) {
           this.logger.error(
-            `Failed to send scheduled notification ${notification.id}: ${error.message}`,
+            `Failed to send scheduled notification ${notification.id}: ${_error.message}`,
           );
         }
       }
@@ -429,9 +429,9 @@ export class NotificationService extends CrudService<Notification> {
       }
 
       return processedCount;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to process scheduled notifications: ${error.message}`,
+        `Failed to process scheduled notifications: ${_error.message}`,
       );
       return 0;
     }

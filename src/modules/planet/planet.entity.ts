@@ -472,7 +472,7 @@ export class Planet extends BaseActiveRecord {
         }),
       );
       return timezonedDate;
-    } catch (error) {
+    } catch (_error) {
       // 시간대 변환 실패 시 UTC 시간 사용
       return now;
     }

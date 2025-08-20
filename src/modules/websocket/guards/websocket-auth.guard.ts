@@ -46,8 +46,8 @@ export class WebSocketAuthGuard implements CanActivate {
 
       this.logger.debug(`User ${user.id} authenticated via WebSocket`);
       return true;
-    } catch (error) {
-      this.logger.warn(`WebSocket authentication failed: ${error.message}`);
+    } catch (_error) {
+      this.logger.warn(`WebSocket authentication failed: ${_error.message}`);
       throw new WsException('인증에 실패했습니다.');
     }
   }

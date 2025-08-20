@@ -29,9 +29,9 @@ export class SchedulerService {
     try {
       const job = await this.queueService.triggerFileCleanup('large');
       this.logger.log(`File cleanup job triggered: ${job.id}`);
-    } catch (error) {
-      this.logger.error('Failed to trigger file cleanup', error);
-      throw error;
+    } catch (_error) {
+      this.logger.error('Failed to trigger file cleanup', _error);
+      throw _error;
     }
   }
 
@@ -42,9 +42,9 @@ export class SchedulerService {
     try {
       const job = await this.queueService.triggerFileCleanup('failed');
       this.logger.log(`Failed upload cleanup job triggered: ${job.id}`);
-    } catch (error) {
-      this.logger.error('Failed to trigger failed upload cleanup', error);
-      throw error;
+    } catch (_error) {
+      this.logger.error('Failed to trigger failed upload cleanup', _error);
+      throw _error;
     }
   }
 
@@ -55,9 +55,9 @@ export class SchedulerService {
     try {
       const job = await this.queueService.triggerTravelCleanup();
       this.logger.log(`Travel cleanup job triggered: ${job.id}`);
-    } catch (error) {
-      this.logger.error('Failed to trigger travel cleanup', error);
-      throw error;
+    } catch (_error) {
+      this.logger.error('Failed to trigger travel cleanup', _error);
+      throw _error;
     }
   }
 
@@ -68,9 +68,9 @@ export class SchedulerService {
     try {
       const job = await this.queueService.triggerCacheCleanup();
       this.logger.log(`Cache cleanup job triggered: ${job.id}`);
-    } catch (error) {
-      this.logger.error('Failed to trigger cache cleanup', error);
-      throw error;
+    } catch (_error) {
+      this.logger.error('Failed to trigger cache cleanup', _error);
+      throw _error;
     }
   }
 
@@ -107,10 +107,10 @@ export class SchedulerService {
         tasks: taskStats,
         timestamp: new Date().toISOString(),
       };
-    } catch (error) {
-      this.logger.error('Failed to get scheduler stats', error);
+    } catch (_error) {
+      this.logger.error('Failed to get scheduler stats', _error);
       return {
-        error: error.message,
+        error: _error.message,
         timestamp: new Date().toISOString(),
       };
     }
@@ -125,8 +125,8 @@ export class SchedulerService {
         `${this.SCHEDULER_STATS_KEY}:${taskName}`,
       );
       return stats ? JSON.parse(stats) : null;
-    } catch (error) {
-      this.logger.error(`Failed to get stats for task ${taskName}`, error);
+    } catch (_error) {
+      this.logger.error(`Failed to get stats for task ${taskName}`, _error);
       return null;
     }
   }
@@ -137,10 +137,10 @@ export class SchedulerService {
   async getJobStatus(queueName: string, jobId: string): Promise<any> {
     try {
       return await this.queueService.getJobStatus(queueName, jobId);
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
         `Failed to get job status for ${queueName}:${jobId}`,
-        error,
+        _error,
       );
       return null;
     }
@@ -165,8 +165,8 @@ export class SchedulerService {
         redis: redisPing === 'PONG',
         timestamp: new Date().toISOString(),
       };
-    } catch (error) {
-      this.logger.error('Health check failed', error);
+    } catch (_error) {
+      this.logger.error('Health check failed', _error);
       return {
         status: 'unhealthy',
         queues: {},

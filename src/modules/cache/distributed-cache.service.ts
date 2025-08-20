@@ -54,9 +54,9 @@ export class DistributedCacheService implements OnModuleInit {
       this.logger.log(
         `Cache invalidated across replicas: ${patterns.join(', ')}`,
       );
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to invalidate cache across replicas: ${error.message}`,
+        `Failed to invalidate cache across replicas: ${_error.message}`,
       );
     }
   }

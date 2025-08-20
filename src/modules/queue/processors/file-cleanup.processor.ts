@@ -72,9 +72,9 @@ export class FileCleanupProcessor extends WorkerHost {
       );
 
       return result;
-    } catch (error) {
-      this.logger.error(`${job.name} failed: ${error.message}`, error.stack);
-      throw error;
+    } catch (_error) {
+      this.logger.error(`${job.name} failed: ${_error.message}`, _error.stack);
+      throw _error;
     }
   }
 
@@ -135,8 +135,8 @@ export class FileCleanupProcessor extends WorkerHost {
         result.failedUploads++;
 
         this.logger.debug(`Cleaned up failed upload: ${upload.id}`);
-      } catch (error) {
-        const errorMsg = `Failed to cleanup upload ${upload.id}: ${error.message}`;
+      } catch (_error) {
+        const errorMsg = `Failed to cleanup upload ${upload.id}: ${_error.message}`;
         this.logger.warn(errorMsg);
         result.errors.push(errorMsg);
       }
@@ -169,8 +169,8 @@ export class FileCleanupProcessor extends WorkerHost {
         result.tempFiles++;
 
         this.logger.debug(`Cleaned up temp file: ${upload.id}`);
-      } catch (error) {
-        const errorMsg = `Failed to cleanup temp file ${upload.id}: ${error.message}`;
+      } catch (_error) {
+        const errorMsg = `Failed to cleanup temp file ${upload.id}: ${_error.message}`;
         this.logger.warn(errorMsg);
         result.errors.push(errorMsg);
       }
@@ -192,14 +192,14 @@ export class FileCleanupProcessor extends WorkerHost {
           result.orphanedFiles++;
 
           this.logger.debug(`Cleaned up orphaned file: ${fileKey}`);
-        } catch (error) {
-          const errorMsg = `Failed to cleanup orphaned file ${fileKey}: ${error.message}`;
+        } catch (_error) {
+          const errorMsg = `Failed to cleanup orphaned file ${fileKey}: ${_error.message}`;
           this.logger.warn(errorMsg);
           result.errors.push(errorMsg);
         }
       }
-    } catch (error) {
-      this.logger.error('Failed to find orphaned files', error);
+    } catch (_error) {
+      this.logger.error('Failed to find orphaned files', _error);
     }
   }
 
@@ -223,8 +223,8 @@ export class FileCleanupProcessor extends WorkerHost {
         .map((f) => f.key)
         .filter((key) => !dbFileKeys.has(key))
         .slice(0, 50); // 한 번에 최대 50개만 처리
-    } catch (error) {
-      this.logger.error('Error finding orphaned files', error);
+    } catch (_error) {
+      this.logger.error('Error finding orphaned files', _error);
       return [];
     }
   }

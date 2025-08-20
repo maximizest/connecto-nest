@@ -60,10 +60,10 @@ export class ConnectionManagerService {
 
       // 연결 통계 업데이트
       this.emitConnectionStats();
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to register connection: ${error.message}`,
-        error.stack,
+        `Failed to register connection: ${_error.message}`,
+        _error.stack,
       );
     }
   }
@@ -101,10 +101,10 @@ export class ConnectionManagerService {
 
       // 연결 통계 업데이트
       this.emitConnectionStats();
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to unregister connection: ${error.message}`,
-        error.stack,
+        `Failed to unregister connection: ${_error.message}`,
+        _error.stack,
       );
     }
   }
@@ -170,10 +170,10 @@ export class ConnectionManagerService {
       );
 
       return disconnectedCount;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to force disconnect user: ${error.message}`,
-        error.stack,
+        `Failed to force disconnect user: ${_error.message}`,
+        _error.stack,
       );
       return 0;
     }
@@ -210,10 +210,10 @@ export class ConnectionManagerService {
       );
 
       return true;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to force disconnect device: ${error.message}`,
-        error.stack,
+        `Failed to force disconnect device: ${_error.message}`,
+        _error.stack,
       );
       return false;
     }
@@ -378,10 +378,10 @@ export class ConnectionManagerService {
       this.deviceConnections.clear();
 
       this.logger.log('Connection manager cleaned up');
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to cleanup connections: ${error.message}`,
-        error.stack,
+        `Failed to cleanup connections: ${_error.message}`,
+        _error.stack,
       );
     }
   }

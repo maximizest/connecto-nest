@@ -333,11 +333,11 @@ export class ReadReceiptController {
       });
 
       return crudResponse(batchReadEntity);
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Mark multiple messages as read failed: userId=${user.id}, error=${error.message}`,
+        `Mark multiple messages as read failed: userId=${user.id}, error=${_error.message}`,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -401,11 +401,11 @@ export class ReadReceiptController {
       });
 
       return crudResponse(planetAllReadEntity);
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Mark all messages as read failed: planetId=${planetId}, userId=${user.id}, error=${error.message}`,
+        `Mark all messages as read failed: planetId=${planetId}, userId=${user.id}, error=${_error.message}`,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -444,11 +444,11 @@ export class ReadReceiptController {
       });
 
       return crudResponse(unreadCountEntity);
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Get unread count failed: planetId=${planetId}, userId=${user.id}, error=${error.message}`,
+        `Get unread count failed: planetId=${planetId}, userId=${user.id}, error=${_error.message}`,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -485,11 +485,11 @@ export class ReadReceiptController {
       });
 
       return crudResponse(myUnreadCountsEntity);
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Get my unread counts failed: userId=${user.id}, error=${error.message}`,
+        `Get my unread counts failed: userId=${user.id}, error=${_error.message}`,
       );
-      throw error;
+      throw _error;
     }
   }
 

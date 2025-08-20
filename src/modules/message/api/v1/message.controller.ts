@@ -479,12 +479,12 @@ export class MessageController {
         Math.min(Math.max(contextSize, 5), 50), // 5-50 범위로 제한
         user.id,
       );
-    } catch (error) {
+    } catch (_error) {
       const user = req.user;
       this.logger.error(
-        `Failed to get message context: messageId=${messageId}, user=${user.id}, error=${error.message}`,
+        `Failed to get message context: messageId=${messageId}, user=${user.id}, error=${_error.message}`,
       );
-      throw error;
+      throw _error;
     }
   }
 

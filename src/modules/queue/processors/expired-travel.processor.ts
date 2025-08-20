@@ -73,9 +73,9 @@ export class ExpiredTravelProcessor extends WorkerHost {
       );
 
       return result;
-    } catch (error) {
-      this.logger.error(`${job.name} failed: ${error.message}`, error.stack);
-      throw error;
+    } catch (_error) {
+      this.logger.error(`${job.name} failed: ${_error.message}`, _error.stack);
+      throw _error;
     }
   }
 
@@ -115,8 +115,8 @@ export class ExpiredTravelProcessor extends WorkerHost {
         result.notificationsSet++;
 
         this.logger.debug(`Expired travel: ${travel.id} - ${travel.name}`);
-      } catch (error) {
-        const errorMsg = `Failed to expire travel ${travel.id}: ${error.message}`;
+      } catch (_error) {
+        const errorMsg = `Failed to expire travel ${travel.id}: ${_error.message}`;
         this.logger.warn(errorMsg);
         result.errors.push(errorMsg);
       }
@@ -170,8 +170,8 @@ export class ExpiredTravelProcessor extends WorkerHost {
             `Set expiry notification for travel: ${travel.id} - ${travel.name} (${travel.getDaysUntilExpiry()} days remaining)`,
           );
         }
-      } catch (error) {
-        const errorMsg = `Failed to notify expiring travel ${travel.id}: ${error.message}`;
+      } catch (_error) {
+        const errorMsg = `Failed to notify expiring travel ${travel.id}: ${_error.message}`;
         this.logger.warn(errorMsg);
         result.errors.push(errorMsg);
       }
@@ -202,10 +202,10 @@ export class ExpiredTravelProcessor extends WorkerHost {
           await this.redisService.del(pattern);
         }
       }
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
         `Failed to invalidate cache for travel ${travelId}`,
-        error,
+        _error,
       );
     }
   }
@@ -225,10 +225,10 @@ export class ExpiredTravelProcessor extends WorkerHost {
       await this.redisService
         .getClient()
         .lpush('notifications:queue', JSON.stringify(notificationData));
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
         `Failed to set expired notification for travel ${travelId}`,
-        error,
+        _error,
       );
     }
   }
@@ -251,10 +251,10 @@ export class ExpiredTravelProcessor extends WorkerHost {
       await this.redisService
         .getClient()
         .lpush('notifications:queue', JSON.stringify(notificationData));
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
         `Failed to set expiring notification for travel ${travelId}`,
-        error,
+        _error,
       );
     }
   }

@@ -53,9 +53,9 @@ export class TypingIndicatorService {
       );
 
       return typingInfo;
-    } catch (error) {
-      this.logger.error(`Failed to start typing: ${error.message}`);
-      throw error;
+    } catch (_error) {
+      this.logger.error(`Failed to start typing: ${_error.message}`);
+      throw _error;
     }
   }
 

@@ -28,7 +28,7 @@ export class WsAuthGuard implements CanActivate {
       client.data.user = payload;
 
       return true;
-    } catch (error) {
+    } catch (_error) {
       throw new WsException('인증에 실패했습니다.');
     }
   }

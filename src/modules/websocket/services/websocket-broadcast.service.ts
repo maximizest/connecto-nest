@@ -55,8 +55,8 @@ export class WebSocketBroadcastService {
       this.logger.debug(
         `Message broadcasted: id=${messageData.messageId}, planetId=${messageData.planetId}`,
       );
-    } catch (error) {
-      this.logger.error(`Failed to broadcast message: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to broadcast message: ${_error.message}`);
     }
   }
 
@@ -84,8 +84,8 @@ export class WebSocketBroadcastService {
       this.logger.debug(
         `Typing status broadcasted for user ${typingData.userId} in planet ${typingData.planetId}`,
       );
-    } catch (error) {
-      this.logger.error(`Failed to broadcast typing status: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to broadcast typing status: ${_error.message}`);
     }
   }
 
@@ -105,8 +105,8 @@ export class WebSocketBroadcastService {
       this.logger.debug(
         `Typing users list broadcasted for planet ${planetId} (cache disabled)`,
       );
-    } catch (error) {
-      this.logger.error(`Failed to broadcast typing users: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to broadcast typing users: ${_error.message}`);
     }
   }
 
@@ -131,8 +131,8 @@ export class WebSocketBroadcastService {
       this.logger.debug(
         `Personal message attempted for user ${targetUserId} (socket management disabled)`,
       );
-    } catch (error) {
-      this.logger.error(`Failed to send personal message: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to send personal message: ${_error.message}`);
     }
   }
 
@@ -151,8 +151,8 @@ export class WebSocketBroadcastService {
       });
 
       this.logger.debug('System notification broadcasted to all clients');
-    } catch (error) {
-      this.logger.error(`Failed to broadcast notification: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to broadcast notification: ${_error.message}`);
     }
   }
 }

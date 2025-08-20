@@ -27,10 +27,10 @@ export class DistributedThrottlerGuard extends ThrottlerGuard {
         async increment(
           key: string,
           ttl: number,
-          limit: number,
-          blockDuration: number,
-          throttlerName: string,
-        ) {
+          _limit: number,
+          _blockDuration: number,
+          _throttlerName: string,
+        ): Promise<any> {
           return {
             totalHits: 1,
             timeToExpire: ttl,

@@ -111,8 +111,8 @@ export class ChatGateway
     try {
       await this.redisAdapterService.setupAdapter(server);
       this.logger.log('Redis adapter configured for multi-replica support');
-    } catch (error) {
-      this.logger.error('Failed to setup Redis adapter:', error);
+    } catch (_error) {
+      this.logger.error('Failed to setup Redis adapter:', _error);
       // Redis Adapter 실패해도 단일 서버로 동작 가능
     }
 
@@ -152,12 +152,12 @@ export class ChatGateway
       this.logger.log(
         `User ${authenticatedClient.userId} connected via WebSocket`,
       );
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Connection failed for client ${client.id}: ${error.message}`,
+        `Connection failed for client ${client.id}: ${_error.message}`,
       );
       client.emit('auth_error', {
-        message: error.message,
+        message: _error.message,
         timestamp: new Date().toISOString(),
       });
       client.disconnect(true);
@@ -184,9 +184,9 @@ export class ChatGateway
           `User ${authenticatedClient.userId} disconnected from WebSocket`,
         );
       }
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Error handling disconnection for client ${client.id}: ${error.message}`,
+        `Error handling disconnection for client ${client.id}: ${_error.message}`,
       );
     }
   }
@@ -294,10 +294,10 @@ export class ChatGateway
       this.logger.debug(
         `Message ${savedMessage.id} sent to planet ${planetId} by user ${userId}`,
       );
-    } catch (error) {
-      this.logger.error(`Failed to send message: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to send message: ${_error.message}`);
       client.emit('message:error', {
-        error: error.message,
+        error: _error.message,
         timestamp: new Date().toISOString(),
       });
     }
@@ -332,11 +332,11 @@ export class ChatGateway
           client.emit('room:info', roomInfo);
         }
       }
-    } catch (error) {
-      this.logger.error(`Failed to join room: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to join room: ${_error.message}`);
       client.emit('room:error', {
         roomId: data.roomId,
-        error: error.message,
+        error: _error.message,
         timestamp: new Date().toISOString(),
       });
     }
@@ -363,11 +363,11 @@ export class ChatGateway
         success,
         timestamp: new Date().toISOString(),
       });
-    } catch (error) {
-      this.logger.error(`Failed to leave room: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to leave room: ${_error.message}`);
       client.emit('room:error', {
         roomId: data.roomId,
-        error: error.message,
+        error: _error.message,
         timestamp: new Date().toISOString(),
       });
     }
@@ -397,8 +397,8 @@ export class ChatGateway
       this.logger.debug(
         `Message ${data.messageId} read by user ${client.userId}`,
       );
-    } catch (error) {
-      this.logger.error(`Failed to handle message read: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to handle message read: ${_error.message}`);
     }
   }
 
@@ -421,8 +421,8 @@ export class ChatGateway
       this.logger.debug(
         `Location updated for user ${client.userId}: travel=${data.travelId}, planet=${data.planetId}`,
       );
-    } catch (error) {
-      this.logger.error(`Failed to update location: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to update location: ${_error.message}`);
     }
   }
 
@@ -442,8 +442,8 @@ export class ChatGateway
         this.server,
         data.planetId,
       );
-    } catch (error) {
-      this.logger.error(`Failed to get typing users: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to get typing users: ${_error.message}`);
     }
   }
 
@@ -460,8 +460,8 @@ export class ChatGateway
       const roomInfo = await this.roomService.getRoomInfo(data.roomId);
 
       client.emit('room:info', roomInfo);
-    } catch (error) {
-      this.logger.error(`Failed to get room info: ${error.message}`);
+    } catch (_error) {
+      this.logger.error(`Failed to get room info: ${_error.message}`);
     }
   }
 
@@ -552,8 +552,8 @@ export class ChatGateway
       this.logger.log(
         `Message edited: id=${messageId}, userId=${client.user.id}`,
       );
-    } catch (error) {
-      this.logger.error('Message edit failed:', error);
+    } catch (_error) {
+      this.logger.error('Message edit failed:', _error);
       client.emit('error', { message: '메시지 편집에 실패했습니다.' });
     }
   }
@@ -621,8 +621,8 @@ export class ChatGateway
       this.logger.log(
         `Message deleted: id=${messageId}, userId=${client.user.id}`,
       );
-    } catch (error) {
-      this.logger.error('Message delete failed:', error);
+    } catch (_error) {
+      this.logger.error('Message delete failed:', _error);
       client.emit('error', { message: '메시지 삭제에 실패했습니다.' });
     }
   }
@@ -702,8 +702,8 @@ export class ChatGateway
       this.logger.log(
         `Message restored: id=${messageId}, userId=${client.user.id}`,
       );
-    } catch (error) {
-      this.logger.error('Message restore failed:', error);
+    } catch (_error) {
+      this.logger.error('Message restore failed:', _error);
       client.emit('error', { message: '메시지 복구에 실패했습니다.' });
     }
   }
@@ -768,8 +768,8 @@ export class ChatGateway
       this.logger.log(
         `Message read processed: messageId=${messageId}, userId=${client.user.id}`,
       );
-    } catch (error) {
-      this.logger.error('Message read failed:', error);
+    } catch (_error) {
+      this.logger.error('Message read failed:', _error);
       client.emit('error', { message: '메시지 읽음 처리에 실패했습니다.' });
     }
   }
@@ -842,8 +842,8 @@ export class ChatGateway
       this.logger.log(
         `Multiple messages read processed: count=${receipts.length}, userId=${client.user.id}`,
       );
-    } catch (error) {
-      this.logger.error('Multiple messages read failed:', error);
+    } catch (_error) {
+      this.logger.error('Multiple messages read failed:', _error);
       client.emit('error', { message: '일괄 읽음 처리에 실패했습니다.' });
     }
   }
@@ -897,8 +897,8 @@ export class ChatGateway
       this.logger.log(
         `Planet all messages read processed: planetId=${planetId}, count=${result.processedCount}, userId=${client.user.id}`,
       );
-    } catch (error) {
-      this.logger.error('Planet read all failed:', error);
+    } catch (_error) {
+      this.logger.error('Planet read all failed:', _error);
       client.emit('error', {
         message: 'Planet 전체 읽음 처리에 실패했습니다.',
       });
@@ -932,8 +932,8 @@ export class ChatGateway
       this.logger.debug(
         `Unread count retrieved: planetId=${planetId}, count=${unreadCount}, userId=${client.user.id}`,
       );
-    } catch (error) {
-      this.logger.error('Get unread count failed:', error);
+    } catch (_error) {
+      this.logger.error('Get unread count failed:', _error);
       client.emit('error', {
         message: '읽지 않은 메시지 카운트 조회에 실패했습니다.',
       });
@@ -969,8 +969,8 @@ export class ChatGateway
       this.logger.debug(
         `All unread counts retrieved: totalCount=${totalUnreadCount}, userId=${client.user.id}`,
       );
-    } catch (error) {
-      this.logger.error('Get all unread counts failed:', error);
+    } catch (_error) {
+      this.logger.error('Get all unread counts failed:', _error);
       client.emit('error', {
         message: '전체 읽지 않은 카운트 조회에 실패했습니다.',
       });
@@ -1028,8 +1028,8 @@ export class ChatGateway
       this.logger.debug(
         `Advanced typing started: userId=${client.user.id}, planetId=${planetId}, type=${typingType}`,
       );
-    } catch (error) {
-      this.logger.error('Advanced typing start failed:', error);
+    } catch (_error) {
+      this.logger.error('Advanced typing start failed:', _error);
       client.emit('error', { message: '타이핑 시작에 실패했습니다.' });
     }
   }
@@ -1071,8 +1071,8 @@ export class ChatGateway
       this.logger.debug(
         `Typing updated: userId=${client.user.id}, planetId=${planetId}, length=${contentLength}`,
       );
-    } catch (error) {
-      this.logger.error('Typing update failed:', error);
+    } catch (_error) {
+      this.logger.error('Typing update failed:', _error);
     }
   }
 
@@ -1109,8 +1109,8 @@ export class ChatGateway
       this.logger.debug(
         `Advanced typing stopped: userId=${client.user.id}, planetId=${planetId}`,
       );
-    } catch (error) {
-      this.logger.error('Advanced typing stop failed:', error);
+    } catch (_error) {
+      this.logger.error('Advanced typing stop failed:', _error);
       client.emit('error', { message: '타이핑 중지에 실패했습니다.' });
     }
   }
@@ -1138,8 +1138,8 @@ export class ChatGateway
       this.logger.debug(
         `Typing status retrieved: planetId=${planetId}, count=${typingStatus.length}`,
       );
-    } catch (error) {
-      this.logger.error('Get typing status failed:', error);
+    } catch (_error) {
+      this.logger.error('Get typing status failed:', _error);
       client.emit('error', { message: '타이핑 상태 조회에 실패했습니다.' });
     }
   }
@@ -1166,8 +1166,8 @@ export class ChatGateway
       });
 
       this.logger.debug(`Typing analytics retrieved: planetId=${planetId}`);
-    } catch (error) {
-      this.logger.error('Get typing analytics failed:', error);
+    } catch (_error) {
+      this.logger.error('Get typing analytics failed:', _error);
       client.emit('error', { message: '타이핑 분석 조회에 실패했습니다.' });
     }
   }
@@ -1244,8 +1244,8 @@ export class ChatGateway
       if (notificationSent) {
         this.logger.debug(`WebSocket notification sent to user ${userId}`);
       }
-    } catch (error) {
-      this.logger.error('Failed to handle WebSocket notification:', error);
+    } catch (_error) {
+      this.logger.error('Failed to handle WebSocket notification:', _error);
     }
   }
 
@@ -1269,8 +1269,8 @@ export class ChatGateway
       });
 
       this.logger.debug(`User ${client.user.id} subscribed to notifications`);
-    } catch (error) {
-      this.logger.error('Notification subscription failed:', error);
+    } catch (_error) {
+      this.logger.error('Notification subscription failed:', _error);
       client.emit('error', { message: '알림 구독에 실패했습니다.' });
     }
   }
@@ -1296,8 +1296,8 @@ export class ChatGateway
       this.logger.debug(
         `User ${client.user.id} unsubscribed from notifications`,
       );
-    } catch (error) {
-      this.logger.error('Notification unsubscription failed:', error);
+    } catch (_error) {
+      this.logger.error('Notification unsubscription failed:', _error);
       client.emit('error', { message: '알림 구독 해제에 실패했습니다.' });
     }
   }
@@ -1338,8 +1338,8 @@ export class ChatGateway
       this.logger.debug(
         `Notification ${notificationId} status checked by user ${client.user.id}`,
       );
-    } catch (error) {
-      this.logger.error('Update notification status failed:', error);
+    } catch (_error) {
+      this.logger.error('Update notification status failed:', _error);
       client.emit('error', { message: '알림 상태 업데이트에 실패했습니다.' });
     }
   }
@@ -1375,8 +1375,8 @@ export class ChatGateway
       this.logger.debug(
         `Notifications retrieved for user ${client.user.id}: ${result.notifications.length} items`,
       );
-    } catch (error) {
-      this.logger.error('Get notification list failed:', error);
+    } catch (_error) {
+      this.logger.error('Get notification list failed:', _error);
       client.emit('error', {
         message: '알림 목록 조회에 실패했습니다.',
       });

@@ -86,7 +86,7 @@ export class DatabaseCleaner {
           `SELECT COUNT(*) as count FROM "${tableName}";`,
         );
         counts[tableName] = parseInt(result[0]?.count || '0');
-      } catch (error) {
+      } catch (_error) {
         counts[tableName] = -1; // 에러 표시
       }
     }
@@ -107,7 +107,7 @@ export class DatabaseCleaner {
         await entityManager.query(
           `SELECT setval(pg_get_serial_sequence('"${tableName}"', 'id'), 1, false);`,
         );
-      } catch (error) {
+      } catch (_error) {
         // 시퀀스가 없는 테이블은 무시
       }
     }

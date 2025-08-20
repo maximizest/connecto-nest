@@ -23,6 +23,7 @@ export abstract class BaseActiveRecord extends BaseEntity {
    * 비즈니스 로직 헬퍼: Active 상태 확인
    */
   isActive(): boolean {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     return (this as any).status === 'ACTIVE' || (this as any).isActive === true;
   }
 
@@ -52,6 +53,7 @@ export abstract class BaseActiveRecord extends BaseEntity {
     this: new () => T,
     id: number,
   ): Promise<T | null> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     return (this as any).findOne({ where: { id } });
   }
 }

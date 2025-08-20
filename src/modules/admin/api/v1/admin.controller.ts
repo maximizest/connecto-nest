@@ -119,9 +119,9 @@ export class AdminController {
           timestamp: new Date(),
         },
       };
-    } catch (error) {
-      this.logger.error(`Force logout failed: ${error.message}`, error.stack);
-      throw error;
+    } catch (_error) {
+      this.logger.error(`Force logout failed: ${_error.message}`, _error.stack);
+      throw _error;
     }
   }
 
@@ -226,9 +226,9 @@ export class AdminController {
           timestamp: new Date(),
         },
       };
-    } catch (error) {
-      this.logger.error(`User ban failed: ${error.message}`, error.stack);
-      throw error;
+    } catch (_error) {
+      this.logger.error(`User ban failed: ${_error.message}`, _error.stack);
+      throw _error;
     }
   }
 
@@ -307,9 +307,9 @@ export class AdminController {
           timestamp: new Date(),
         },
       };
-    } catch (error) {
-      this.logger.error(`User unban failed: ${error.message}`, error.stack);
-      throw error;
+    } catch (_error) {
+      this.logger.error(`User unban failed: ${_error.message}`, _error.stack);
+      throw _error;
     }
   }
 
@@ -334,12 +334,12 @@ export class AdminController {
           totalSessions: sessions.length,
         },
       };
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Get user sessions failed: ${error.message}`,
-        error.stack,
+        `Get user sessions failed: ${_error.message}`,
+        _error.stack,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -364,12 +364,12 @@ export class AdminController {
           timestamp: new Date(),
         },
       };
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Get session stats failed: ${error.message}`,
-        error.stack,
+        `Get session stats failed: ${_error.message}`,
+        _error.stack,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -408,12 +408,12 @@ export class AdminController {
           totalPages: Math.ceil(total / limit),
         },
       };
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Get banned users failed: ${error.message}`,
-        error.stack,
+        `Get banned users failed: ${_error.message}`,
+        _error.stack,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -457,12 +457,12 @@ export class AdminController {
           timestamp: new Date(),
         },
       };
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Device disconnect failed: ${error.message}`,
-        error.stack,
+        `Device disconnect failed: ${_error.message}`,
+        _error.stack,
       );
-      throw error;
+      throw _error;
     }
   }
 }

@@ -96,30 +96,30 @@ export class StorageService {
         publicUrl,
         expiresAt,
       };
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
         `❌ Presigned URL generation failed: ${filename}`,
-        error,
+        _error,
       );
 
       // 이미 커스텀 예외인 경우 그대로 던지기
       if (
-        error instanceof FileUploadException ||
-        error instanceof FileSizeExceededException ||
-        error instanceof FileTypeNotSupportedException
+        _error instanceof FileUploadException ||
+        _error instanceof FileSizeExceededException ||
+        _error instanceof FileTypeNotSupportedException
       ) {
-        throw error;
+        throw _error;
       }
 
       // AWS/R2 관련 오류
-      if (error.name === 'NoSuchBucket') {
+      if (_error.name === 'NoSuchBucket') {
         throw new ExternalServiceException(
           'Cloudflare R2',
           '버킷을 찾을 수 없습니다.',
         );
       }
 
-      if (error.name === 'AccessDenied') {
+      if (_error.name === 'AccessDenied') {
         throw new ExternalServiceException(
           'Cloudflare R2',
           '접근 권한이 없습니다.',
@@ -127,7 +127,7 @@ export class StorageService {
       }
 
       // 일반적인 업로드 실패
-      throw new FileUploadFailedException(error.message);
+      throw new FileUploadFailedException(_error.message);
     }
   }
 
@@ -148,9 +148,9 @@ export class StorageService {
         size: fileInfo.size,
         contentType: fileInfo.contentType,
       };
-    } catch (error) {
-      this.logger.error(`❌ Upload verification failed:`, error);
-      throw error;
+    } catch (_error) {
+      this.logger.error(`❌ Upload verification failed:`, _error);
+      throw _error;
     }
   }
 
@@ -173,9 +173,9 @@ export class StorageService {
 
       const url = await getSignedUrl(this.s3Client, command, { expiresIn });
       return url;
-    } catch (error) {
-      this.logger.error(`❌ Download URL generation failed:`, error);
-      throw error;
+    } catch (_error) {
+      this.logger.error(`❌ Download URL generation failed:`, _error);
+      throw _error;
     }
   }
 
@@ -202,9 +202,9 @@ export class StorageService {
 
       await this.s3Client.send(command);
       this.logger.log(`🗑️ File deleted: ${key}`);
-    } catch (error) {
-      this.logger.error(`❌ File deletion failed:`, error);
-      throw error;
+    } catch (_error) {
+      this.logger.error(`❌ File deletion failed:`, _error);
+      throw _error;
     }
   }
 
@@ -231,12 +231,12 @@ export class StorageService {
         lastModified: result.LastModified || new Date(),
         metadata: result.Metadata,
       };
-    } catch (error) {
-      if (error.name === 'NotFound') {
+    } catch (_error) {
+      if (_error.name === 'NotFound') {
         return null;
       }
-      this.logger.error(`❌ File info retrieval failed:`, error);
-      throw error;
+      this.logger.error(`❌ File info retrieval failed:`, _error);
+      throw _error;
     }
   }
 
@@ -273,9 +273,9 @@ export class StorageService {
           lastModified: item.LastModified,
         })) || []
       );
-    } catch (error) {
-      this.logger.error(`❌ File listing failed:`, error);
-      throw error;
+    } catch (_error) {
+      this.logger.error(`❌ File listing failed:`, _error);
+      throw _error;
     }
   }
 
@@ -371,8 +371,8 @@ export class StorageService {
 
       await this.s3Client.send(command);
       return true;
-    } catch (error) {
-      this.logger.error('Storage health check failed:', error);
+    } catch (_error) {
+      this.logger.error('Storage health check failed:', _error);
       return false;
     }
   }

@@ -47,8 +47,8 @@ export class AuthService {
           secret: this.JWT_SECRET,
         },
       );
-    } catch (error) {
-      this.logger.error('Failed to generate access token', error);
+    } catch (_error) {
+      this.logger.error('Failed to generate access token', _error);
       throw new Error(ERROR_MESSAGES.TOKEN_GENERATION_FAILED);
     }
   }
@@ -67,8 +67,8 @@ export class AuthService {
           secret: this.JWT_SECRET,
         },
       );
-    } catch (error) {
-      this.logger.error('Failed to generate refresh token', error);
+    } catch (_error) {
+      this.logger.error('Failed to generate refresh token', _error);
       throw new Error(ERROR_MESSAGES.TOKEN_GENERATION_FAILED);
     }
   }
@@ -92,24 +92,24 @@ export class AuthService {
       }
 
       return payload;
-    } catch (error) {
-      this.logger.warn(`Token verification failed: ${error.message}`);
+    } catch (_error) {
+      this.logger.warn(`Token verification failed: ${_error.message}`);
 
-      if (error.name === 'TokenExpiredError') {
+      if (_error.name === 'TokenExpiredError') {
         throw new UnauthorizedException(ERROR_MESSAGES.TOKEN_EXPIRED);
       }
 
-      if (error.name === 'JsonWebTokenError') {
+      if (_error.name === 'JsonWebTokenError') {
         throw new UnauthorizedException(ERROR_MESSAGES.TOKEN_INVALID);
       }
 
-      if (error.name === 'NotBeforeError') {
+      if (_error.name === 'NotBeforeError') {
         throw new UnauthorizedException(ERROR_MESSAGES.TOKEN_NOT_ACTIVE);
       }
 
       // 이미 UnauthorizedException인 경우 그대로 throw
-      if (error instanceof UnauthorizedException) {
-        throw error;
+      if (_error instanceof UnauthorizedException) {
+        throw _error;
       }
 
       // 기타 에러
@@ -126,8 +126,8 @@ export class AuthService {
         accessToken: this.generateAccessToken(payload),
         refreshToken: this.generateRefreshToken(payload),
       };
-    } catch (error) {
-      this.logger.error('Failed to generate token pair', error);
+    } catch (_error) {
+      this.logger.error('Failed to generate token pair', _error);
       throw new Error(ERROR_MESSAGES.TOKEN_GENERATION_FAILED);
     }
   }
@@ -166,8 +166,8 @@ export class AuthService {
             '지원하지 않는 소셜 로그인 제공자입니다.',
           );
       }
-    } catch (error) {
-      this.logger.error(`소셜 로그인 토큰 검증 실패 (${provider}):`, error);
+    } catch (_error) {
+      this.logger.error(`소셜 로그인 토큰 검증 실패 (${provider}):`, _error);
       throw new UnauthorizedException('소셜 로그인 토큰 검증에 실패했습니다.');
     }
   }
@@ -192,8 +192,8 @@ export class AuthService {
         email: payload.email || '',
         name: payload.name || payload.email?.split('@')[0] || 'Google User',
       };
-    } catch (error) {
-      this.logger.error('Google 토큰 검증 실패:', error);
+    } catch (_error) {
+      this.logger.error('Google 토큰 검증 실패:', _error);
       throw new UnauthorizedException('Google 토큰 검증에 실패했습니다.');
     }
   }
@@ -224,8 +224,8 @@ export class AuthService {
         email: payload.email || '',
         name: payload.name || payload.email?.split('@')[0] || 'Apple User',
       };
-    } catch (error) {
-      this.logger.error('Apple 토큰 검증 실패:', error);
+    } catch (_error) {
+      this.logger.error('Apple 토큰 검증 실패:', _error);
       throw new UnauthorizedException('Apple 토큰 검증에 실패했습니다.');
     }
   }
@@ -267,11 +267,11 @@ export class AuthService {
       }
 
       return user;
-    } catch (error) {
-      if (error instanceof UnauthorizedException) {
-        throw error;
+    } catch (_error) {
+      if (_error instanceof UnauthorizedException) {
+        throw _error;
       }
-      this.logger.error('관리자 로그인 검증 실패:', error);
+      this.logger.error('관리자 로그인 검증 실패:', _error);
       throw new UnauthorizedException(
         '관리자 로그인 처리 중 오류가 발생했습니다.',
       );

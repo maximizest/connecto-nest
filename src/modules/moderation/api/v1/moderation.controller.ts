@@ -94,11 +94,11 @@ export class ModerationController {
           bannedAt: new Date(),
         },
       };
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Platform ban failed: targetUserId=${targetUserId}, bannedBy=${bannerUser.id}, error=${error.message}`,
+        `Platform ban failed: targetUserId=${targetUserId}, bannedBy=${bannerUser.id}, error=${_error.message}`,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -149,11 +149,11 @@ export class ModerationController {
           unbannedAt: new Date(),
         },
       };
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Platform unban failed: targetUserId=${targetUserId}, unbannedBy=${bannerUser.id}, error=${error.message}`,
+        `Platform unban failed: targetUserId=${targetUserId}, unbannedBy=${bannerUser.id}, error=${_error.message}`,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -227,11 +227,11 @@ export class ModerationController {
           bannedAt: targetTravelUser.bannedAt,
         },
       };
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Travel ban failed: travelId=${travelId}, targetUserId=${targetUserId}, bannedBy=${bannerUser.id}, error=${error.message}`,
+        `Travel ban failed: travelId=${travelId}, targetUserId=${targetUserId}, bannedBy=${bannerUser.id}, error=${_error.message}`,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -302,11 +302,11 @@ export class ModerationController {
           unbannedAt: new Date(),
         },
       };
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Travel unban failed: travelId=${travelId}, targetUserId=${targetUserId}, unbannedBy=${bannerUser.id}, error=${error.message}`,
+        `Travel unban failed: travelId=${travelId}, targetUserId=${targetUserId}, unbannedBy=${bannerUser.id}, error=${_error.message}`,
       );
-      throw error;
+      throw _error;
     }
   }
 }

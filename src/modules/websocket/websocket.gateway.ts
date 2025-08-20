@@ -62,8 +62,8 @@ export class EnhancedWebSocketGateway
     try {
       await this.redisAdapterService.setupAdapter(server);
       this.logger.log('Redis adapter configured for multi-replica support');
-    } catch (error) {
-      this.logger.error('Failed to setup Redis adapter:', error);
+    } catch (_error) {
+      this.logger.error('Failed to setup Redis adapter:', _error);
       // Redis Adapter 실패해도 단일 서버로 동작 가능
     }
 
@@ -124,7 +124,7 @@ export class EnhancedWebSocketGateway
         payload = this.jwtService.verify(token, {
           secret: process.env.JWT_SECRET,
         });
-      } catch (error) {
+      } catch (_error) {
         this.logger.warn(`Connection rejected - Invalid token: ${socket.id}`);
         socket.emit('error', {
           code: 'INVALID_TOKEN',
@@ -227,8 +227,8 @@ export class EnhancedWebSocketGateway
       this.logger.log(
         `Client connected: userId=${user.id}, socketId=${socket.id}, deviceId=${socket.data.deviceId}`,
       );
-    } catch (error) {
-      this.logger.error(`Connection error: ${error.message}`, error.stack);
+    } catch (_error) {
+      this.logger.error(`Connection error: ${_error.message}`, _error.stack);
       socket.emit('error', {
         code: 'CONNECTION_ERROR',
         message: '연결 처리 중 오류가 발생했습니다.',
@@ -273,8 +273,8 @@ export class EnhancedWebSocketGateway
       } else {
         this.logger.log(`Unknown client disconnected: ${socket.id}`);
       }
-    } catch (error) {
-      this.logger.error(`Disconnect error: ${error.message}`, error.stack);
+    } catch (_error) {
+      this.logger.error(`Disconnect error: ${_error.message}`, _error.stack);
     }
   }
 
@@ -336,8 +336,8 @@ export class EnhancedWebSocketGateway
       this.logger.log(
         `User joined room: userId=${user.id}, planetId=${data.planetId}`,
       );
-    } catch (error) {
-      this.logger.error(`Join room error: ${error.message}`, error.stack);
+    } catch (_error) {
+      this.logger.error(`Join room error: ${_error.message}`, _error.stack);
       socket.emit('error', {
         code: 'JOIN_ROOM_ERROR',
         message: '채팅방 참여 중 오류가 발생했습니다.',
@@ -375,8 +375,8 @@ export class EnhancedWebSocketGateway
       this.logger.log(
         `User left room: userId=${user.id}, planetId=${data.planetId}`,
       );
-    } catch (error) {
-      this.logger.error(`Leave room error: ${error.message}`, error.stack);
+    } catch (_error) {
+      this.logger.error(`Leave room error: ${_error.message}`, _error.stack);
     }
   }
 
@@ -400,8 +400,8 @@ export class EnhancedWebSocketGateway
         planetId: data.planetId,
         isTyping: data.isTyping,
       });
-    } catch (error) {
-      this.logger.error(`Typing event error: ${error.message}`, error.stack);
+    } catch (_error) {
+      this.logger.error(`Typing event error: ${_error.message}`, _error.stack);
     }
   }
 

@@ -107,14 +107,14 @@ export class WebSocketRateLimitGuard implements CanActivate {
       }
 
       return true;
-    } catch (error) {
-      if (error instanceof WsException) {
-        throw error;
+    } catch (_error) {
+      if (_error instanceof WsException) {
+        throw _error;
       }
 
       this.logger.error(
-        `Rate limit guard error: ${error.message}`,
-        error.stack,
+        `Rate limit guard error: ${_error.message}`,
+        _error.stack,
       );
 
       // 에러 발생 시 허용 (안전한 실패)

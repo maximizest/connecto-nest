@@ -48,9 +48,9 @@ export class WebSocketRoomService {
       await this.joinUserToAuthorizedRooms(socket, server);
 
       this.logger.debug(`User ${userId} connected and joined authorized rooms`);
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to handle user connection for ${socket.userId}: ${error.message}`,
+        `Failed to handle user connection for ${socket.userId}: ${_error.message}`,
       );
     }
   }
@@ -77,9 +77,9 @@ export class WebSocketRoomService {
       }
 
       this.logger.debug(`User ${userId} disconnected and left all rooms`);
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to handle user disconnection for ${socket.userId}: ${error.message}`,
+        `Failed to handle user disconnection for ${socket.userId}: ${_error.message}`,
       );
     }
   }
@@ -131,9 +131,9 @@ export class WebSocketRoomService {
           await this.joinRoom(socket, planetRoomId, server);
         }
       }
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to join user ${userId} to authorized rooms: ${error.message}`,
+        `Failed to join user ${userId} to authorized rooms: ${_error.message}`,
       );
     }
   }
@@ -193,9 +193,9 @@ export class WebSocketRoomService {
 
       this.logger.debug(`User ${userId} joined room ${roomId}`);
       return true;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to join room ${roomId} for user ${socket.userId}: ${error.message}`,
+        `Failed to join room ${roomId} for user ${socket.userId}: ${_error.message}`,
       );
       return false;
     }
@@ -245,9 +245,9 @@ export class WebSocketRoomService {
 
       this.logger.debug(`User ${userId} left room ${roomId}`);
       return true;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to leave room ${roomId} for user ${socket.userId}: ${error.message}`,
+        `Failed to leave room ${roomId} for user ${socket.userId}: ${_error.message}`,
       );
       return false;
     }
@@ -279,18 +279,18 @@ export class WebSocketRoomService {
         try {
           await validateRoleBasedPlanetAccess(entityId, userId);
           return true;
-        } catch (error) {
+        } catch (_error) {
           this.logger.debug(
-            `User ${userId} does not have permission for planet ${entityId}: ${error.message}`,
+            `User ${userId} does not have permission for planet ${entityId}: ${_error.message}`,
           );
           return false;
         }
       }
 
       return false;
-    } catch (error) {
+    } catch (_error) {
       this.logger.warn(
-        `Failed to check room permission for user ${userId} in room ${roomId}: ${error.message}`,
+        `Failed to check room permission for user ${userId} in room ${roomId}: ${_error.message}`,
       );
       return false;
     }
@@ -321,9 +321,9 @@ export class WebSocketRoomService {
       this.logger.debug(
         `Updated ${type} ${entityId} online count: ${onlineCount}`,
       );
-    } catch (error) {
+    } catch (_error) {
       this.logger.warn(
-        `Failed to update room online count for ${roomId}: ${error.message}`,
+        `Failed to update room online count for ${roomId}: ${_error.message}`,
       );
     }
   }
@@ -399,9 +399,9 @@ export class WebSocketRoomService {
       }
 
       return null;
-    } catch (error) {
+    } catch (_error) {
       this.logger.warn(
-        `Failed to get room info for ${roomId}: ${error.message}`,
+        `Failed to get room info for ${roomId}: ${_error.message}`,
       );
       return null;
     }

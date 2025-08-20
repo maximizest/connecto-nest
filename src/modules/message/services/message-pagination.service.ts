@@ -94,12 +94,12 @@ export class MessagePaginationService {
       await this.cacheResult(cacheKey, response, 60); // 1분
 
       return response;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Error fetching planet messages: ${error.message}`,
-        error.stack,
+        `Error fetching planet messages: ${_error.message}`,
+        _error.stack,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -170,12 +170,12 @@ export class MessagePaginationService {
         prevCursor,
         query.limit || 20,
       );
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Error searching messages: ${error.message}`,
-        error.stack,
+        `Error searching messages: ${_error.message}`,
+        _error.stack,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -228,12 +228,12 @@ export class MessagePaginationService {
         undefined,
         contextMessages.length,
       );
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Error fetching message context: ${error.message}`,
-        error.stack,
+        `Error fetching message context: ${_error.message}`,
+        _error.stack,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -295,12 +295,12 @@ export class MessagePaginationService {
       );
 
       return meta;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Error fetching message stats: ${error.message}`,
-        error.stack,
+        `Error fetching message stats: ${_error.message}`,
+        _error.stack,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -363,7 +363,7 @@ export class MessagePaginationService {
             cursorValue: cursorData[field as keyof CursorData],
           });
         }
-      } catch (error) {
+      } catch (_error) {
         this.logger.warn(`Invalid cursor format: ${query.cursor}`);
       }
     }
@@ -510,8 +510,8 @@ export class MessagePaginationService {
     try {
       const cached = await this.redisService.get(key);
       return cached ? JSON.parse(cached) : null;
-    } catch (error) {
-      this.logger.warn(`Cache read error: ${error.message}`);
+    } catch (_error) {
+      this.logger.warn(`Cache read error: ${_error.message}`);
       return null;
     }
   }
@@ -530,8 +530,8 @@ export class MessagePaginationService {
         JSON.stringify(data),
         ttl || this.CACHE_TTL,
       );
-    } catch (error) {
-      this.logger.warn(`Cache write error: ${error.message}`);
+    } catch (_error) {
+      this.logger.warn(`Cache write error: ${_error.message}`);
     }
   }
 
@@ -549,8 +549,8 @@ export class MessagePaginationService {
           `Invalidated ${keys.length} cache entries for planet ${planetId}`,
         );
       }
-    } catch (error) {
-      this.logger.warn(`Cache invalidation error: ${error.message}`);
+    } catch (_error) {
+      this.logger.warn(`Cache invalidation error: ${_error.message}`);
     }
   }
 }

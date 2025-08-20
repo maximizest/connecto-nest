@@ -151,12 +151,12 @@ export class FileUploadController {
           expiresAt: presignedUrl.expiresAt,
         },
       };
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Presigned URL generation failed: ${error.message}`,
-        error.stack,
+        `Presigned URL generation failed: ${_error.message}`,
+        _error.stack,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -322,10 +322,10 @@ export class FileUploadController {
       this.logger.log(
         `이미지 자동 최적화 시작: ${fileUpload.originalFileName} (${Math.round(fileUpload.fileSize / 1024 / 1024)}MB)`,
       );
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
         `이미지 최적화 이벤트 발행 실패: ${fileUpload.originalFileName}`,
-        error.stack,
+        _error.stack,
       );
     }
   }
@@ -389,12 +389,12 @@ export class FileUploadController {
           status: cancelledUpload.status,
         },
       };
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Upload cancellation failed: ${error.message}`,
-        error.stack,
+        `Upload cancellation failed: ${_error.message}`,
+        _error.stack,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -471,12 +471,12 @@ export class FileUploadController {
           expiresAt: new Date(Date.now() + validExpiresIn * 1000),
         },
       };
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Download URL generation failed: ${error.message}`,
-        error.stack,
+        `Download URL generation failed: ${_error.message}`,
+        _error.stack,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -550,12 +550,12 @@ export class FileUploadController {
           },
         },
       };
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Streaming URL generation failed: ${error.message}`,
-        error.stack,
+        `Streaming URL generation failed: ${_error.message}`,
+        _error.stack,
       );
-      throw error;
+      throw _error;
     }
   }
 }

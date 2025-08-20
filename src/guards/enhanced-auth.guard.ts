@@ -120,12 +120,15 @@ export class EnhancedAuthGuard implements CanActivate {
       };
 
       return true;
-    } catch (error) {
-      if (error instanceof UnauthorizedException) {
-        throw error;
+    } catch (_error) {
+      if (_error instanceof UnauthorizedException) {
+        throw _error;
       }
 
-      this.logger.error(`Authentication error: ${error.message}`, error.stack);
+      this.logger.error(
+        `Authentication error: ${_error.message}`,
+        _error.stack,
+      );
       throw new UnauthorizedException('인증 처리 중 오류가 발생했습니다.');
     }
   }

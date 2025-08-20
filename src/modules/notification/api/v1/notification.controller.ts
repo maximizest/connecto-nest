@@ -166,11 +166,11 @@ export class NotificationController {
       });
 
       return crudResponse(pushTokenEntity);
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Register push token failed: userId=${user.id}, error=${error.message}`,
+        `Register push token failed: userId=${user.id}, error=${_error.message}`,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -211,11 +211,11 @@ export class NotificationController {
       });
 
       return crudResponse(unregisterEntity);
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Unregister push token failed: userId=${user.id}, error=${error.message}`,
+        `Unregister push token failed: userId=${user.id}, error=${_error.message}`,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -258,11 +258,11 @@ export class NotificationController {
       });
 
       return crudResponse(tokenListEntity);
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Get my push tokens failed: userId=${user.id}, error=${error.message}`,
+        `Get my push tokens failed: userId=${user.id}, error=${_error.message}`,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -316,11 +316,11 @@ export class NotificationController {
       });
 
       return crudResponse(notifications);
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Send test notification failed: userId=${user.id}, error=${error.message}`,
+        `Send test notification failed: userId=${user.id}, error=${_error.message}`,
       );
-      throw error;
+      throw _error;
     }
   }
 }

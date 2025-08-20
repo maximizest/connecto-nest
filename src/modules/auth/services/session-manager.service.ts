@@ -71,12 +71,12 @@ export class SessionManagerService {
       );
 
       return sessionId;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to create session: ${error.message}`,
-        error.stack,
+        `Failed to create session: ${_error.message}`,
+        _error.stack,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -94,10 +94,10 @@ export class SessionManagerService {
 
         await this.redis.setex(sessionKey, 86400, JSON.stringify(session));
       }
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to update session activity: ${error.message}`,
-        error.stack,
+        `Failed to update session activity: ${_error.message}`,
+        _error.stack,
       );
     }
   }
@@ -127,12 +127,12 @@ export class SessionManagerService {
           `Session invalidated: sessionId=${sessionId}, userId=${session.userId}`,
         );
       }
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to invalidate session: ${error.message}`,
-        error.stack,
+        `Failed to invalidate session: ${_error.message}`,
+        _error.stack,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -181,12 +181,12 @@ export class SessionManagerService {
       );
 
       return invalidatedCount;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to invalidate user sessions: ${error.message}`,
-        error.stack,
+        `Failed to invalidate user sessions: ${_error.message}`,
+        _error.stack,
       );
-      throw error;
+      throw _error;
     }
   }
 
@@ -206,10 +206,10 @@ export class SessionManagerService {
       }
 
       return sessions;
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to get user sessions: ${error.message}`,
-        error.stack,
+        `Failed to get user sessions: ${_error.message}`,
+        _error.stack,
       );
       return [];
     }
@@ -222,8 +222,11 @@ export class SessionManagerService {
     try {
       const sessionData = await this.redis.get(`session:${sessionId}`);
       return sessionData ? JSON.parse(sessionData) : null;
-    } catch (error) {
-      this.logger.error(`Failed to get session: ${error.message}`, error.stack);
+    } catch (_error) {
+      this.logger.error(
+        `Failed to get session: ${_error.message}`,
+        _error.stack,
+      );
       return null;
     }
   }
@@ -237,10 +240,10 @@ export class SessionManagerService {
       if (!sessionId) return null;
 
       return this.getSession(sessionId);
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to get device session: ${error.message}`,
-        error.stack,
+        `Failed to get device session: ${_error.message}`,
+        _error.stack,
       );
       return null;
     }
@@ -268,10 +271,10 @@ export class SessionManagerService {
       if (cleanedCount > 0) {
         this.logger.log(`Cleaned up ${cleanedCount} expired sessions`);
       }
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to cleanup expired sessions: ${error.message}`,
-        error.stack,
+        `Failed to cleanup expired sessions: ${_error.message}`,
+        _error.stack,
       );
     }
   }
@@ -307,10 +310,10 @@ export class SessionManagerService {
         uniqueUsers: users.size,
         deviceTypes,
       };
-    } catch (error) {
+    } catch (_error) {
       this.logger.error(
-        `Failed to get session stats: ${error.message}`,
-        error.stack,
+        `Failed to get session stats: ${_error.message}`,
+        _error.stack,
       );
       return {
         totalSessions: 0,
