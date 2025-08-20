@@ -1,7 +1,6 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { QueueAdminController } from './api/admin/queue-admin.controller';
 import { FileCleanupProcessor } from './processors/file-cleanup.processor';
 import { ExpiredTravelProcessor } from './processors/expired-travel.processor';
 import { CacheCleanupProcessor } from './processors/cache-cleanup.processor';
@@ -82,7 +81,7 @@ import { TravelModule } from '../travel/travel.module';
       },
     ),
   ],
-  controllers: [QueueAdminController],
+  controllers: [],
   providers: [
     QueueService,
     FileCleanupProcessor,

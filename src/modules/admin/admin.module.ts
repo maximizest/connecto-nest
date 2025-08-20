@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { AdminController } from './api/v1/admin.controller';
 import { AuthModule } from '../auth/auth.module';
 import { WebSocketModule } from '../websocket/websocket.module';
 import { ConnectionManagerService } from '../websocket/services/connection-manager.service';
@@ -13,7 +12,7 @@ import { AuthGuard } from '../../guards/auth.guard';
     AuthModule, // TokenBlacklistService, SessionManagerService 사용
     WebSocketModule, // ConnectionManagerService 사용
   ],
-  controllers: [AdminController],
+  controllers: [],
   providers: [ConnectionManagerService, AuthGuard, AdminGuard],
   exports: [],
 })

@@ -16,11 +16,11 @@
 ## 개요
 
 ### 통계
-- **총 컨트롤러 수**: 20개
-- **CRUD 컨트롤러**: 14개 (70%)
-- **커스텀 컨트롤러**: 6개 (30%)
-- **인증 필요 컨트롤러**: 19개 (95%)
-- **관리자 전용 컨트롤러**: 2개
+- **총 컨트롤러 수**: 17개
+- **CRUD 컨트롤러**: 14개 (82%)
+- **커스텀 컨트롤러**: 3개 (18%)
+- **인증 필요 컨트롤러**: 16개 (94%)
+- **관리자 전용 컨트롤러**: 0개
 
 ### 기술 스택
 - **CRUD 라이브러리**: `@foryourdev/nestjs-crud`
@@ -33,8 +33,7 @@
 ### Guard 종류
 | Guard | 용도 | 사용 컨트롤러 수 |
 |-------|------|-----------------|
-| `AuthGuard` | 일반 사용자 인증 (토큰 블랙리스트 검증 포함) | 17 |
-| `AdminGuard` | 관리자 권한 검증 | 3 |
+| `AuthGuard` | 일반 사용자 인증 (토큰 블랙리스트 검증 포함) | 15 |
 | `DevOnlyGuard` | 개발 환경 전용 | 1 |
 | 인증 없음 | 공개 엔드포인트 | 1 (Auth) |
 
@@ -208,35 +207,7 @@
   - JWT 토큰 쌍 생성 (Access + Refresh)
   - 푸시 토큰 자동 등록
 
-### 2. Moderation Controller
-- **경로**: `/api/v1/moderation`
-- **인증**: `AuthGuard`
-- **엔드포인트**:
-  ```
-  POST /api/v1/moderation/ban/platform/:userId      - 플랫폼 차단 (ADMIN)
-  POST /api/v1/moderation/unban/platform/:userId    - 플랫폼 차단 해제 (ADMIN)
-  POST /api/v1/moderation/ban/travel/:travelId/:userId   - 여행 차단 (HOST/ADMIN)
-  POST /api/v1/moderation/unban/travel/:travelId/:userId - 여행 차단 해제 (HOST/ADMIN)
-  ```
-- **특수 기능**:
-  - 역할 기반 권한 검증
-  - 플랫폼 차원 vs 여행 차원 차단 구분
-
-### 3. Admin Controller
-- **경로**: `/api/v1/admin`
-- **인증**: `AuthGuard` + `AdminGuard`
-- **엔드포인트**:
-  ```
-  POST /api/v1/admin/users/:userId/force-logout     - 강제 로그아웃
-  POST /api/v1/admin/users/:userId/ban              - 사용자 차단
-  POST /api/v1/admin/users/:userId/unban            - 차단 해제
-  GET  /api/v1/admin/users/:userId/sessions         - 세션 조회
-  GET  /api/v1/admin/sessions/stats                 - 세션 통계
-  GET  /api/v1/admin/users/banned                   - 차단 사용자 목록
-  POST /api/v1/admin/devices/:deviceId/force-disconnect - 기기 강제 연결 해제
-  ```
-
-### 4. Schema Controller
+### 2. Schema Controller
 - **경로**: `/api/v1/schema`
 - **인증**: `DevOnlyGuard` (개발 환경 전용)
 - **엔드포인트**:
@@ -246,18 +217,6 @@
   ```
 - **용도**: TypeORM 메타데이터 기반 DB 스키마 API
 
-### 5. QueueAdmin Controller
-- **경로**: `/api/v1/admin/queue`
-- **인증**: `AdminGuard`
-- **엔드포인트**:
-  ```
-  GET  /api/v1/admin/queue/stats                      - 큐 통계
-  GET  /api/v1/admin/queue/:queueName/job/:jobId      - 작업 상태
-  POST /api/v1/admin/queue/file-cleanup/trigger       - 파일 정리 실행
-  POST /api/v1/admin/queue/travel-cleanup/trigger     - 여행 정리 실행
-  POST /api/v1/admin/queue/cache-cleanup/trigger      - 캐시 정리 실행
-  ```
-- **용도**: BullMQ 백그라운드 작업 관리
 
 ## 특수 기능 엔드포인트
 
@@ -331,6 +290,7 @@ socket.on('user-online-status', data)         // 온라인 상태
   - RESTful 원칙 준수 (가상 Notification 엔티티 제거)
   - Redis 임시 저장 → PostgreSQL 영구 저장으로 전환
   - Active Record 패턴 적용
+- **관리자/호스트 API 제거**: 사용자 API 개발에 집중하기 위해 Admin, QueueAdmin, Moderation 컨트롤러 제거
 - **코드 정리**: 불필요한 엔티티 메서드 제거, 직접 TypeORM 쿼리 사용
 
 ---
