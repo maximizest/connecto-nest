@@ -107,61 +107,19 @@ export class Profile extends BaseActiveRecord {
    * Active Record 정적 메서드
    */
 
-  /**
-   * 사용자 ID로 프로필 찾기
-   */
-  static async findByUserId(userId: number): Promise<Profile | null> {
-    return this.findOne({
-      where: { userId },
-      relations: ['user'],
-    });
-  }
+  // Simple finder methods removed - use TypeORM queries directly in controllers
+  // Examples:
+  // Profile.findOne({ where: { userId }, relations: ['user'] })
+  // Profile.findOne({ where: { nickname }, relations: ['user'] })
+  // Profile.createQueryBuilder('profile').where('profile.age >= :minAge').andWhere('profile.age <= :maxAge').getMany()
+  // Profile.find({ where: { gender }, order: { createdAt: 'DESC' } })
 
-  /**
-   * 닉네임으로 프로필 찾기
-   */
-  static async findByNickname(nickname: string): Promise<Profile | null> {
-    return this.findOne({
-      where: { nickname },
-      relations: ['user'],
-    });
-  }
+  // Additional simple finder methods removed
+  // Examples for remaining methods:
+  // Profile.find({ where: { gender }, order: { age: 'ASC' } })
+  // Profile.find({ where: { occupation }, order: { createdAt: 'DESC' } })
 
-  /**
-   * 나이대별 프로필 조회
-   */
-  static async findByAgeRange(
-    minAge: number,
-    maxAge: number,
-  ): Promise<Profile[]> {
-    const repository = this.getRepository();
-    return repository
-      .createQueryBuilder('profile')
-      .where('profile.age >= :minAge', { minAge })
-      .andWhere('profile.age <= :maxAge', { maxAge })
-      .orderBy('profile.age', 'ASC')
-      .getMany();
-  }
-
-  /**
-   * 성별별 프로필 조회
-   */
-  static async findByGender(gender: Gender): Promise<Profile[]> {
-    return this.find({
-      where: { gender },
-      order: { age: 'ASC' },
-    });
-  }
-
-  /**
-   * 직업별 프로필 조회
-   */
-  static async findByOccupation(occupation: string): Promise<Profile[]> {
-    return this.find({
-      where: { occupation },
-      order: { age: 'ASC' },
-    });
-  }
+  // findByOccupation removed - use: Profile.find({ where: { occupation }, order: { age: 'ASC' } })
 
   /**
    * 프로필 생성

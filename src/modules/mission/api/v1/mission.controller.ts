@@ -59,6 +59,6 @@ export class MissionController {
    */
   @Get('active')
   async getActiveMissions() {
-    return await this.crudService.getActiveMissions();
+    return await Mission.findActiveMissions();
   }
 }

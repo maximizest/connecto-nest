@@ -121,97 +121,18 @@ export class TravelUser extends BaseActiveRecord {
    * Active Record 정적 메서드
    */
 
-  /**
-   * Travel의 모든 멤버 조회
-   */
-  static async findByTravel(travelId: number): Promise<TravelUser[]> {
-    return this.find({
-      where: { travelId },
-      order: { joinedAt: 'ASC' },
-      relations: ['user'],
-    });
-  }
+  // Simple finder methods removed - use TypeORM queries directly in controllers
+  // Examples:
+  // TravelUser.find({ where: { travelId }, order: { joinedAt: 'ASC' }, relations: ['user'] })
+  // TravelUser.find({ where: { travelId, status: TravelUserStatus.ACTIVE }, relations: ['user'] })
+  // TravelUser.find({ where: { userId }, order: { joinedAt: 'DESC' }, relations: ['travel'] })
+  // TravelUser.find({ where: { travelId, role: TravelUserRole.HOST }, relations: ['user'] })
 
-  /**
-   * Travel의 활성 멤버 조회
-   */
-  static async findActiveMembersByTravel(
-    travelId: number,
-  ): Promise<TravelUser[]> {
-    return this.find({
-      where: {
-        travelId,
-        status: TravelUserStatus.ACTIVE,
-      },
-      order: { joinedAt: 'ASC' },
-      relations: ['user'],
-    });
-  }
+  // findHostsByTravel also removed - use: TravelUser.find({ where: { travelId, role: TravelUserRole.HOST }, relations: ['user'] })
 
-  /**
-   * 사용자의 모든 Travel 조회
-   */
-  static async findByUser(userId: number): Promise<TravelUser[]> {
-    return this.find({
-      where: { userId },
-      order: { joinedAt: 'DESC' },
-      relations: ['travel'],
-    });
-  }
-
-  /**
-   * 사용자의 활성 Travel 조회
-   */
-  static async findActiveByUser(userId: number): Promise<TravelUser[]> {
-    return this.find({
-      where: {
-        userId,
-        status: TravelUserStatus.ACTIVE,
-      },
-      order: { joinedAt: 'DESC' },
-      relations: ['travel'],
-    });
-  }
-
-  /**
-   * Travel의 호스트 조회
-   */
-  static async findHostsByTravel(travelId: number): Promise<TravelUser[]> {
-    return this.find({
-      where: {
-        travelId,
-        role: TravelUserRole.HOST,
-      },
-      relations: ['user'],
-    });
-  }
-
-  /**
-   * Travel의 따로 역할 담김 멤버 조회
-   */
-  static async findByTravelAndRole(
-    travelId: number,
-    role: TravelUserRole,
-  ): Promise<TravelUser[]> {
-    return this.find({
-      where: { travelId, role },
-      order: { joinedAt: 'ASC' },
-      relations: ['user'],
-    });
-  }
-
-  /**
-   * 특정 사용자의 특정 Travel 멤버십 조회
-   */
-  static async findMembership(
-    travelId: number,
-    userId: number,
-  ): Promise<TravelUser | null> {
-    return this.findOne({
-      where: { travelId, userId },
-      relations: ['travel', 'user'],
-    });
-  }
+  // Additional simple finders removed:
+  // TravelUser.find({ where: { travelId, role }, order: { joinedAt: 'ASC' }, relations: ['user'] })
+  // TravelUser.findOne({ where: { travelId, userId }, relations: ['travel', 'user'] })
 
   /**
    * Travel 멤버 추가

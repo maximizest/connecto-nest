@@ -5,72 +5,17 @@ import { CrudService } from '@foryourdev/nestjs-crud';
 import { Accommodation } from './accommodation.entity';
 
 /**
- * Accommodation Service - Hybrid Pattern (CrudService + Active Record)
+ * Accommodation Service - Basic CrudService Pattern
  *
- * CrudService를 확장하면서 Accommodation 엔티티의 Active Record 메서드도 활용합니다.
+ * 기본 CRUD 기능은 CrudService를 통해 제공됩니다.
+ * 커스텀 비즈니스 로직이 필요한 경우 Entity의 Active Record 메서드를 직접 사용하세요.
  */
 @Injectable()
 export class AccommodationService extends CrudService<Accommodation> {
   constructor(
     @InjectRepository(Accommodation)
-    private readonly accommodationRepository: Repository<Accommodation>,
+    repository: Repository<Accommodation>,
   ) {
-    super(accommodationRepository);
-  }
-  /**
-   * ID로 숙박 업소 조회
-   */
-  async findById(id: number) {
-    return Accommodation.findById(id);
-  }
-
-  /**
-   * 모든 숙박 업소 조회
-   */
-  async findAll() {
-    return Accommodation.find({
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-  /**
-   * 숙박 업소 생성
-   */
-  async createAccommodation(data: {
-    name: string;
-    description?: string;
-  }): Promise<Accommodation> {
-    const accommodation = Accommodation.create({
-      name: data.name,
-      description: data.description || null,
-    });
-
-    return await accommodation.save();
-  }
-
-  /**
-   * 숙박 업소 업데이트
-   */
-  async updateAccommodation(id: number, updateData: Partial<Accommodation>) {
-    await Accommodation.update(id, updateData);
-    return Accommodation.findById(id);
-  }
-
-  /**
-   * 숙박 업소 삭제
-   */
-  async deleteAccommodation(id: number) {
-    const accommodation = await Accommodation.findById(id);
-    if (accommodation) {
-      return accommodation.remove();
-    }
-    return null;
-  }
-
-  /**
-   * 숙박 업소 수 조회
-   */
-  async count() {
-    return Accommodation.count();
+    super(repository);
   }
 }

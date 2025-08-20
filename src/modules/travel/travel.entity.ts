@@ -137,73 +137,11 @@ export class Travel extends BaseActiveRecord {
    * Active Record 정적 메서드
    */
 
-  /**
-   * 활성 여행 목록 조회
-   */
-  static async findActiveTravel(): Promise<Travel[]> {
-    return this.find({
-      where: { status: TravelStatus.ACTIVE },
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-  /**
-   * 공개 여행 목록 조회
-   */
-  static async findPublicTravel(): Promise<Travel[]> {
-    return this.find({
-      where: {
-        visibility: TravelVisibility.PUBLIC,
-        status: TravelStatus.ACTIVE,
-      },
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-  /**
-   * 만료된 여행 목록 조회
-   */
-  static async findExpiredTravel(): Promise<Travel[]> {
-    return this.find({
-      where: { status: TravelStatus.EXPIRED },
-      order: { endDate: 'DESC' },
-    });
-  }
-
-  /**
-   * 초대 코드로 여행 찾기
-   */
-  static async findByInviteCode(inviteCode: string): Promise<Travel | null> {
-    return this.findOne({
-      where: { inviteCode },
-    });
-  }
-
-  /**
-   * 숙소별 여행 조회
-   */
-  static async findByAccommodation(accommodationId: number): Promise<Travel[]> {
-    return this.find({
-      where: { accommodationId },
-      order: { startDate: 'ASC' },
-    });
-  }
-
-  /**
-   * 기간별 여행 조회
-   */
-  static async findByDateRange(
-    startDate: Date,
-    endDate: Date,
-  ): Promise<Travel[]> {
-    const repository = this.getRepository();
-    return repository
-      .createQueryBuilder('travel')
-      .where('travel.startDate >= :startDate', { startDate })
-      .andWhere('travel.endDate <= :endDate', { endDate })
-      .orderBy('travel.startDate', 'ASC')
-      .getMany();
-  }
+  // Simple finder methods removed - use TypeORM queries directly in controllers
+  // Examples:
+  // Travel.find({ where: { status: TravelStatus.ACTIVE }, order: { createdAt: 'DESC' } })
+  // Travel.findOne({ where: { inviteCode } })
+  // Travel.find({ where: { accommodationId }, order: { startDate: 'ASC' } })
 
   /**
    * 여행 생성

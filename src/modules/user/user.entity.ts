@@ -258,73 +258,12 @@ export class User extends BaseActiveRecord {
    * Active Record 정적 메서드
    */
 
-  /**
-   * 이메일로 사용자 찾기
-   */
-  static async findByEmail(email: string): Promise<User | null> {
-    return this.findOne({
-      where: { email },
-    });
-  }
-
-  /**
-   * 소셜 ID로 사용자 찾기
-   */
-  static async findBySocialId(
-    socialId: string,
-    provider: SocialProvider,
-  ): Promise<User | null> {
-    return this.findOne({
-      where: { socialId, provider },
-    });
-  }
-
-  /**
-   * 활성 사용자 목록 조회
-   */
-  static async findActiveUsers(): Promise<User[]> {
-    return this.find({
-      where: { isBanned: false },
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-  /**
-   * 밴된 사용자 목록 조회
-   */
-  static async findBannedUsers(): Promise<User[]> {
-    return this.find({
-      where: { isBanned: true },
-      order: { bannedAt: 'DESC' },
-    });
-  }
-
-  /**
-   * 역할별 사용자 조회
-   */
-  static async findByRole(role: UserRole): Promise<User[]> {
-    return this.find({
-      where: { role },
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-  /**
-   * 관리자 목록 조회
-   */
-  static async findAdmins(): Promise<User[]> {
-    return this.findByRole(UserRole.ADMIN);
-  }
-
-  /**
-   * 호스트 목록 조회
-   */
-  static async findHosts(): Promise<User[]> {
-    return this.find({
-      where: [{ role: UserRole.HOST }, { role: UserRole.ADMIN }],
-      order: { createdAt: 'DESC' },
-    });
-  }
+  // Simple finder methods removed - use TypeORM queries directly in controllers
+  // Examples:
+  // User.findOne({ where: { email } })
+  // User.findOne({ where: { socialId, provider } })
+  // User.find({ where: { isBanned: false }, order: { createdAt: 'DESC' } })
+  // User.find({ where: { role }, order: { createdAt: 'DESC' } })
 
   /**
    * 사용자 생성 (소셜 로그인)

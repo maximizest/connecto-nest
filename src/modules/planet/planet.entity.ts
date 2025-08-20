@@ -129,66 +129,12 @@ export class Planet extends BaseActiveRecord {
    * Active Record 정적 메서드
    */
 
-  /**
-   * Travel의 모든 Planet 조회
-   */
-  static async findByTravel(travelId: number): Promise<Planet[]> {
-    return this.find({
-      where: { travelId },
-      order: { createdAt: 'ASC' },
-    });
-  }
-
-  /**
-   * Travel의 활성 Planet 조회
-   */
-  static async findActivePlanetsByTravel(travelId: number): Promise<Planet[]> {
-    return this.find({
-      where: {
-        travelId,
-        status: PlanetStatus.ACTIVE,
-      },
-      order: { createdAt: 'ASC' },
-    });
-  }
-
-  /**
-   * 타입별 Planet 조회
-   */
-  static async findByType(type: PlanetType): Promise<Planet[]> {
-    return this.find({
-      where: { type },
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-  /**
-   * Travel의 단체 채팅방 조회
-   */
-  static async findGroupPlanetsByTravel(travelId: number): Promise<Planet[]> {
-    return this.find({
-      where: {
-        travelId,
-        type: PlanetType.GROUP,
-        status: PlanetStatus.ACTIVE,
-      },
-      order: { createdAt: 'ASC' },
-    });
-  }
-
-  /**
-   * Travel의 1:1 채팅방 조회
-   */
-  static async findDirectPlanetsByTravel(travelId: number): Promise<Planet[]> {
-    return this.find({
-      where: {
-        travelId,
-        type: PlanetType.DIRECT,
-        status: PlanetStatus.ACTIVE,
-      },
-      order: { createdAt: 'ASC' },
-    });
-  }
+  // Simple finder methods removed - use TypeORM queries directly in controllers
+  // Examples:
+  // Planet.find({ where: { travelId }, order: { createdAt: 'ASC' } })
+  // Planet.find({ where: { travelId, status: PlanetStatus.ACTIVE }, order: { createdAt: 'ASC' } })
+  // Planet.find({ where: { type }, order: { createdAt: 'DESC' } })
+  // Planet.find({ where: { travelId, type: PlanetType.GROUP, status: PlanetStatus.ACTIVE } })
 
   /**
    * Planet 생성

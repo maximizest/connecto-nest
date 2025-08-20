@@ -306,44 +306,11 @@ export class Message extends BaseActiveRecord {
    * Active Record 정적 메서드
    */
 
-  /**
-   * Planet의 모든 메시지 조회 (시간순)
-   */
-  static async findByPlanet(
-    planetId: number,
-    limit?: number,
-  ): Promise<Message[]> {
-    const query = this.find({
-      where: { planetId },
-      order: { createdAt: 'DESC' },
-      relations: ['sender'],
-    });
-
-    if (limit) {
-      return (await query).slice(0, limit);
-    }
-    return query;
-  }
-
-  /**
-   * 사용자의 모든 메시지 조회
-   */
-  static async findBySender(senderId: number): Promise<Message[]> {
-    return this.find({
-      where: { senderId },
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-  /**
-   * 메시지 타입별 조회
-   */
-  static async findByType(type: MessageType): Promise<Message[]> {
-    return this.find({
-      where: { type },
-      order: { createdAt: 'DESC' },
-    });
-  }
+  // Simple finder methods removed - use TypeORM queries directly in controllers
+  // Examples:
+  // Message.find({ where: { planetId }, order: { createdAt: 'DESC' }, relations: ['sender'], take: limit })
+  // Message.find({ where: { senderId }, order: { createdAt: 'DESC' } })
+  // Message.find({ where: { type }, order: { createdAt: 'DESC' } })
 
   /**
    * Planet의 타입별 메시지 조회
@@ -397,16 +364,8 @@ export class Message extends BaseActiveRecord {
       .getCount();
   }
 
-  /**
-   * 특정 메시지에 대한 답장들 조회
-   */
-  static async findReplies(messageId: number): Promise<Message[]> {
-    return this.find({
-      where: { replyToMessageId: messageId },
-      order: { createdAt: 'ASC' },
-      relations: ['sender'],
-    });
-  }
+  // Simple finder method removed - use TypeORM query directly:
+  // Message.find({ where: { replyToMessageId: messageId }, order: { createdAt: 'ASC' }, relations: ['sender'] })
 
   /**
    * 메시지 생성
