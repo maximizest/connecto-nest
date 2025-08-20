@@ -2,11 +2,6 @@ import { Crud } from '@foryourdev/nestjs-crud';
 import {
   Controller,
   UseGuards,
-  Get,
-  Patch,
-  Param,
-  Body,
-  ParseIntPipe,
 } from '@nestjs/common';
 import { AuthGuard } from '../../../../guards/auth.guard';
 import { Mission } from '../../mission.entity';
@@ -39,29 +34,4 @@ import { MissionService } from '../../mission.service';
 @UseGuards(AuthGuard)
 export class MissionController {
   constructor(public readonly crudService: MissionService) {}
-
-  /**
-   * 미션 활성화/비활성화
-   */
-  @Patch(':missionId/status')
-  async updateMissionStatus(
-    @Param('missionId', ParseIntPipe) missionId: number,
-    @Body() statusDto: { isActive: boolean },
-  ) {
-    return await this.crudService.updateMissionStatus(
-      missionId,
-      statusDto.isActive,
-    );
-  }
-
-  /**
-   * 활성 미션 목록 조회
-   */
-  @Get('active')
-  async getActiveMissions() {
-    return await Mission.find({
-      where: { active: true },
-      order: { startAt: 'ASC' },
-    });
-  }
 }

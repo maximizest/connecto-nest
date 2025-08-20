@@ -6,15 +6,9 @@ import {
   crudResponse,
 } from '@foryourdev/nestjs-crud';
 import {
-  Body,
   Controller,
-  Get,
   Logger,
   NotFoundException,
-  Param,
-  Post,
-  Query,
-  Request,
   UseGuards,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -308,73 +302,6 @@ export class ReadReceiptController {
     return entity;
   }
 
-  /**
-   * 통계 및 집계 데이터 조회 API
-   * GET /api/v1/read-receipts/stats
-   * 
-   * 읽지 않은 메시지 수, 마지막 읽은 시간 등 집계 데이터 제공
-   */
-  @Get('stats')
-  async getStats(
-    @Query() query: { 
-      planetId?: number;
-      userId?: number;
-      type?: 'unread' | 'summary' | 'all';
-    },
-    @Request() req: any,
-  ) {
-    const user: User = req.user;
-    const targetUserId = query.userId || user.id;
-
-    try {
-      // 특정 Planet의 읽지 않은 수
-      if (query.planetId && query.type === 'unread') {
-        await validateRoleBasedPlanetAccess(query.planetId, targetUserId);
-        
-        const unreadCount = await this.crudService.getUnreadCountInPlanet(
-          query.planetId,
-          targetUserId,
-        );
-
-        return {
-          planetId: query.planetId,
-          userId: targetUserId,
-          unreadCount,
-          type: 'planet_unread',
-        };
-      }
-
-      // 사용자의 전체 Planet별 읽지 않은 수
-      if (query.type === 'all' || !query.planetId) {
-        const unreadCounts = await this.crudService.getUnreadCountsByUser(
-          targetUserId,
-        );
-
-        return {
-          userId: targetUserId,
-          totalUnread: unreadCounts.reduce(
-            (sum, planet) => sum + planet.unreadCount,
-            0,
-          ),
-          planets: unreadCounts,
-          type: 'user_unread_summary',
-        };
-      }
-
-      // 기본: 요약 정보
-      return {
-        userId: targetUserId,
-        planetId: query.planetId,
-        type: 'summary',
-        message: 'Use type=unread or type=all for specific stats',
-      };
-    } catch (_error) {
-      this.logger.error(
-        `Get stats failed: planetId=${query.planetId}, userId=${targetUserId}, error=${_error.message}`,
-      );
-      throw _error;
-    }
-  }
 
   /**
    * 메시지 접근 권한 검증

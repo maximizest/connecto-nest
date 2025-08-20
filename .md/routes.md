@@ -110,14 +110,11 @@
 - **인증**: `AuthGuard`
 - **CRUD 작업**: `index`, `show`, `create`
 - **주요 기능**: 메시지 읽음 상태 관리
-- **커스텀 엔드포인트**:
-  ```
-  GET /api/v1/read-receipts/stats - 읽음 상태 통계 및 집계 데이터
-  ```
 - **특수 기능**:
-  - 단일/복수 메시지 읽음 처리 (POST body에 messageId 또는 messageIds 배열)
+  - 단일/복수 메시지 읽음 처리 (POST body에 단일 객체 또는 배열)
   - Upsert 로직으로 중복 처리 방지
   - 실시간 읽음 상태 동기화
+  - nestjs-crud 네이티브 벌크 지원
 
 ### 9. FileUpload Controller
 - **경로**: `/api/v1/file-uploads`
@@ -142,10 +139,6 @@
 - **인증**: `AuthGuard`
 - **CRUD 작업**: `index`, `show`, `update`
 - **주요 기능**: 알림 관리
-- **커스텀 엔드포인트**:
-  ```
-  POST /api/v1/notifications/test                 - 테스트 알림 (개발용)
-  ```
 - **특징**: 푸시 토큰 관리는 별도의 PushTokenController로 분리됨
 
 ### 11. PushToken Controller
@@ -183,11 +176,6 @@
 - **인증**: `AuthGuard`
 - **CRUD 작업**: `index`, `show` (create, update, destroy 제거됨)
 - **주요 기능**: 미션 조회
-- **커스텀 엔드포인트**:
-  ```
-  PATCH /api/v1/missions/:missionId/status - 미션 활성화 상태 변경
-  GET   /api/v1/missions/active           - 활성 미션 목록
-  ```
 
 #### MissionSubmission Controller
 - **경로**: `/api/v1/mission-submissions`
