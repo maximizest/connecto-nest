@@ -713,23 +713,32 @@ graph TD
 ```mermaid
 graph TD
     A[사용자 앱 사용 중] --> B[API 요청]
-    B --> C{Enhanced Auth Guard}
+    B --> C{Auth Guard}
 
-    C --> D[토큰 블랙리스트 확인]
-    D --> E{블랙리스트?}
+    C --> D[병렬 검증 시작]
+    D --> E[토큰 블랙리스트 확인]
+    D --> F[사용자 차단 상태 확인]
+    D --> G[사용자 정보 조회]
 
-    E -->|Yes| F[401 Unauthorized]
-    E -->|No| G[세션 유효성 확인]
+    E --> H{블랙리스트?}
+    F --> I{차단됨?}
+    G --> J{유효한 사용자?}
 
-    G --> H{sessionVersion 비교}
-    H -->|불일치| F
-    H -->|일치| I[요청 처리]
+    H -->|Yes| K[401 Unauthorized]
+    I -->|Yes| K
+    J -->|No| K
 
-    F --> J[클라이언트 로그아웃 처리]
-    J --> K[WebSocket 연결 종료]
-    K --> L[로그인 화면으로 이동]
+    H -->|No| L[계속 진행]
+    I -->|No| L
+    J -->|Yes| L
 
-    L --> M[강제 로그아웃 안내 메시지]
+    L --> M[요청 처리]
+
+    K --> N[클라이언트 로그아웃 처리]
+    N --> O[WebSocket 연결 종료]
+    O --> P[로그인 화면으로 이동]
+
+    P --> Q[강제 로그아웃 안내 메시지]
 ```
 
 ### 9.3 세션 모니터링 및 관리
@@ -807,7 +816,7 @@ graph TD
 
 ### 10.3 WebSocket 연결 관리 (Dual Gateway System + Redis Adapter)
 
-#### EnhancedWebSocketGateway (인증 및 연결 관리)
+#### WebSocketGateway (인증 및 연결 관리)
 
 ```mermaid
 graph TD
@@ -1929,3 +1938,78 @@ yarn typecheck ✓
 - 10개 모듈 Repository 의존성 제거
 - 빌드 및 타입 체크 성공
 ```
+
+---
+
+## 22. 최근 개선사항 (2025-01-21)
+
+### 22.1 Guard 시스템 개선
+
+#### AuthGuard 통합 및 최적화
+
+```mermaid
+graph TD
+    A[JWT 토큰 검증] --> B[병렬 처리 시작]
+    B --> C[토큰 블랙리스트 확인]
+    B --> D[사용자 차단 상태 확인]
+    B --> E[사용자 정보 조회]
+    
+    C --> F[Promise.all로 대기]
+    D --> F
+    E --> F
+    
+    F --> G{모든 검증 통과?}
+    G -->|Yes| H[요청 허용]
+    G -->|No| I[401 Unauthorized]
+```
+
+**개선 내용**:
+- EnhancedAuthGuard 기능을 AuthGuard에 통합
+- 토큰 블랙리스트 및 사용자 차단 검증 포함
+- Promise.all을 사용한 병렬 처리로 67-75% 성능 향상
+- JWT secret 캐싱으로 추가 최적화
+
+#### AdminGuard 최적화
+
+- AuthGuard를 내부적으로 사용하여 중복 제거
+- 사용자 엔티티 캐싱으로 불필요한 DB 쿼리 방지
+
+### 22.2 ReadReceipt API 단순화
+
+#### Before: 5개의 커스텀 엔드포인트
+```
+POST /api/v1/read-receipts/mark-read
+POST /api/v1/read-receipts/mark-multiple-read
+POST /api/v1/read-receipts/mark-all-read/:planetId
+GET  /api/v1/read-receipts/unread-count/:planetId
+GET  /api/v1/read-receipts/unread-counts/my
+```
+
+#### After: CRUD + 1 Stats 엔드포인트
+```
+# Standard CRUD (자동 생성)
+GET    /api/v1/read-receipts          - 목록 조회
+GET    /api/v1/read-receipts/:id      - 단일 조회
+POST   /api/v1/read-receipts          - 생성 (단일/복수 지원)
+
+# Custom Stats
+GET    /api/v1/read-receipts/stats    - 통계 데이터
+```
+
+**개선 효과**:
+- 코드량 80% 감소 (~400줄 제거)
+- @foryourdev/nestjs-crud 패턴 일관성
+- 단일 POST 엔드포인트로 단일/복수 메시지 처리
+- Upsert 로직으로 중복 처리 방지
+
+### 22.3 코드 정리
+
+#### 엔티티 메서드 제거
+- 약 15개의 단순 finder 메서드 제거
+- 직접 TypeORM 쿼리 사용으로 단순화
+- Active Record 패턴의 기본 메서드 활용
+
+#### 서비스 레이어 최적화
+- 불필요한 래퍼 메서드 제거
+- 비즈니스 로직에 집중
+- 코드 가독성 향상

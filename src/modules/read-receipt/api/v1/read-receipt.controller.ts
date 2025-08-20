@@ -13,6 +13,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -59,6 +60,7 @@ import { ReadReceiptService } from '../../read-receipt.service';
   // Body에서 허용할 파라미터 (생성/수정 시)
   allowedParams: [
     'messageId',
+    'messageIds', // bulk 작업용
     'userId',
     'planetId',
     'isRead',
@@ -103,7 +105,7 @@ export class ReadReceiptController {
 
   /**
    * 읽음 영수증 생성 전 검증 및 전처리
-   * mark-read 라우트의 upsert 로직 통합
+   * 단일 및 복수 메시지 처리 지원
    */
   @BeforeCreate()
   async beforeCreate(body: any, context: any): Promise<any> {
@@ -112,7 +114,45 @@ export class ReadReceiptController {
     // 사용자 정보 설정
     body.userId = user.id;
 
-    // 메시지 존재 및 접근 권한 확인
+    // 복수 메시지 처리 (messageIds 배열)
+    if (body.messageIds && Array.isArray(body.messageIds)) {
+      const receipts = await this.crudService.markMultipleMessagesAsRead(
+        body.messageIds,
+        user.id,
+        {
+          deviceType: body.deviceType,
+          userAgent: context.request?.headers?.['user-agent'],
+          readSource: body.readSource || 'manual',
+          sessionId: body.sessionId,
+        },
+      );
+
+      // 실시간 동기화 이벤트
+      receipts.forEach((receipt) => {
+        this.eventEmitter.emit('message.read', {
+          messageId: receipt.messageId,
+          planetId: receipt.planetId,
+          userId: user.id,
+          userName: user.name,
+          readAt: receipt.readAt,
+          deviceType: receipt.deviceType,
+          isBatchRead: true,
+        });
+      });
+
+      // 배치 작업 완료 후 중단
+      context.skipCreate = true;
+      context.existingEntity = receipts[0]; // 첫 번째 영수증 반환
+      context.batchResult = receipts;
+
+      this.logger.log(
+        `Batch read receipts created: count=${receipts.length}, userId=${user.id}`,
+      );
+
+      return null;
+    }
+
+    // 단일 메시지 처리
     const message = await this.validateMessageAccess(body.messageId, user.id);
     body.planetId = message.planetId;
 
@@ -215,279 +255,68 @@ export class ReadReceiptController {
   }
 
   /**
-   * 메시지 읽음 처리 API (커스텀 엔드포인트)
-   * POST /api/v1/read-receipts/mark-read
-   *
-   * create 액션으로 위임
+   * 통계 및 집계 데이터 조회 API
+   * GET /api/v1/read-receipts/stats
+   * 
+   * 읽지 않은 메시지 수, 마지막 읽은 시간 등 집계 데이터 제공
    */
-  @Post('mark-read')
-  async markMessageAsRead(
-    @Body()
-    body: {
-      messageId: number;
-      deviceType?: string;
-      readSource?: 'auto' | 'manual' | 'scroll';
-      readDuration?: number;
-      sessionId?: string;
-    },
-    @Request() req: any,
-  ) {
-    // create 액션으로 위임
-    const createBody = {
-      ...body,
-      userAgent: req.headers['user-agent'],
-    };
-
-    // BeforeCreate hook을 통해 처리
-    const processedBody = await this.beforeCreate(createBody, {
-      request: { user: req.user },
-    });
-
-    if (processedBody.skipCreate) {
-      return crudResponse(processedBody.existingEntity);
-    }
-
-    const entity = MessageReadReceipt.create(processedBody);
-    const result = await entity.save();
-
-    // AfterCreate 훅 호출 - result가 배열인 경우 첫 번째 요소 사용
-    const savedEntity = Array.isArray(result) ? result[0] : result;
-    await this.afterCreate(savedEntity, { request: { user: req.user } });
-
-    return crudResponse(result);
-  }
-
-  /**
-   * 여러 메시지 일괄 읽음 처리 API
-   * POST /api/v1/read-receipts/mark-multiple-read
-   */
-  @Post('mark-multiple-read')
-  async markMultipleMessagesAsRead(
-    @Body()
-    body: {
-      messageIds: number[];
-      deviceType?: string;
-      readSource?: 'auto' | 'manual' | 'scroll';
-      sessionId?: string;
+  @Get('stats')
+  async getStats(
+    @Query() query: { 
+      planetId?: number;
+      userId?: number;
+      type?: 'unread' | 'summary' | 'all';
     },
     @Request() req: any,
   ) {
     const user: User = req.user;
+    const targetUserId = query.userId || user.id;
 
     try {
-      const { messageIds, deviceType, readSource, sessionId } = body;
+      // 특정 Planet의 읽지 않은 수
+      if (query.planetId && query.type === 'unread') {
+        await validateRoleBasedPlanetAccess(query.planetId, targetUserId);
+        
+        const unreadCount = await this.crudService.getUnreadCountInPlanet(
+          query.planetId,
+          targetUserId,
+        );
 
-      if (!messageIds || messageIds.length === 0) {
-        throw new Error('messageIds is required and cannot be empty');
+        return {
+          planetId: query.planetId,
+          userId: targetUserId,
+          unreadCount,
+          type: 'planet_unread',
+        };
       }
 
-      // 각 메시지의 접근 권한 확인
-      await Promise.all(
-        messageIds.map((messageId) =>
-          this.validateMessageAccess(messageId, user.id),
-        ),
-      );
+      // 사용자의 전체 Planet별 읽지 않은 수
+      if (query.type === 'all' || !query.planetId) {
+        const unreadCounts = await this.crudService.getUnreadCountsByUser(
+          targetUserId,
+        );
 
-      // 일괄 읽음 처리
-      const receipts = await this.crudService.markMultipleMessagesAsRead(
-        messageIds,
-        user.id,
-        {
-          deviceType,
-          userAgent: req.headers['user-agent'],
-          readSource,
-          sessionId,
-        },
-      );
-
-      // 실시간 일괄 읽음 상태 동기화 이벤트 발생
-      receipts.forEach((receipt) => {
-        this.eventEmitter.emit('message.read', {
-          messageId: receipt.messageId,
-          planetId: receipt.planetId,
-          userId: user.id,
-          userName: user.name,
-          readAt: receipt.readAt,
-          deviceType: receipt.deviceType,
-          isBatchRead: true,
-        });
-      });
-
-      this.logger.log(
-        `Multiple messages marked as read: count=${receipts.length}, userId=${user.id}`,
-      );
-
-      // Create virtual MessageReadReceipt entity for batch operation
-      const batchReadEntity = Object.assign(new MessageReadReceipt(), {
-        id: 0,
-        messageId: 0,
-        userId: user.id,
-        planetId: 0,
-        isRead: true,
-        readAt: new Date(),
-        metadata: {
-          processedCount: receipts.length,
-          receipts: receipts.map((r) => r.getSummary()),
-          operationType: 'batch_read',
-        },
-      });
-
-      return crudResponse(batchReadEntity);
-    } catch (_error) {
-      this.logger.error(
-        `Mark multiple messages as read failed: userId=${user.id}, error=${_error.message}`,
-      );
-      throw _error;
-    }
-  }
-
-  /**
-   * Planet의 모든 메시지 읽음 처리 API
-   * POST /api/v1/read-receipts/mark-all-read/:planetId
-   */
-  @Post('mark-all-read/:planetId')
-  async markAllMessagesAsReadInPlanet(
-    @Param('planetId') planetId: number,
-    @Body()
-    body: {
-      deviceType?: string;
-      sessionId?: string;
-    },
-    @Request() req: any,
-  ) {
-    const user: User = req.user;
-
-    try {
-      // Planet 접근 권한 확인 (역할 기반)
-      await validateRoleBasedPlanetAccess(planetId, user.id);
-
-      // 모든 메시지 읽음 처리
-      const result = await this.crudService.markAllMessagesAsReadInPlanet(
-        planetId,
-        user.id,
-        {
-          deviceType: body.deviceType,
-          userAgent: req.headers['user-agent'],
-          sessionId: body.sessionId,
-        },
-      );
-
-      // 실시간 Planet 전체 읽음 상태 동기화 이벤트 발생
-      this.eventEmitter.emit('planet.allMessagesRead', {
-        planetId,
-        userId: user.id,
-        userName: user.name,
-        processedCount: result.processedCount,
-        readAt: new Date(),
-      });
-
-      this.logger.log(
-        `All messages in planet marked as read: planetId=${planetId}, userId=${user.id}, count=${result.processedCount}`,
-      );
-
-      // Create virtual MessageReadReceipt entity for planet all read
-      const planetAllReadEntity = Object.assign(new MessageReadReceipt(), {
-        id: 0,
-        messageId: 0,
-        userId: user.id,
-        planetId,
-        isRead: true,
-        readAt: new Date(),
-        metadata: {
-          processedCount: result.processedCount,
-          receipts: result.receipts.map((r) => r.getSummary()),
-          operationType: 'planet_all_read',
-        },
-      });
-
-      return crudResponse(planetAllReadEntity);
-    } catch (_error) {
-      this.logger.error(
-        `Mark all messages as read failed: planetId=${planetId}, userId=${user.id}, error=${_error.message}`,
-      );
-      throw _error;
-    }
-  }
-
-  /**
-   * Planet의 읽지 않은 메시지 카운트 조회 API
-   * GET /api/v1/read-receipts/unread-count/:planetId
-   */
-  @Get('unread-count/:planetId')
-  async getUnreadCountInPlanet(
-    @Param('planetId') planetId: number,
-    @Request() req: any,
-  ) {
-    const user: User = req.user;
-
-    try {
-      // Planet 접근 권한 확인 (역할 기반)
-      await validateRoleBasedPlanetAccess(planetId, user.id);
-
-      const unreadCount = await this.crudService.getUnreadCountInPlanet(
-        planetId,
-        user.id,
-      );
-
-      // Create virtual MessageReadReceipt entity for unread count
-      const unreadCountEntity = Object.assign(new MessageReadReceipt(), {
-        id: 0,
-        messageId: 0,
-        userId: user.id,
-        planetId,
-        isRead: false,
-        readAt: null,
-        metadata: {
-          unreadCount,
-          operationType: 'unread_count',
-        },
-      });
-
-      return crudResponse(unreadCountEntity);
-    } catch (_error) {
-      this.logger.error(
-        `Get unread count failed: planetId=${planetId}, userId=${user.id}, error=${_error.message}`,
-      );
-      throw _error;
-    }
-  }
-
-  /**
-   * 사용자의 모든 Planet별 읽지 않은 메시지 카운트 조회 API
-   * GET /api/v1/read-receipts/unread-counts/my
-   */
-  @Get('unread-counts/my')
-  async getMyUnreadCounts(@Request() req: any) {
-    const user: User = req.user;
-
-    try {
-      const unreadCounts = await this.crudService.getUnreadCountsByUser(
-        user.id,
-      );
-
-      // Create virtual MessageReadReceipt entity for my unread counts
-      const myUnreadCountsEntity = Object.assign(new MessageReadReceipt(), {
-        id: 0,
-        messageId: 0,
-        userId: user.id,
-        planetId: 0,
-        isRead: false,
-        readAt: null,
-        metadata: {
-          totalPlanets: unreadCounts.length,
-          totalUnreadCount: unreadCounts.reduce(
+        return {
+          userId: targetUserId,
+          totalUnread: unreadCounts.reduce(
             (sum, planet) => sum + planet.unreadCount,
             0,
           ),
           planets: unreadCounts,
-          operationType: 'my_unread_counts',
-        },
-      });
+          type: 'user_unread_summary',
+        };
+      }
 
-      return crudResponse(myUnreadCountsEntity);
+      // 기본: 요약 정보
+      return {
+        userId: targetUserId,
+        planetId: query.planetId,
+        type: 'summary',
+        message: 'Use type=unread or type=all for specific stats',
+      };
     } catch (_error) {
       this.logger.error(
-        `Get my unread counts failed: userId=${user.id}, error=${_error.message}`,
+        `Get stats failed: planetId=${query.planetId}, userId=${targetUserId}, error=${_error.message}`,
       );
       throw _error;
     }

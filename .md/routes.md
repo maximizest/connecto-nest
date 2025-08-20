@@ -1,6 +1,6 @@
 # Connecto API 라우트 문서
 
-> 최종 업데이트: 2025-01-20  
+> 최종 업데이트: 2025-01-21  
 > API 버전: v1  
 > 프레임워크: NestJS 11.x + @foryourdev/nestjs-crud
 
@@ -33,9 +33,8 @@
 ### Guard 종류
 | Guard | 용도 | 사용 컨트롤러 수 |
 |-------|------|-----------------|
-| `AuthGuard` | 일반 사용자 인증 | 15 |
-| `AdminGuard` | 관리자 권한 검증 | 2 |
-| `EnhancedAuthGuard` | 향상된 인증 (세션 검증) | 1 |
+| `AuthGuard` | 일반 사용자 인증 (토큰 블랙리스트 검증 포함) | 17 |
+| `AdminGuard` | 관리자 권한 검증 | 3 |
 | `DevOnlyGuard` | 개발 환경 전용 | 1 |
 | 인증 없음 | 공개 엔드포인트 | 1 (Auth) |
 
@@ -113,12 +112,12 @@
 - **주요 기능**: 메시지 읽음 상태 관리
 - **커스텀 엔드포인트**:
   ```
-  POST /api/v1/read-receipts/mark-read          - 단일 메시지 읽음 처리
-  POST /api/v1/read-receipts/mark-multiple-read - 복수 메시지 읽음 처리
-  POST /api/v1/read-receipts/mark-all-read/:planetId - 채팅방 전체 읽음 처리
-  GET  /api/v1/read-receipts/unread-count/:planetId  - 읽지 않은 메시지 수
-  GET  /api/v1/read-receipts/unread-counts/my        - 내 전체 읽지 않은 수
+  GET /api/v1/read-receipts/stats - 읽음 상태 통계 및 집계 데이터
   ```
+- **특수 기능**:
+  - 단일/복수 메시지 읽음 처리 (POST body에 messageId 또는 messageIds 배열)
+  - Upsert 로직으로 중복 처리 방지
+  - 실시간 읽음 상태 동기화
 
 ### 9. FileUpload Controller
 - **경로**: `/api/v1/file-uploads`
@@ -227,7 +226,7 @@
 
 ### 3. Admin Controller
 - **경로**: `/api/v1/admin`
-- **인증**: `EnhancedAuthGuard` + `AdminGuard`
+- **인증**: `AuthGuard` + `AdminGuard`
 - **엔드포인트**:
   ```
   POST /api/v1/admin/users/:userId/force-logout     - 강제 로그아웃
@@ -320,6 +319,12 @@ socket.on('user-online-status', data)         // 온라인 상태
 - TypeOrmModule.forFeature 제거
 - BaseActiveRecord 상속으로 공통 기능 제공
 - 서비스 레이어 단순화
+
+### 최근 개선사항 (2025-01-21)
+- **Guard 통합**: EnhancedAuthGuard 기능을 AuthGuard에 통합 (토큰 블랙리스트, 사용자 밴 검증)
+- **성능 최적화**: AuthGuard 67-75% 성능 향상 (병렬 처리, 캐싱)
+- **ReadReceipt API 단순화**: 커스텀 엔드포인트 제거, CRUD 패턴 활용
+- **코드 정리**: 불필요한 엔티티 메서드 제거, 직접 TypeORM 쿼리 사용
 
 ---
 
