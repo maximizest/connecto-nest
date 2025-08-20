@@ -84,6 +84,7 @@
   ```
   GET /api/v1/messages/:messageId/context - 특정 메시지 주변 컨텍스트 조회
   ```
+  - nestjs-crud로 구현 불가: 특정 메시지 기준 전후 메시지를 가져오는 복잡한 쿼리
 - **특수 기능**:
   - 메시지 타입 검증 (TEXT, IMAGE, VIDEO, FILE, SYSTEM)
   - 수정 시간 제한 및 히스토리 추적
@@ -128,6 +129,7 @@
   GET    /api/v1/file-uploads/:id/download-url  - 다운로드 URL 생성
   GET    /api/v1/file-uploads/:id/stream        - 스트리밍 URL 생성
   ```
+  - nestjs-crud로 구현 불가: 외부 서비스(Cloudflare R2) 연동 및 presigned URL 생성 로직
 - **특수 기능**:
   - 최대 500MB 파일 지원
   - 이미지 자동 최적화
