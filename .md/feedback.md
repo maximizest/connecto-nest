@@ -226,18 +226,112 @@ throw new NotFoundException(
 
 ## 우선순위 권장사항
 
-### ✅ 완료된 개선사항 (Completed)
-1. ✅ console.log를 Logger로 변경
-2. ✅ Travel-Planet 생성 트랜잭션 처리
-3. ✅ N+1 쿼리 문제 해결
-4. ✅ Repository 패턴 완전 제거 (Active Record 패턴으로 완전 마이그레이션)
-5. ✅ 중복 권한 검증 로직 통합 (커스텀 데코레이터 생성)
-6. ✅ 엔티티 필드의 class-validator 데코레이터 보완
-7. ✅ 추가 인덱스 적용 (성능 최적화 마이그레이션 생성)
+### ✅ 완료된 개선사항 (Completed - 2025-01-21)
 
-### 장기 개선 (Low Priority - Pending)
-1. i18n 국제화 도입
-2. 캐싱 전략 확대
+#### 1. ✅ console.log를 Logger로 변경
+**문제**: travel.entity.ts에서 console.log/console.error 사용
+**해결방법**: 
+- NestJS의 Logger 클래스 import
+- Travel 클래스에 정적 logger 인스턴스 생성
+- AfterInsert 훅에서 Logger.log()와 Logger.error() 사용
+**파일**: `src/modules/travel/travel.entity.ts`
+
+#### 2. ✅ Travel-Planet 생성 트랜잭션 처리
+**문제**: Travel과 Planet 생성이 별도 트랜잭션으로 실행되어 원자성 보장 안됨
+**해결방법**:
+- TravelService에 createTravelWithPlanets 메서드 추가
+- DataSource.transaction() 사용하여 단일 트랜잭션 내에서 처리
+- Travel 생성 실패시 Planet도 롤백되도록 보장
+**파일**: `src/modules/travel/travel.service.ts`
+
+#### 3. ✅ N+1 쿼리 문제 해결
+**문제**: AfterInsert에서 Planet 2개를 개별 save()로 생성
+**해결방법**:
+- Planet.save() 2회 호출을 Planet.insert() 1회로 변경
+- 배열로 2개 Planet 데이터 준비 후 벌크 insert
+- 쿼리 2개에서 1개로 감소 (50% 성능 향상)
+**파일**: `src/modules/travel/travel.entity.ts`
+
+#### 4. ✅ Repository 패턴 완전 제거 (Active Record 패턴으로 완전 마이그레이션)
+**문제**: 15개 이상 서비스가 Repository 패턴 사용
+**해결방법**:
+- 모든 서비스에서 @InjectRepository 제거
+- constructor에서 repository 주입 대신 Entity 클래스 직접 전달
+- TypeOrmModule.forFeature() imports 제거
+- BaseActiveRecord 상속 엔티티의 정적 메서드 활용
+**영향 파일**: 
+- `src/modules/*/**.service.ts` (15개 서비스)
+- `src/modules/*/**.module.ts` (15개 모듈)
+
+#### 5. ✅ 중복 권한 검증 로직 통합 (커스텀 데코레이터 생성)
+**문제**: 여러 컨트롤러에서 동일한 Guard 조합 반복 사용
+**해결방법**:
+- `@RequireAuth()`: AuthGuard만 적용
+- `@RequireHost()`: AuthGuard + HostGuard 조합
+- `@RequireAdmin()`: AuthGuard + AdminGuard 조합
+- applyDecorators()로 Guard 조합 캡슐화
+**파일**: `src/common/decorators/auth.decorator.ts`
+
+#### 6. ✅ 엔티티 필드의 class-validator 데코레이터 보완
+**문제**: 일부 엔티티 필드에 검증 데코레이터 누락
+**해결방법**:
+- 모든 엔티티 필드에 적절한 class-validator 데코레이터 추가
+- @IsString(), @IsNumber(), @IsEmail(), @IsEnum() 등 타입별 검증
+- @MinLength(), @MaxLength() 등 제약사항 검증
+- @IsOptional() nullable 필드 명시
+**영향 파일**: 30개 엔티티 파일
+
+#### 7. ✅ 추가 인덱스 적용 (성능 최적화 마이그레이션 생성 및 실행)
+**문제**: 자주 조회되는 컬럼 조합에 인덱스 부재
+**해결방법**:
+- AddPerformanceIndexes1737500000000 마이그레이션 생성
+- 5개 복합 인덱스 추가:
+  - messages(planetId, createdAt DESC)
+  - notifications(userId, status)
+  - travels(status, visibility)
+  - planet_users(userId, status)
+  - travel_users(userId, status)
+- IF NOT EXISTS 조건으로 안전한 실행 보장
+**파일**: `src/migrations/1737500000000-AddPerformanceIndexes.ts`
+
+#### 8. ✅ i18n 국제화 도입 (nestjs-i18n 설정, 한국어/영어 번역 파일 생성)
+**문제**: 에러 메시지가 한글로 하드코딩됨
+**해결방법**:
+- nestjs-i18n 패키지 설치 및 I18nModule 설정
+- 한국어를 fallback 언어로 설정
+- ko/en 언어별 JSON 번역 파일 생성
+- 에러, 성공, 알림, 검증 메시지 번역 추가
+- QueryResolver, HeaderResolver, AcceptLanguageResolver 설정
+**파일**:
+- `src/modules/i18n/i18n.module.ts`
+- `i18n/ko/*.json`, `i18n/en/*.json`
+
+#### 9. ✅ 캐싱 전략 확대 (Redis 캐싱 레이어, 캐시 데코레이터, 무효화 전략 구현)
+**문제**: Redis 캐싱이 부분적으로만 적용됨
+**해결방법**:
+- @Cacheable() 데코레이터: 메서드 레벨 캐싱
+- @CacheInvalidate() 데코레이터: 캐시 무효화
+- 엔티티별 캐싱 TTL 전략:
+  - Travel: 5-10분 (자주 변경)
+  - Planet: 10분 (메시지는 30초)
+  - User/Profile: 15분
+  - FileUpload: 1시간
+- CacheKeyBuilder 유틸리티로 일관된 키 생성
+**파일**:
+- `src/common/decorators/cache.decorator.ts`
+- `src/modules/cache/strategies/cache-strategy.ts`
+
+#### 10. ✅ 마이그레이션 이슈 해결 (엔티티 데코레이터 오류 수정)
+**문제**: TypeORM이 메서드를 컬럼으로 인식하는 hanging decorator 문제
+**해결방법**:
+- FileUpload.entity.ts: completeUpload 메서드 위 고아 데코레이터 제거
+- Notification.entity.ts: markAsDelivered 메서드 위 고아 데코레이터 제거  
+- PushToken.entity.ts: 존재하지 않는 isActive 컬럼 인덱스 제거
+- 마이그레이션 파일: isRead → status 컬럼명 수정
+**영향 파일**:
+- `src/modules/file-upload/file-upload.entity.ts`
+- `src/modules/notification/notification.entity.ts`
+- `src/modules/push-token/push-token.entity.ts`
 
 ## 추가 제안사항
 

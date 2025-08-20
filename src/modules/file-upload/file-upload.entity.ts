@@ -115,10 +115,6 @@ export class FileUpload extends BaseActiveRecord {
   @IsOptional()
   metadata?: Record<string, any>;
 
-  @IsDateString()
-  @Index() // 시간별 정렬
-  @IsDateString()
-
   /**
    * 비즈니스 로직 메서드
    */

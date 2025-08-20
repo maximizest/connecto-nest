@@ -31,8 +31,6 @@ export enum PushTokenPlatform {
 @Index(['userId', 'deviceId'], { unique: true })
 @Index(['token'])
 @Index(['platform'])
-@Index(['isActive'])
-@Index(['userId', 'isActive'])
 export class PushToken extends BaseActiveRecord {
   @PrimaryGeneratedColumn({ comment: '푸시 토큰 ID' })
   id: number;
