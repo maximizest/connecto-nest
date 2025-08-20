@@ -1,0 +1,60 @@
+{
+  "errors": {
+    "AUTH_REQUIRED": "Authentication required",
+    "INVALID_CREDENTIALS": "Invalid credentials",
+    "USER_NOT_FOUND": "User not found",
+    "USER_BLOCKED": "User is blocked",
+    "TRAVEL_NOT_FOUND": "Travel not found",
+    "PLANET_NOT_FOUND": "Chat room not found",
+    "MESSAGE_NOT_FOUND": "Message not found",
+    "PERMISSION_DENIED": "Permission denied",
+    "RESOURCE_NOT_FOUND": "Resource not found",
+    "VALIDATION_ERROR": "Validation error",
+    "SERVER_ERROR": "Server error occurred",
+    "DUPLICATE_ENTRY": "Entry already exists",
+    "EXPIRED_TOKEN": "Token has expired",
+    "INVALID_TOKEN": "Invalid token",
+    "FILE_TOO_LARGE": "File size too large",
+    "INVALID_FILE_TYPE": "Unsupported file type",
+    "TRAVEL_EXPIRED": "Travel has expired",
+    "PLANET_FULL": "Chat room is full",
+    "ALREADY_JOINED": "Already joined",
+    "NOT_MEMBER": "Not a member",
+    "MUTED_USER": "User is muted"
+  },
+  "success": {
+    "LOGIN_SUCCESS": "Login successful",
+    "LOGOUT_SUCCESS": "Logged out successfully",
+    "REGISTER_SUCCESS": "Registration completed",
+    "UPDATE_SUCCESS": "Update completed",
+    "DELETE_SUCCESS": "Delete completed",
+    "CREATE_SUCCESS": "Created successfully",
+    "UPLOAD_SUCCESS": "Upload completed",
+    "JOIN_SUCCESS": "Joined successfully",
+    "LEAVE_SUCCESS": "Left successfully",
+    "MESSAGE_SENT": "Message sent",
+    "REPORT_SUBMITTED": "Report submitted"
+  },
+  "notifications": {
+    "NEW_MESSAGE": "New message received",
+    "NEW_MEMBER": "New member joined",
+    "MEMBER_LEFT": "Member left",
+    "TRAVEL_STARTING": "Travel starting soon",
+    "TRAVEL_ENDING": "Travel ending soon",
+    "ANNOUNCEMENT": "New announcement",
+    "SYSTEM_MESSAGE": "System message"
+  },
+  "validation": {
+    "REQUIRED_FIELD": "This field is required",
+    "MIN_LENGTH": "Minimum {{min}} characters required",
+    "MAX_LENGTH": "Maximum {{max}} characters allowed",
+    "INVALID_EMAIL": "Please enter a valid email",
+    "INVALID_PHONE": "Please enter a valid phone number",
+    "INVALID_DATE": "Please enter a valid date",
+    "PAST_DATE": "Cannot select past date",
+    "FUTURE_DATE": "Please select a future date",
+    "INVALID_URL": "Please enter a valid URL",
+    "PASSWORD_MISMATCH": "Passwords do not match",
+    "WEAK_PASSWORD": "Please use a stronger password"
+  }
+}

@@ -37,6 +37,7 @@ import { ReadReceiptModule } from './read-receipt/read-receipt.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { SchemaModule } from './schema/schema.module';
 import { StorageModule } from './storage/storage.module';
+import { I18nModule } from './i18n/i18n.module';
 import { TravelUserModule } from './travel-user/travel-user.module';
 import { TravelModule } from './travel/travel.module';
 import { UserModule } from './user/user.module';
@@ -74,6 +75,7 @@ if (NODE_ENV !== 'production') {
 }
 
 // 모듈 추가
+modules.push(I18nModule); // i18n 국제화 모듈
 modules.push(RedisModule);
 modules.push(CacheModule);
 modules.push(StorageModule);

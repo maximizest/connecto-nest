@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { I18nService, I18nContext } from 'nestjs-i18n';
 import { Request } from 'express';
 import { CurrentUserData } from '../common/decorators/current-user.decorator';
 import { TokenUtil } from '../common/utils/token.util';
@@ -26,6 +27,7 @@ export class AuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly tokenBlacklistService: TokenBlacklistService,
+    private readonly i18n: I18nService,
   ) {
     // JWT secret을 한 번만 읽어서 캐싱
     this.jwtSecret = process.env.JWT_SECRET || '';
@@ -38,7 +40,10 @@ export class AuthGuard implements CanActivate {
       // 1. 토큰 추출
       const token = TokenUtil.extractTokenFromHeader(request);
       if (!token) {
-        throw new UnauthorizedException('인증 토큰이 없습니다.');
+        const message = await this.i18n.t('errors.AUTH_REQUIRED', {
+          lang: I18nContext.current()?.lang || 'ko',
+        });
+        throw new UnauthorizedException(message);
       }
 
       // 2. JWT 토큰 검증 (블랙리스트 확인보다 먼저 - 잘못된 토큰은 Redis 조회 불필요)
@@ -49,9 +54,15 @@ export class AuthGuard implements CanActivate {
         });
       } catch (jwtError) {
         if (jwtError.name === 'TokenExpiredError') {
-          throw new UnauthorizedException('토큰이 만료되었습니다.');
+          const message = await this.i18n.t('errors.EXPIRED_TOKEN', {
+            lang: I18nContext.current()?.lang || 'ko',
+          });
+          throw new UnauthorizedException(message);
         } else if (jwtError.name === 'JsonWebTokenError') {
-          throw new UnauthorizedException('유효하지 않은 토큰입니다.');
+          const message = await this.i18n.t('errors.INVALID_TOKEN', {
+            lang: I18nContext.current()?.lang || 'ko',
+          });
+          throw new UnauthorizedException(message);
         }
         throw jwtError;
       }

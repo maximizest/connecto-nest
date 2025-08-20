@@ -1,0 +1,60 @@
+{
+  "errors": {
+    "AUTH_REQUIRED": "인증이 필요합니다",
+    "INVALID_CREDENTIALS": "잘못된 인증 정보입니다",
+    "USER_NOT_FOUND": "사용자를 찾을 수 없습니다",
+    "USER_BLOCKED": "차단된 사용자입니다",
+    "TRAVEL_NOT_FOUND": "여행을 찾을 수 없습니다",
+    "PLANET_NOT_FOUND": "채팅방을 찾을 수 없습니다",
+    "MESSAGE_NOT_FOUND": "메시지를 찾을 수 없습니다",
+    "PERMISSION_DENIED": "권한이 없습니다",
+    "RESOURCE_NOT_FOUND": "리소스를 찾을 수 없습니다",
+    "VALIDATION_ERROR": "입력값이 올바르지 않습니다",
+    "SERVER_ERROR": "서버 오류가 발생했습니다",
+    "DUPLICATE_ENTRY": "이미 존재하는 항목입니다",
+    "EXPIRED_TOKEN": "만료된 토큰입니다",
+    "INVALID_TOKEN": "유효하지 않은 토큰입니다",
+    "FILE_TOO_LARGE": "파일 크기가 너무 큽니다",
+    "INVALID_FILE_TYPE": "지원하지 않는 파일 형식입니다",
+    "TRAVEL_EXPIRED": "만료된 여행입니다",
+    "PLANET_FULL": "채팅방이 가득 찼습니다",
+    "ALREADY_JOINED": "이미 참여중입니다",
+    "NOT_MEMBER": "멤버가 아닙니다",
+    "MUTED_USER": "음소거된 사용자입니다"
+  },
+  "success": {
+    "LOGIN_SUCCESS": "로그인 성공",
+    "LOGOUT_SUCCESS": "로그아웃 되었습니다",
+    "REGISTER_SUCCESS": "가입이 완료되었습니다",
+    "UPDATE_SUCCESS": "업데이트가 완료되었습니다",
+    "DELETE_SUCCESS": "삭제가 완료되었습니다",
+    "CREATE_SUCCESS": "생성이 완료되었습니다",
+    "UPLOAD_SUCCESS": "업로드가 완료되었습니다",
+    "JOIN_SUCCESS": "참여가 완료되었습니다",
+    "LEAVE_SUCCESS": "나가기가 완료되었습니다",
+    "MESSAGE_SENT": "메시지가 전송되었습니다",
+    "REPORT_SUBMITTED": "신고가 접수되었습니다"
+  },
+  "notifications": {
+    "NEW_MESSAGE": "새 메시지가 도착했습니다",
+    "NEW_MEMBER": "새 멤버가 참여했습니다",
+    "MEMBER_LEFT": "멤버가 나갔습니다",
+    "TRAVEL_STARTING": "여행이 곧 시작됩니다",
+    "TRAVEL_ENDING": "여행이 곧 종료됩니다",
+    "ANNOUNCEMENT": "공지사항이 있습니다",
+    "SYSTEM_MESSAGE": "시스템 메시지"
+  },
+  "validation": {
+    "REQUIRED_FIELD": "필수 입력 항목입니다",
+    "MIN_LENGTH": "최소 {{min}}자 이상 입력해주세요",
+    "MAX_LENGTH": "최대 {{max}}자까지 입력 가능합니다",
+    "INVALID_EMAIL": "올바른 이메일 주소를 입력해주세요",
+    "INVALID_PHONE": "올바른 전화번호를 입력해주세요",
+    "INVALID_DATE": "올바른 날짜를 입력해주세요",
+    "PAST_DATE": "과거 날짜는 선택할 수 없습니다",
+    "FUTURE_DATE": "미래 날짜를 선택해주세요",
+    "INVALID_URL": "올바른 URL을 입력해주세요",
+    "PASSWORD_MISMATCH": "비밀번호가 일치하지 않습니다",
+    "WEAK_PASSWORD": "더 강력한 비밀번호를 사용해주세요"
+  }
+}

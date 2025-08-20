@@ -131,12 +131,12 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async del(key: string): Promise<number> {
+  async del(...keys: string[]): Promise<number> {
     if (!this.checkConnection()) return 0;
     try {
-      return await this.redis.del(key);
+      return await this.redis.del(...keys);
     } catch (_error) {
-      this.logger.error(`Redis DEL error for key ${key}:`, _error.message);
+      this.logger.error(`Redis DEL error for keys ${keys.join(', ')}:`, _error.message);
       return 0;
     }
   }
@@ -345,6 +345,59 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         `Failed to get keys with pattern ${pattern}: ${_error.message}`,
       );
       return [];
+    }
+  }
+
+  /**
+   * keys 메서드 별칭 (호환성)
+   */
+  async keys(pattern: string): Promise<string[]> {
+    return this.getKeys(pattern);
+  }
+
+  /**
+   * info 메서드 별칭 (호환성)
+   */
+  async info(section?: string): Promise<string> {
+    if (!this.checkConnection()) return '';
+    try {
+      return section ? await this.redis.info(section) : await this.redis.info();
+    } catch (_error) {
+      this.logger.warn(`Failed to get Redis info: ${_error.message}`);
+      return '';
+    }
+  }
+
+  /**
+   * Set 자료구조 작업
+   */
+  async sadd(key: string, ...members: string[]): Promise<number> {
+    if (!this.checkConnection()) return 0;
+    try {
+      return await this.redis.sadd(key, ...members);
+    } catch (_error) {
+      this.logger.error(`Redis SADD error for key ${key}:`, _error.message);
+      return 0;
+    }
+  }
+
+  async smembers(key: string): Promise<string[]> {
+    if (!this.checkConnection()) return [];
+    try {
+      return await this.redis.smembers(key);
+    } catch (_error) {
+      this.logger.error(`Redis SMEMBERS error for key ${key}:`, _error.message);
+      return [];
+    }
+  }
+
+  async srem(key: string, ...members: string[]): Promise<number> {
+    if (!this.checkConnection()) return 0;
+    try {
+      return await this.redis.srem(key, ...members);
+    } catch (_error) {
+      this.logger.error(`Redis SREM error for key ${key}:`, _error.message);
+      return 0;
     }
   }
 }
