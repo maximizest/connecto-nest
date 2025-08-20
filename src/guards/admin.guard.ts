@@ -30,19 +30,30 @@ export class AdminGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<Request>();
-    const payload = (request as any).user as CurrentUserData;
+    
+    // AuthGuard에서 이미 조회한 사용자 엔티티 재사용
+    const user = (request as any).userEntity as User;
 
-    // 데이터베이스에서 사용자 role 확인
-    const user = await User.findOne({
-      where: { id: payload.id },
-      select: ['id', 'email', 'role'],
-    });
-
-    if (!user) {
-      throw new ForbiddenException('사용자를 찾을 수 없습니다');
+    // 사용자 정보가 없거나 role이 없는 경우만 재조회
+    if (!user || !user.role) {
+      const payload = (request as any).user as CurrentUserData;
+      const dbUser = await User.findOne({
+        where: { id: payload.id },
+        select: ['id', 'email', 'role'],
+      });
+      
+      if (!dbUser) {
+        throw new ForbiddenException('사용자를 찾을 수 없습니다');
+      }
+      
+      if (dbUser.role !== UserRole.ADMIN) {
+        throw new ForbiddenException('관리자 권한이 필요합니다');
+      }
+      
+      return true;
     }
 
-    // ADMIN 역할 확인
+    // 캐시된 사용자 정보에서 ADMIN 역할 확인
     if (user.role !== UserRole.ADMIN) {
       throw new ForbiddenException('관리자 권한이 필요합니다');
     }

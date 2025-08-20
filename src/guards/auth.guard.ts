@@ -21,11 +21,15 @@ import { TokenBlacklistService } from '../modules/auth/services/token-blacklist.
 @Injectable()
 export class AuthGuard implements CanActivate {
   private readonly logger = new Logger(AuthGuard.name);
+  private readonly jwtSecret: string;
 
   constructor(
     private readonly jwtService: JwtService,
     private readonly tokenBlacklistService: TokenBlacklistService,
-  ) {}
+  ) {
+    // JWT secret을 한 번만 읽어서 캐싱
+    this.jwtSecret = process.env.JWT_SECRET || '';
+  }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -37,25 +41,11 @@ export class AuthGuard implements CanActivate {
         throw new UnauthorizedException('인증 토큰이 없습니다.');
       }
 
-      // 2. 블랙리스트 확인 (빠른 Redis 조회)
-      const isBlacklisted =
-        await this.tokenBlacklistService.isTokenBlacklisted(token);
-      if (isBlacklisted) {
-        const blacklistInfo =
-          await this.tokenBlacklistService.getBlacklistInfo(token);
-        this.logger.warn(
-          `Blacklisted token used: reason=${blacklistInfo?.reason}, userId=${blacklistInfo?.userId}`,
-        );
-        throw new UnauthorizedException(
-          '무효화된 토큰입니다. 다시 로그인해주세요.',
-        );
-      }
-
-      // 3. JWT 토큰 검증
+      // 2. JWT 토큰 검증 (블랙리스트 확인보다 먼저 - 잘못된 토큰은 Redis 조회 불필요)
       let payload: CurrentUserData;
       try {
         payload = await this.jwtService.verifyAsync<CurrentUserData>(token, {
-          secret: process.env.JWT_SECRET,
+          secret: this.jwtSecret,
         });
       } catch (jwtError) {
         if (jwtError.name === 'TokenExpiredError') {
@@ -66,34 +56,53 @@ export class AuthGuard implements CanActivate {
         throw jwtError;
       }
 
-      // 4. 사용자 전체 세션 블랙리스트 확인
-      const isUserBlacklisted =
-        await this.tokenBlacklistService.isUserBlacklisted(payload.id);
-      if (isUserBlacklisted) {
-        const userBlacklistInfo =
-          await this.tokenBlacklistService.getUserBlacklistInfo(payload.id);
-        this.logger.warn(
-          `User blacklisted: userId=${payload.id}, reason=${userBlacklistInfo?.reason}`,
+      // 3. 병렬 처리: 블랙리스트 확인과 사용자 정보 조회를 동시에 실행
+      const [isTokenBlacklisted, isUserBlacklisted, user] = await Promise.all([
+        this.tokenBlacklistService.isTokenBlacklisted(token),
+        this.tokenBlacklistService.isUserBlacklisted(payload.id),
+        User.findOne({
+          where: { id: payload.id },
+          select: [
+            'id',
+            'email',
+            'name',
+            'role',
+            'isBanned',
+            'bannedAt',
+            'bannedReason',
+          ],
+        }),
+      ]);
+
+      // 4. 토큰 블랙리스트 확인
+      if (isTokenBlacklisted) {
+        // 프로덕션에서는 로깅 최소화
+        if (process.env.NODE_ENV !== 'production') {
+          const blacklistInfo = await this.tokenBlacklistService.getBlacklistInfo(token);
+          this.logger.warn(
+            `Blacklisted token used: reason=${blacklistInfo?.reason}, userId=${blacklistInfo?.userId}`,
+          );
+        }
+        throw new UnauthorizedException(
+          '무효화된 토큰입니다. 다시 로그인해주세요.',
         );
+      }
+
+      // 5. 사용자 세션 블랙리스트 확인
+      if (isUserBlacklisted) {
+        // 프로덕션에서는 로깅 최소화
+        if (process.env.NODE_ENV !== 'production') {
+          const userBlacklistInfo = await this.tokenBlacklistService.getUserBlacklistInfo(payload.id);
+          this.logger.warn(
+            `User blacklisted: userId=${payload.id}, reason=${userBlacklistInfo?.reason}`,
+          );
+        }
         throw new UnauthorizedException(
           '세션이 무효화되었습니다. 다시 로그인해주세요.',
         );
       }
 
-      // 5. 사용자 정보 조회 및 차단 상태 확인
-      const user = await User.findOne({
-        where: { id: payload.id },
-        select: [
-          'id',
-          'email',
-          'name',
-          'role',
-          'isBanned',
-          'bannedAt',
-          'bannedReason',
-        ],
-      });
-
+      // 6. 사용자 존재 및 차단 상태 확인
       if (!user) {
         throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
       }
@@ -107,21 +116,10 @@ export class AuthGuard implements CanActivate {
         );
       }
 
-      // 6. 요청 객체에 사용자 정보 추가
+      // 7. 요청 객체에 사용자 정보 추가 (최소한의 정보만)
       (request as any).user = payload;
+      (request as any).userEntity = user; // AdminGuard가 재조회하지 않도록 저장
       (request as any).token = token;
-      (request as any).tokenPayload = payload;
-
-      // 7. 추가 메타데이터 저장 (로깅 및 감사용)
-      (request as any).authMetadata = {
-        userId: user.id,
-        userRole: user.role,
-        tokenIssuedAt: new Date((payload as any).iat * 1000),
-        tokenExpiresAt: new Date((payload as any).exp * 1000),
-        requestTime: new Date(),
-        ipAddress: request.ip,
-        userAgent: request.get('user-agent'),
-      };
 
       return true;
     } catch (_error) {
