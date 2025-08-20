@@ -1,5 +1,6 @@
 import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
 import {
+  AfterInsert,
   Column,
   Entity,
   Index,
@@ -10,6 +11,9 @@ import {
 } from 'typeorm';
 import { BaseActiveRecord } from '../../common/entities/base-active-record.entity';
 import { Accommodation } from '../accommodation/accommodation.entity';
+import { Planet } from '../planet/planet.entity';
+import { PlanetType } from '../planet/enums/planet-type.enum';
+import { PlanetStatus } from '../planet/enums/planet-status.enum';
 import { TravelStatus } from './enums/travel-status.enum';
 import { TravelVisibility } from './enums/travel-visibility.enum';
 
@@ -327,5 +331,40 @@ export class Travel extends BaseActiveRecord {
       isWarning: this.isExpiryWarning(),
       endDate: this.endDate,
     };
+  }
+
+  /**
+   * Travel 생성 후 자동으로 기본 Planet 생성
+   * - 여행 참여자 단체 채팅 1개
+   * - 공지사항 채팅 1개
+   */
+  @AfterInsert()
+  async createDefaultPlanets(): Promise<void> {
+    try {
+      // 1. 여행 참여자 단체 채팅 생성
+      const groupPlanet = Planet.create({
+        travelId: this.id,
+        name: `${this.name} 참여자`,
+        description: `${this.name} 여행 참여자 단체 채팅방`,
+        type: PlanetType.GROUP,
+        status: PlanetStatus.ACTIVE,
+      });
+      await groupPlanet.save();
+
+      // 2. 공지사항 채팅 생성
+      const announcementPlanet = Planet.create({
+        travelId: this.id,
+        name: `${this.name} 공지사항`,
+        description: `${this.name} 여행 공지사항`,
+        type: PlanetType.ANNOUNCEMENT,
+        status: PlanetStatus.ACTIVE,
+      });
+      await announcementPlanet.save();
+
+      console.log(`Default planets created for Travel ${this.id}: Group and Announcement`);
+    } catch (error) {
+      console.error(`Failed to create default planets for Travel ${this.id}:`, error);
+      // Travel 생성은 성공했으므로 에러를 throw하지 않고 로그만 남김
+    }
   }
 }
