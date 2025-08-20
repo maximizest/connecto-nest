@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CrudService } from '@foryourdev/nestjs-crud';
@@ -20,17 +20,4 @@ export class MissionService extends CrudService<Mission> {
     super(repository);
   }
 
-  /**
-   * 미션 활성화/비활성화 (특수 비즈니스 로직 보존)
-   */
-  async updateMissionStatus(missionId: number, isActive: boolean) {
-    const mission = await Mission.findById(missionId);
-
-    if (!mission) {
-      throw new NotFoundException('미션을 찾을 수 없습니다.');
-    }
-
-    mission.active = isActive;
-    return await mission.save();
-  }
 }

@@ -41,8 +41,7 @@ import { WebSocketBroadcastService } from './services/websocket-broadcast.servic
 import { WebSocketRoomService } from './services/websocket-room.service';
 import { DeleteMessageDto } from './dto/delete-message.dto';
 import { EditMessageDto } from './dto/edit-message.dto';
-import { JoinRoomDto } from './dto/join-room.dto';
-import { LeaveRoomDto } from './dto/leave-room.dto';
+import { JoinRoomDto, LeaveRoomDto } from '../../common/dto/room.dto';
 import { MarkAllReadDto } from './dto/mark-all-read.dto';
 import { MarkMessageReadDto } from './dto/mark-message-read.dto';
 import { MarkMultipleReadDto } from './dto/mark-multiple-read.dto';

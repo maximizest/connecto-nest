@@ -3,7 +3,6 @@ import {
   BeforeCreate,
   BeforeUpdate,
   Crud,
-  crudResponse,
 } from '@foryourdev/nestjs-crud';
 import { Controller, Logger, UseGuards } from '@nestjs/common';
 import { getCurrentUserIdFromContext } from '../../../../common/helpers/current-user.helper';

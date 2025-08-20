@@ -100,10 +100,6 @@ export class CrudMetadataService {
    */
   private findCrudMetadataDynamically(controller: ControllerWrapper): any {
     const allKeys = Reflect.getMetadataKeys(controller.metatype);
-    console.log(
-      `Controller ${controller.metatype.name} metadata keys:`,
-      allKeys,
-    );
 
     const crudKey = allKeys.find(
       (key) => typeof key === 'string' && key.toLowerCase().includes('crud'),
@@ -111,7 +107,6 @@ export class CrudMetadataService {
 
     if (crudKey) {
       const metadata = Reflect.getMetadata(crudKey, controller.metatype);
-      console.log(`Found CRUD metadata with key "${crudKey}":`, metadata);
       return metadata;
     }
 

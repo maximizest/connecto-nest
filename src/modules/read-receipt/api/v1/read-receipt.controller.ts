@@ -1,9 +1,7 @@
 import {
   AfterCreate,
   BeforeCreate,
-  BeforeUpdate,
   Crud,
-  crudResponse,
 } from '@foryourdev/nestjs-crud';
 import {
   Controller,
@@ -286,20 +284,6 @@ export class ReadReceiptController {
     this.logger.log(
       `Read receipt ${context.isUpdate ? 'updated' : 'created'}: messageId=${entity.messageId}, userId=${user.id}`,
     );
-  }
-
-  /**
-   * 읽음 영수증 수정 전 검증
-   */
-  @BeforeUpdate()
-  async beforeUpdate(
-    entity: MessageReadReceipt,
-    context: any,
-  ): Promise<MessageReadReceipt> {
-    // 읽음 영수증은 isRead와 metadata만 수정 가능
-    // 다른 필드 변경 시도는 무시됨
-
-    return entity;
   }
 
 
