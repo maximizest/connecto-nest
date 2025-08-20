@@ -33,11 +33,12 @@ import { ReadReceiptService } from '../../read-receipt.service';
  * @foryourdev/nestjs-crud를 활용하여 표준 RESTful API를 제공합니다.
  *
  * 주요 기능:
- * - 개별 메시지 읽음 처리
- * - 일괄 읽음 처리
+ * - 개별 메시지 읽음 처리: POST /read-receipts { messageId: 1 }
+ * - 일괄 읽음 처리 (native bulk): POST /read-receipts [{ messageId: 1 }, { messageId: 2 }]
  * - Planet별 읽지 않은 메시지 카운트
  * - 읽음 상태 통계 및 분석
  * - 실시간 읽음 상태 동기화
+ * - Upsert 로직으로 중복 방지
  */
 @Controller({ path: 'read-receipts', version: '1' })
 @Crud({
@@ -60,7 +61,6 @@ import { ReadReceiptService } from '../../read-receipt.service';
   // Body에서 허용할 파라미터 (생성/수정 시)
   allowedParams: [
     'messageId',
-    'messageIds', // bulk 작업용
     'userId',
     'planetId',
     'isRead',
@@ -105,30 +105,64 @@ export class ReadReceiptController {
 
   /**
    * 읽음 영수증 생성 전 검증 및 전처리
-   * 단일 및 복수 메시지 처리 지원
+   * nestjs-crud의 native bulk support 활용
+   * - 단일 객체: { messageId: 1 }
+   * - 배열: [{ messageId: 1 }, { messageId: 2 }]
    */
   @BeforeCreate()
   async beforeCreate(body: any, context: any): Promise<any> {
     const user: User = context.request?.user;
-
-    // 사용자 정보 설정
-    body.userId = user.id;
-
-    // 복수 메시지 처리 (messageIds 배열)
-    if (body.messageIds && Array.isArray(body.messageIds)) {
-      const receipts = await this.crudService.markMultipleMessagesAsRead(
-        body.messageIds,
-        user.id,
-        {
-          deviceType: body.deviceType,
-          userAgent: context.request?.headers?.['user-agent'],
-          readSource: body.readSource || 'manual',
-          sessionId: body.sessionId,
-        },
-      );
-
-      // 실시간 동기화 이벤트
-      receipts.forEach((receipt) => {
+    
+    // nestjs-crud가 배열을 전달하는 경우 (bulk creation)
+    if (Array.isArray(body)) {
+      const processedReceipts: any[] = [];
+      const updatedReceipts: MessageReadReceipt[] = [];
+      
+      for (const item of body) {
+        // 각 아이템에 사용자 정보 추가
+        item.userId = user.id;
+        
+        // 메시지 접근 권한 검증 및 planetId 설정
+        const message = await this.validateMessageAccess(item.messageId, user.id);
+        item.planetId = message.planetId;
+        
+        // 기존 읽음 확인 체크 (upsert 로직)
+        const existing = await MessageReadReceipt.findOne({
+          where: { messageId: item.messageId, userId: user.id },
+        });
+        
+        if (existing) {
+          // 이미 읽음 처리된 경우 업데이트
+          existing.readAt = new Date();
+          existing.deviceType = item.deviceType || existing.deviceType;
+          existing.metadata = {
+            ...existing.metadata,
+            ...item.metadata,
+            lastReadSource: item.readSource || 'manual',
+            lastReadDuration: item.readDuration,
+            lastSessionId: item.sessionId,
+            updatedAt: new Date().toISOString(),
+          };
+          
+          updatedReceipts.push(await existing.save());
+        } else {
+          // 새 읽음 확인 생성을 위한 데이터 준비
+          item.isRead = true;
+          item.readAt = new Date();
+          item.metadata = {
+            ...item.metadata,
+            readSource: item.readSource || 'manual',
+            readDuration: item.readDuration,
+            sessionId: item.sessionId,
+            createdAt: new Date().toISOString(),
+          };
+          
+          processedReceipts.push(item);
+        }
+      }
+      
+      // 업데이트된 엔티티들에 대한 이벤트 발생
+      updatedReceipts.forEach((receipt) => {
         this.eventEmitter.emit('message.read', {
           messageId: receipt.messageId,
           planetId: receipt.planetId,
@@ -136,23 +170,22 @@ export class ReadReceiptController {
           userName: user.name,
           readAt: receipt.readAt,
           deviceType: receipt.deviceType,
-          isBatchRead: true,
+          isUpdate: true,
         });
       });
-
-      // 배치 작업 완료 후 중단
-      context.skipCreate = true;
-      context.existingEntity = receipts[0]; // 첫 번째 영수증 반환
-      context.batchResult = receipts;
-
+      
       this.logger.log(
-        `Batch read receipts created: count=${receipts.length}, userId=${user.id}`,
+        `Bulk read receipts processing: new=${processedReceipts.length}, updated=${updatedReceipts.length}, userId=${user.id}`,
       );
-
-      return null;
+      
+      // 새로 생성할 데이터만 반환 (nestjs-crud가 bulk create 진행)
+      return processedReceipts.length > 0 ? processedReceipts : null;
     }
-
-    // 단일 메시지 처리
+    
+    // 단일 객체 처리
+    body.userId = user.id;
+    
+    // 메시지 접근 권한 검증
     const message = await this.validateMessageAccess(body.messageId, user.id);
     body.planetId = message.planetId;
 
@@ -207,10 +240,11 @@ export class ReadReceiptController {
   /**
    * 읽음 영수증 생성/업데이트 후 처리
    * 이벤트 발행 및 메시지 카운트 업데이트
+   * 단일 및 bulk 생성 모두 처리
    */
   @AfterCreate()
   async afterCreate(
-    entity: MessageReadReceipt | null,
+    entity: MessageReadReceipt | MessageReadReceipt[] | null,
     context: any,
   ): Promise<void> {
     // upsert로 업데이트된 경우
@@ -221,8 +255,28 @@ export class ReadReceiptController {
     if (!entity) return;
 
     const user: User = context.request?.user;
+    
+    // 배열 처리 (bulk creation)
+    if (Array.isArray(entity)) {
+      entity.forEach((receipt) => {
+        this.eventEmitter.emit('message.read', {
+          messageId: receipt.messageId,
+          planetId: receipt.planetId,
+          userId: user.id,
+          userName: user.name,
+          readAt: receipt.readAt,
+          deviceType: receipt.deviceType,
+          isBulkCreate: true,
+        });
+      });
+      
+      this.logger.log(
+        `Bulk read receipts created: count=${entity.length}, userId=${user.id}`,
+      );
+      return;
+    }
 
-    // 실시간 읽음 상태 동기화 이벤트 발생
+    // 단일 엔티티 처리
     this.eventEmitter.emit('message.read', {
       messageId: entity.messageId,
       planetId: entity.planetId,
