@@ -1,6 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { CrudService } from '@foryourdev/nestjs-crud';
 import {
   Report,
@@ -14,11 +12,8 @@ import { User } from '../user/user.entity';
 export class ReportService extends CrudService<Report> {
   private readonly logger = new Logger(ReportService.name);
 
-  constructor(
-    @InjectRepository(Report)
-    private readonly reportRepository: Repository<Report>,
-  ) {
-    super(reportRepository);
+  constructor() {
+    super(Report.getRepository());
   }
 
   /**

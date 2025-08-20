@@ -1,16 +1,15 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlanetController } from './api/v1/planet.controller';
 import { PlanetService } from './planet.service';
 import { Planet } from './planet.entity';
 
 /**
- * Planet 모듈 - Hybrid Pattern (CrudService + Active Record)
+ * Planet 모듈 - Active Record Pattern
  *
- * CrudService를 확장하면서 Planet 엔티티의 Active Record 메서드도 활용합니다.
+ * TypeOrmModule.forFeature 없이 Active Record 패턴 사용
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([Planet])],
+  imports: [],
   controllers: [PlanetController],
   providers: [PlanetService],
   exports: [PlanetService],

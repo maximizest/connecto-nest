@@ -1,6 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { CrudService } from '@foryourdev/nestjs-crud';
 import { Message } from '../message/message.entity';
 import { PlanetUser } from '../planet-user/planet-user.entity';
@@ -17,11 +15,8 @@ import { PlanetReadStatus } from './types/planet-read-status.interface';
 export class ReadReceiptService extends CrudService<MessageReadReceipt> {
   private readonly logger = new Logger(ReadReceiptService.name);
 
-  constructor(
-    @InjectRepository(MessageReadReceipt)
-    private readonly readReceiptRepository: Repository<MessageReadReceipt>,
-  ) {
-    super(readReceiptRepository);
+  constructor() {
+    super(MessageReadReceipt.getRepository());
   }
 
   /**

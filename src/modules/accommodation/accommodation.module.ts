@@ -1,16 +1,15 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccommodationService } from './accommodation.service';
 import { AccommodationController } from './api/v1/accommodation.controller';
 import { Accommodation } from './accommodation.entity';
 
 /**
- * Accommodation 모듈 - Hybrid Pattern (CrudService + Active Record)
+ * Accommodation 모듈 - Active Record Pattern
  *
- * CrudService를 확장하면서 Accommodation 엔티티의 Active Record 메서드도 활용합니다.
+ * TypeOrmModule.forFeature 없이 Active Record 패턴 사용
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([Accommodation])],
+  imports: [],
   controllers: [AccommodationController],
   providers: [AccommodationService],
   exports: [AccommodationService],

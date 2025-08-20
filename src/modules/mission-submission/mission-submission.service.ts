@@ -3,19 +3,14 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { CrudService } from '@foryourdev/nestjs-crud';
 import { MissionSubmission } from './mission-submission.entity';
 import { SubmissionStatus } from '../mission/enums/submission-status.enum';
 
 @Injectable()
 export class MissionSubmissionService extends CrudService<MissionSubmission> {
-  constructor(
-    @InjectRepository(MissionSubmission)
-    private readonly missionSubmissionRepository: Repository<MissionSubmission>,
-  ) {
-    super(missionSubmissionRepository);
+  constructor() {
+    super(MissionSubmission.getRepository());
   }
 
   /**

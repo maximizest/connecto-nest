@@ -1,6 +1,4 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { CrudService } from '@foryourdev/nestjs-crud';
 import { StorageService } from '../storage/storage.service';
 import { FileUpload } from './file-upload.entity';
@@ -12,11 +10,9 @@ export class FileUploadService extends CrudService<FileUpload> {
   private readonly logger = new Logger(FileUploadService.name);
 
   constructor(
-    @InjectRepository(FileUpload)
-    private readonly fileUploadRepository: Repository<FileUpload>,
     private readonly storageService: StorageService,
   ) {
-    super(fileUploadRepository);
+    super(FileUpload.getRepository());
   }
 
   /**

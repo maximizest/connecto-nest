@@ -1,16 +1,15 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { TravelController } from './api/v1/travel.controller';
 import { TravelService } from './travel.service';
 import { Travel } from './travel.entity';
 
 /**
- * Travel 모듈 - Hybrid Pattern (CrudService + Active Record)
+ * Travel 모듈 - Active Record Pattern
  *
- * CrudService를 확장하면서 Travel 엔티티의 Active Record 메서드도 활용합니다.
+ * TypeOrmModule.forFeature 없이 Active Record 패턴 사용
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([Travel])],
+  imports: [],
   controllers: [TravelController],
   providers: [TravelService],
   exports: [TravelService],

@@ -1,4 +1,5 @@
-import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
+import { Logger } from '@nestjs/common';
+import { IsDateString, IsEnum, IsOptional, IsString, MinLength, MaxLength, IsUrl, IsInt, Min } from 'class-validator';
 import {
   AfterInsert,
   Column,
@@ -22,6 +23,8 @@ import { TravelVisibility } from './enums/travel-visibility.enum';
 @Index(['status', 'endDate']) // 상태별 만료일 조회
 @Index(['visibility', 'status']) // 공개 설정별 상태 조회
 export class Travel extends BaseActiveRecord {
+  private static readonly logger = new Logger(Travel.name);
+
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -34,6 +37,8 @@ export class Travel extends BaseActiveRecord {
     comment: '여행 이름',
   })
   @IsString()
+  @MinLength(2)
+  @MaxLength(100)
   name: string;
 
   @Column({
@@ -43,6 +48,7 @@ export class Travel extends BaseActiveRecord {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   description?: string;
 
   @Column({
@@ -51,7 +57,7 @@ export class Travel extends BaseActiveRecord {
     comment: '여행 이미지 URL',
   })
   @IsOptional()
-  @IsString()
+  @IsUrl()
   imageUrl?: string;
 
   /**
@@ -91,6 +97,9 @@ export class Travel extends BaseActiveRecord {
    * 숙박 업소 관계
    */
   @Column({ nullable: true })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
   accommodationId: number | null;
 
   @ManyToOne(() => Accommodation, (accommodation) => accommodation.travels, {
@@ -122,6 +131,8 @@ export class Travel extends BaseActiveRecord {
   })
   @IsOptional()
   @IsString()
+  @MinLength(6)
+  @MaxLength(20)
   @Index() // 초대 코드 검색 최적화
   inviteCode?: string;
 
@@ -337,33 +348,36 @@ export class Travel extends BaseActiveRecord {
    * Travel 생성 후 자동으로 기본 Planet 생성
    * - 여행 참여자 단체 채팅 1개
    * - 공지사항 채팅 1개
+   * 
+   * N+1 쿼리 문제 해결: 벌크 insert 사용
    */
   @AfterInsert()
   async createDefaultPlanets(): Promise<void> {
     try {
-      // 1. 여행 참여자 단체 채팅 생성
-      const groupPlanet = Planet.create({
-        travelId: this.id,
-        name: `${this.name} 참여자`,
-        description: `${this.name} 여행 참여자 단체 채팅방`,
-        type: PlanetType.GROUP,
-        status: PlanetStatus.ACTIVE,
-      });
-      await groupPlanet.save();
+      // 벌크 insert로 N+1 쿼리 문제 해결
+      const planets = [
+        {
+          travelId: this.id,
+          name: `${this.name} 참여자`,
+          description: `${this.name} 여행 참여자 단체 채팅방`,
+          type: PlanetType.GROUP,
+          status: PlanetStatus.ACTIVE,
+        },
+        {
+          travelId: this.id,
+          name: `${this.name} 공지사항`,
+          description: `${this.name} 여행 공지사항`,
+          type: PlanetType.ANNOUNCEMENT,
+          status: PlanetStatus.ACTIVE,
+        }
+      ];
+      
+      // 단일 쿼리로 처리
+      await Planet.insert(planets);
 
-      // 2. 공지사항 채팅 생성
-      const announcementPlanet = Planet.create({
-        travelId: this.id,
-        name: `${this.name} 공지사항`,
-        description: `${this.name} 여행 공지사항`,
-        type: PlanetType.ANNOUNCEMENT,
-        status: PlanetStatus.ACTIVE,
-      });
-      await announcementPlanet.save();
-
-      console.log(`Default planets created for Travel ${this.id}: Group and Announcement`);
+      Travel.logger.log(`Default planets created for Travel ${this.id}: Group and Announcement`);
     } catch (error) {
-      console.error(`Failed to create default planets for Travel ${this.id}:`, error);
+      Travel.logger.error(`Failed to create default planets for Travel ${this.id}:`, error.stack);
       // Travel 생성은 성공했으므로 에러를 throw하지 않고 로그만 남김
     }
   }
