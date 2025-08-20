@@ -12,7 +12,6 @@ import {
   HttpCode,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { EnhancedAuthGuard } from '../../../../guards/enhanced-auth.guard';
 import { AdminGuard } from '../../../../guards/admin.guard';
 import { User } from '../../../user/user.entity';
 import { SessionManagerService } from '../../../auth/services/session-manager.service';
@@ -27,7 +26,7 @@ import { CurrentUser } from '../../../../common/decorators/current-user.decorato
  * 강제 로그아웃, 사용자 차단, 세션 관리 등
  */
 @Controller({ path: 'admin', version: '1' })
-@UseGuards(EnhancedAuthGuard, AdminGuard)
+@UseGuards(AdminGuard)
 export class AdminController {
   private readonly logger = new Logger(AdminController.name);
 
