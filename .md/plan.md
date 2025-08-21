@@ -64,8 +64,8 @@ DROP INDEX IF EXISTS idx_messages_searchable_text_gin;
 
 2. **검색 DTO 생성**
 ```typescript
-// src/modules/message/dto/search-message.dto.ts
-export class SearchMessageDto {
+// src/modules/message/dto/search.dto.ts
+export class SearchDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(2)
@@ -97,7 +97,7 @@ export class SearchMessageDto {
 @Get('search')
 @UseGuards(JwtAuthGuard)
 async search(
-  @Query() searchDto: SearchMessageDto,
+  @Query() searchDto: SearchDto,
   @CurrentUser() user: User,
 ) {
   return this.messageService.search(searchDto, user.id);
@@ -107,7 +107,7 @@ async search(
 4. **검색 메서드 구현 (Active Record 패턴)**
 ```typescript
 // src/modules/message/message.entity.ts에 추가
-static async search(searchDto: SearchMessageDto, userId: number) {
+static async search(searchDto: SearchDto, userId: number) {
   const query = this.createQueryBuilder('message')
     .leftJoinAndSelect('message.sender', 'sender')
     .leftJoinAndSelect('message.planet', 'planet')
@@ -155,7 +155,7 @@ static async search(searchDto: SearchMessageDto, userId: number) {
 }
 
 // src/modules/message/message.service.ts
-async search(searchDto: SearchMessageDto, userId: number) {
+async search(searchDto: SearchDto, userId: number) {
   // Active Record 패턴 - Entity의 static 메서드 호출
   return Message.search(searchDto, userId);
 }
@@ -168,7 +168,7 @@ yarn typeorm migration:run
 
 **구현 파일:**
 - `migration/[timestamp]-AddMessageSearchableTextGinIndex.ts`: 새 마이그레이션 생성
-- `src/modules/message/dto/search-message.dto.ts`: 검색 DTO 생성
+- `src/modules/message/dto/search.dto.ts`: 검색 DTO 생성
 - `src/modules/message/api/v1/message.controller.ts`: 검색 엔드포인트 추가
 - `src/modules/message/message.entity.ts`: Active Record 검색 메서드 추가
 - `src/modules/message/message.service.ts`: Entity 메서드 호출
