@@ -1,5 +1,7 @@
 # 엔티티 관계도 (Entity Relationship Diagram)
 
+> 최종 업데이트: 2025-08-21
+
 ## 전체 ERD
 
 ```mermaid
@@ -8,12 +10,20 @@ erDiagram
     User ||--o{ TravelUser : "participates"
     User ||--o{ PlanetUser : "joins"
     User ||--o{ Message : "sends"
-    User ||--o{ MessageReadReceipt : "reads"
+    User ||--o{ ReadReceipt : "reads"
     User ||--o{ Notification : "receives"
     User ||--o{ FileUpload : "uploads"
+    User ||--o{ PushToken : "has tokens"
+    User ||--o{ Report : "reports"
+    User ||--o{ Report : "reported"
+    User ||--o{ MissionSubmission : "submits"
     
+    Accommodation ||--o{ Travel : "hosts"
+    
+    Travel }o--o| Accommodation : "stays at"
     Travel ||--o{ TravelUser : "has members"
     Travel ||--o{ Planet : "contains"
+    Travel ||--o{ MissionTravel : "has missions"
     
     TravelUser }o--|| User : "member"
     TravelUser }o--|| Travel : "belongs to"
@@ -21,23 +31,44 @@ erDiagram
     Planet }o--|| Travel : "belongs to"
     Planet ||--o{ PlanetUser : "has members"
     Planet ||--o{ Message : "contains"
-    Planet ||--o{ MessageReadReceipt : "tracks"
+    Planet ||--o{ ReadReceipt : "tracks"
+    Planet ||--o{ MissionTravel : "receives missions"
     
     PlanetUser }o--|| User : "member"
     PlanetUser }o--|| Planet : "belongs to"
     
     Message }o--|| User : "sender"
     Message }o--|| Planet : "in"
-    Message ||--o{ MessageReadReceipt : "has receipts"
+    Message ||--o{ ReadReceipt : "has receipts"
     Message ||--o| Message : "replies to"
+    Message ||--o{ Report : "reported"
     
-    MessageReadReceipt }o--|| User : "reader"
-    MessageReadReceipt }o--|| Message : "for"
-    MessageReadReceipt }o--|| Planet : "in"
+    ReadReceipt }o--|| User : "reader"
+    ReadReceipt }o--|| Message : "for"
+    ReadReceipt }o--|| Planet : "in"
     
     Notification }o--|| User : "recipient"
     
     FileUpload }o--|| User : "uploader"
+    
+    PushToken }o--|| User : "belongs to"
+    
+    Report }o--|| User : "reporter"
+    Report }o--o| User : "reported user"
+    Report }o--o| Travel : "in travel"
+    Report }o--o| Planet : "in planet"
+    Report }o--o| Message : "about message"
+    
+    Mission ||--o{ MissionTravel : "assigned to"
+    Mission ||--o{ MissionSubmission : "submissions"
+    
+    MissionTravel }o--|| Mission : "mission"
+    MissionTravel }o--|| Travel : "travel"
+    MissionTravel }o--o| Planet : "target planet"
+    
+    MissionSubmission }o--|| Mission : "for mission"
+    MissionSubmission }o--|| User : "by user"
+    MissionSubmission }o--|| Travel : "in travel"
 ```
 
 ## 핵심 관계 설명
@@ -102,19 +133,19 @@ graph TB
     Message[Message<br/>메시지]
     User[User<br/>발신자]
     Planet[Planet<br/>채팅방]
-    MessageReadReceipt[MessageReadReceipt<br/>읽음 확인]
+    ReadReceipt[ReadReceipt<br/>읽음 확인]
     ReplyMessage[Message<br/>답장]
     
     User -->|작성| Message
     Message -->|속함| Planet
-    Message -->|읽음| MessageReadReceipt
+    Message -->|읽음| ReadReceipt
     Message -.->|답장| ReplyMessage
-    User -->|읽음| MessageReadReceipt
+    User -->|읽음| ReadReceipt
     
     style User fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#000
     style Planet fill:#e3f2fd,stroke:#0d47a1,stroke-width:2px,color:#000
     style Message fill:#e0f2f1,stroke:#004d40,stroke-width:2px,color:#000
-    style MessageReadReceipt fill:#fff8e1,stroke:#f57f17,stroke-width:2px,color:#000
+    style ReadReceipt fill:#fff8e1,stroke:#f57f17,stroke-width:2px,color:#000
     style ReplyMessage fill:#efebe9,stroke:#3e2723,stroke-width:2px,color:#000
 ```
 
@@ -123,17 +154,82 @@ graph TB
 graph TB
     User[User]
     Notification[Notification<br/>알림]
+    PushToken[PushToken<br/>푸시 토큰]
     FileUpload[FileUpload<br/>파일 업로드<br/>Cloudflare Media 지원]
     Message[Message]
     
     User -->|수신| Notification
+    User -->|등록| PushToken
     User -->|업로드| FileUpload
     FileUpload -.->|첨부| Message
+    PushToken -.->|전송| Notification
     
     style User fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#000
     style Notification fill:#ffebee,stroke:#b71c1c,stroke-width:2px,color:#000
+    style PushToken fill:#fff9c4,stroke:#f57f17,stroke-width:2px,color:#000
     style FileUpload fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000
     style Message fill:#e0f2f1,stroke:#004d40,stroke-width:2px,color:#000
+```
+
+### 6. 미션 시스템 (Mission System)
+```mermaid
+graph TB
+    Mission[Mission<br/>미션]
+    MissionTravel[MissionTravel<br/>미션 할당]
+    MissionSubmission[MissionSubmission<br/>미션 제출]
+    Travel[Travel<br/>여행]
+    Planet[Planet<br/>채팅방]
+    User[User<br/>사용자]
+    
+    Mission -->|할당| MissionTravel
+    MissionTravel -->|속함| Travel
+    MissionTravel -.->|전송| Planet
+    Mission -->|제출| MissionSubmission
+    User -->|제출| MissionSubmission
+    MissionSubmission -->|속함| Travel
+    
+    style Mission fill:#e8eaf6,stroke:#283593,stroke-width:2px,color:#000
+    style MissionTravel fill:#e0f7fa,stroke:#006064,stroke-width:2px,color:#000
+    style MissionSubmission fill:#fce4ec,stroke:#880e4f,stroke-width:2px,color:#000
+    style Travel fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000
+    style Planet fill:#e3f2fd,stroke:#0d47a1,stroke-width:2px,color:#000
+    style User fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#000
+```
+
+### 7. 신고 시스템 (Report System)
+```mermaid
+graph TB
+    User[User<br/>신고자]
+    Report[Report<br/>신고]
+    ReportedUser[User<br/>피신고자]
+    Travel[Travel]
+    Planet[Planet]
+    Message[Message]
+    
+    User -->|신고| Report
+    Report -.->|대상| ReportedUser
+    Report -.->|컨텍스트| Travel
+    Report -.->|컨텍스트| Planet
+    Report -.->|대상| Message
+    
+    style User fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#000
+    style Report fill:#ffccbc,stroke:#bf360c,stroke-width:2px,color:#000
+    style ReportedUser fill:#ffebee,stroke:#b71c1c,stroke-width:2px,color:#000
+    style Travel fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000
+    style Planet fill:#e3f2fd,stroke:#0d47a1,stroke-width:2px,color:#000
+    style Message fill:#e0f2f1,stroke:#004d40,stroke-width:2px,color:#000
+```
+
+### 8. 숙박 시설 관계 (Accommodation Relations)
+```mermaid
+graph LR
+    Accommodation[Accommodation<br/>숙박 시설]
+    Travel[Travel<br/>여행]
+    
+    Accommodation -->|1:N| Travel
+    
+    style Accommodation fill:#f1f8e9,stroke:#33691e,stroke-width:2px,color:#000
+    style Travel fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000
 ```
 
 ## 엔티티 상세 구조
@@ -193,6 +289,7 @@ graph TB
 | endDate | timestamp | 여행 종료 예정 날짜 (채팅 만료) | Not Null |
 | visibility | enum | 공개 설정 (PUBLIC/INVITE_ONLY) | Default: 'PUBLIC' |
 | inviteCode | string | 초대 코드 | Unique, Max Length: 20 |
+| accommodationId | int | 숙박 시설 ID | FK → Accommodation.id, Nullable |
 | createdAt | timestamp | 생성일시 | Not Null |
 | updatedAt | timestamp | 수정일시 | Not Null |
 
@@ -269,7 +366,7 @@ graph TB
 
 **복합 유니크 인덱스**: (planetId, userId)
 
-### MessageReadReceipt (메시지 읽음 확인)
+### ReadReceipt (메시지 읽음 확인)
 | 필드명 | 타입 | 설명 | 제약조건 |
 |--------|------|------|----------|
 | id | int | Primary Key | PK, Auto Increment |
@@ -420,6 +517,132 @@ graph TB
 - (userId, status): 사용자별 상태 조회 최적화
 - (status, createdAt): 상태별 시간순 조회
 
+### PushToken (푸시 토큰)
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|----------|
+| id | int | Primary Key | PK, Auto Increment |
+| userId | int | 사용자 ID | FK → User.id, Not Null |
+| token | string | FCM/APNS 토큰 | Not Null, Max Length: 500 |
+| platform | enum | 플랫폼 | PushTokenPlatform (ios/android/web), Not Null |
+| deviceId | string | 디바이스 ID | Not Null, Max Length: 255 |
+| deviceName | string | 디바이스 이름 | Max Length: 255 |
+| isActive | boolean | 활성화 여부 | Default: true |
+| failureCount | int | 전송 실패 횟수 | Default: 0 |
+| lastUsedAt | timestamp | 마지막 사용 시간 | |
+| createdAt | timestamp | 생성일시 | Not Null |
+| updatedAt | timestamp | 수정일시 | Not Null |
+
+**복합 유니크 인덱스**: (userId, deviceId)
+
+### Report (신고)
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|----------|
+| id | int | Primary Key | PK, Auto Increment |
+| reporterId | int | 신고자 ID | FK → User.id, Not Null |
+| reportedUserId | int | 피신고자 ID | FK → User.id, Nullable |
+| type | enum | 신고 유형 | ReportType enum, Not Null |
+| reason | text | 신고 사유 | Not Null |
+| status | enum | 처리 상태 | ReportStatus enum, Default: 'PENDING' |
+| context | enum | 신고 컨텍스트 | ReportContext enum, Not Null |
+| travelId | int | 관련 여행 ID | FK → Travel.id, Nullable |
+| planetId | int | 관련 채팅방 ID | FK → Planet.id, Nullable |
+| messageId | int | 관련 메시지 ID | FK → Message.id, Nullable |
+| processedAt | timestamp | 처리 시간 | |
+| processedBy | int | 처리자 ID | FK → User.id, Nullable |
+| processingNote | text | 처리 메모 | |
+| createdAt | timestamp | 생성일시 | Not Null |
+| updatedAt | timestamp | 수정일시 | Not Null |
+
+**ReportType (신고 유형)**:
+- SPAM: 스팸
+- HARASSMENT: 괴롭힘/따돌림
+- INAPPROPRIATE_CONTENT: 부적절한 콘텐츠
+- VIOLENCE: 폭력적인 내용
+- HATE_SPEECH: 혐오 발언
+- FRAUD: 사기/사칭
+- PRIVACY_VIOLATION: 개인정보 침해
+- OTHER: 기타
+
+**ReportStatus (처리 상태)**:
+- PENDING: 검토 대기
+- REVIEWING: 검토 중
+- RESOLVED: 처리 완료
+- REJECTED: 반려
+
+**ReportContext (신고 컨텍스트)**:
+- TRAVEL: Travel 내에서 발생
+- PLANET: Planet 내에서 발생
+- MESSAGE: 특정 메시지 신고
+- USER_PROFILE: 사용자 프로필 신고
+
+### Accommodation (숙박 시설)
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|----------|
+| id | int | Primary Key | PK, Auto Increment |
+| name | string | 숙소명 | Not Null, Max Length: 255 |
+| description | text | 숙소 설명 | Nullable |
+| createdAt | timestamp | 생성일시 | Not Null |
+| updatedAt | timestamp | 수정일시 | Not Null |
+
+### Mission (미션)
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|----------|
+| id | int | Primary Key | PK, Auto Increment |
+| type | enum | 미션 타입 | MissionType enum, Not Null |
+| target | enum | 미션 대상 | MissionTarget enum, Not Null |
+| title | string | 미션 제목 | Not Null, Max Length: 200 |
+| description | text | 미션 설명 | |
+| imageUrl | text | 미션 이미지 URL | |
+| contentData | json | 미션 콘텐츠 데이터 | |
+| pointReward | int | 포인트 보상 | Default: 0 |
+| startAt | timestamp | 미션 시작 시간 | |
+| endAt | timestamp | 미션 종료 시간 | |
+| active | boolean | 활성화 여부 | Default: true |
+| createdAt | timestamp | 생성일시 | Not Null |
+| updatedAt | timestamp | 수정일시 | Not Null |
+
+**MissionType (미션 타입)**:
+- IMAGE: 이미지 미션
+- VIDEO: 비디오 미션
+- BALANCE_GAME: 밸런스 게임
+
+**MissionTarget (미션 대상)**:
+- INDIVIDUAL: 개인 미션
+- GROUP: 단체 미션
+
+### MissionTravel (미션-여행 할당)
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|----------|
+| id | int | Primary Key | PK, Auto Increment |
+| missionId | int | 미션 ID | FK → Mission.id, Not Null |
+| travelId | int | 여행 ID | FK → Travel.id, Not Null |
+| planetId | int | 전송 대상 채팅방 ID | FK → Planet.id, Nullable |
+| assignedAt | timestamp | 할당 시간 | Default: CURRENT_TIMESTAMP |
+| createdAt | timestamp | 생성일시 | Not Null |
+| updatedAt | timestamp | 수정일시 | Not Null |
+
+**복합 유니크 인덱스**: (missionId, travelId)
+
+### MissionSubmission (미션 제출)
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|----------|
+| id | int | Primary Key | PK, Auto Increment |
+| missionId | int | 미션 ID | FK → Mission.id, Not Null |
+| userId | int | 제출 사용자 ID | FK → User.id, Not Null |
+| travelId | int | 여행 ID | FK → Travel.id, Not Null |
+| contentUrl | text | 제출 콘텐츠 URL | |
+| submissionData | json | 제출 데이터 | |
+| status | enum | 제출 상태 | SubmissionStatus enum, Default: 'PENDING' |
+| reviewedAt | timestamp | 검토 시간 | |
+| reviewNote | text | 검토 메모 | |
+| createdAt | timestamp | 생성일시 | Not Null |
+| updatedAt | timestamp | 수정일시 | Not Null |
+
+**SubmissionStatus (제출 상태)**:
+- PENDING: 검토 대기
+- APPROVED: 승인
+- REJECTED: 반려
+
 ## 주요 특징
 
 ### 1. Soft Delete 지원 엔티티
@@ -462,7 +685,7 @@ graph TB
 - Message의 `metadata`, `fileMetadata`, `systemMetadata`, `reactions`
 - FileUpload의 `metadata`, `mediaVariants` (Cloudflare Media 변형 URLs)
 - Notification의 `data` (메시지, Travel, Planet, 액션, 푸시 알림, 시스템 정보 관련 데이터)
-- MessageReadReceipt의 `metadata` (읽음 처리 방식, 위치 정보 등)
+- ReadReceipt의 `metadata` (읽음 처리 방식, 위치 정보 등)
 - User의 `socialMetadata`
 
 ## 데이터베이스 인덱스 전략
@@ -486,13 +709,13 @@ graph TB
 - TravelUser: `(status, joinedAt)` - 상태별 가입순 정렬
 - PlanetUser: `(planetId, userId)` - 중복 방지
 - PlanetUser: `(planetId, status)` - Planet 내 활성 멤버 조회
-- MessageReadReceipt: `(messageId, userId)` - 중복 읽음 방지
-- MessageReadReceipt: `(planetId, userId)` - Planet 내 사용자별 읽음 상태
-- MessageReadReceipt: `(planetId, isRead)` - Planet 내 읽음 상태별 조회
-- MessageReadReceipt: `(messageId, isRead)` - 메시지별 읽음 상태
-- MessageReadReceipt: `(userId, isRead)` - 사용자별 읽음 상태
-- MessageReadReceipt: `(planetId, userId, readAt)` - Planet 내 사용자별 시간순
-- MessageReadReceipt: `(planetId, messageId, userId)` - 트리플 인덱스
+- ReadReceipt: `(messageId, userId)` - 중복 읽음 방지
+- ReadReceipt: `(planetId, userId)` - Planet 내 사용자별 읽음 상태
+- ReadReceipt: `(planetId, isRead)` - Planet 내 읽음 상태별 조회
+- ReadReceipt: `(messageId, isRead)` - 메시지별 읽음 상태
+- ReadReceipt: `(userId, isRead)` - 사용자별 읽음 상태
+- ReadReceipt: `(planetId, userId, readAt)` - Planet 내 사용자별 시간순
+- ReadReceipt: `(planetId, messageId, userId)` - 트리플 인덱스
 - Message: `(planetId, createdAt)` - 메시지 목록 조회 최적화
 - Notification: `(userId, status)` - 사용자별 상태 필터링
 - Notification: `(userId, type, createdAt)` - 사용자별 타입별 시간순
@@ -506,9 +729,15 @@ graph TB
 - TravelUser: `travelId`, `userId`, `role`, `status`, `joinedAt`
 - PlanetUser: `planetId`, `userId`, `status`, `joinedAt`, `isDeletedUser`
 - Message: `senderId`, `replyToMessageId`, `searchableText`
-- MessageReadReceipt: `messageId`, `userId`, `planetId`, `isRead`, `readAt`
+- ReadReceipt: `messageId`, `userId`, `planetId`, `isRead`, `readAt`
 - Notification: `userId`, `type`, `priority`, `status`, `travelId`, `planetId`, `scheduledAt`, `createdAt`
 - FileUpload: `userId`, `status`, `storageKey`, `uploadType`, `isFromDeletedUser`
+- PushToken: `token`, `platform`, `userId`, `deviceId`
+- Report: `reporterId`, `reportedUserId`, `status`, `context`, `travelId`, `planetId`, `messageId`
+- Accommodation: `name`
+- Mission: `type`, `target`, `active`, `startAt`, `endAt`
+- MissionTravel: `missionId`, `travelId`, `planetId`
+- MissionSubmission: `missionId`, `userId`, `travelId`, `status`, `createdAt`
 - All entities: `createdAt`, `deletedAt`
 
 ## 관계 제약 조건
@@ -517,13 +746,13 @@ graph TB
 - User 삭제 시 → Profile Soft Delete
 - Travel 삭제 시 → Planet Soft Delete
 - Planet 삭제 시 → Message Soft Delete
-- Message 삭제 시 → MessageReadReceipt 유지 (읽음 기록 보존)
+- Message 삭제 시 → ReadReceipt 유지 (읽음 기록 보존)
 
 ### 제약 조건
 - Message.type이 `SYSTEM`인 경우 → systemMetadata 필수
 - TravelUser는 Travel당 User당 하나만 존재
 - PlanetUser는 Planet당 User당 하나만 존재
-- MessageReadReceipt는 Message당 User당 하나만 존재
+- ReadReceipt는 Message당 User당 하나만 존재
 
 ## 성능 최적화 고려사항
 
