@@ -16,11 +16,10 @@
       "Bash(jest:*)",
       "Bash(vitest:*)",
       "Bash(webpack:*)",
-      "Bash(vite:*)",
-      "Read(/.env)"
+      "Bash(vite:*)"
     ],
     "deny": ["Bash(curl:*)", "Bash(wget:*)", "Bash(rm -rf:*)"],
-    "defaultMode": "bypassPermissions"
+    "defaultMode": "allowEdits"
   },
   "env": {
     "BASH_DEFAULT_TIMEOUT_MS": "60000",
