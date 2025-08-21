@@ -1091,10 +1091,10 @@
     express "^4.18.2"
     swagger-ui-dist "^5.10.5"
 
-"@foryourdev/nestjs-crud@^0.1.21":
-  version "0.1.21"
-  resolved "https://registry.yarnpkg.com/@foryourdev/nestjs-crud/-/nestjs-crud-0.1.21.tgz#6e507e84b5b118bc992cfa763bf1ed4afd6cf752"
-  integrity sha512-lAz1hAraxui9JsBCI6txdl9uMbbf1R30UfftDM+6HM4AHb73K2yhMO7mhRxZq8lbTP8EjzSfsOe7V2Btko5f2g==
+"@foryourdev/nestjs-crud@^0.2.3":
+  version "0.2.3"
+  resolved "https://registry.yarnpkg.com/@foryourdev/nestjs-crud/-/nestjs-crud-0.2.3.tgz#a709c909f5d6ba2502a2d173e4674c2e12719060"
+  integrity sha512-cDCgGFlleyDAX2WBLoHM/893saZdlljAk1ILYmplx4NWDHwXIgdz8wo2zaYEOgUmkFS3GOEhqzUFyn1XDt9PkQ==
   dependencies:
     "@nestjs/common" "^11.0.11"
     "@nestjs/core" "^11.0.11"
