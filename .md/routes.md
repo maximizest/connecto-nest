@@ -1,8 +1,8 @@
 # Connecto API 라우트 문서
 
-> 최종 업데이트: 2025-01-21  
+> 최종 업데이트: 2025-08-21  
 > API 버전: v1  
-> 프레임워크: NestJS 11.x + @foryourdev/nestjs-crud
+> 프레임워크: NestJS 11.x + @foryourdev/nestjs-crud 0.2.3
 
 ## 📋 목차
 
@@ -16,11 +16,11 @@
 ## 개요
 
 ### 통계
-- **총 컨트롤러 수**: 17개
-- **CRUD 컨트롤러**: 14개 (82%)
-- **커스텀 컨트롤러**: 3개 (18%)
-- **인증 필요 컨트롤러**: 16개 (94%)
-- **관리자 전용 컨트롤러**: 0개
+- **총 컨트롤러 수**: 18개
+- **CRUD 컨트롤러**: 16개 (89%)
+- **커스텀 컨트롤러**: 2개 (11%)
+- **인증 필요 컨트롤러**: 17개 (94%)
+- **개발 환경 전용**: 1개 (Schema)
 
 ### 기술 스택
 - **CRUD 라이브러리**: `@foryourdev/nestjs-crud`
@@ -33,7 +33,7 @@
 ### Guard 종류
 | Guard | 용도 | 사용 컨트롤러 수 |
 |-------|------|-----------------|
-| `AuthGuard` | 일반 사용자 인증 (토큰 블랙리스트 검증 포함) | 15 |
+| `AuthGuard` | 일반 사용자 인증 (토큰 블랙리스트 검증 포함) | 16 |
 | `DevOnlyGuard` | 개발 환경 전용 | 1 |
 | 인증 없음 | 공개 엔드포인트 | 1 (Auth) |
 
@@ -175,20 +175,25 @@
 #### Mission Controller
 - **경로**: `/api/v1/missions`
 - **인증**: `AuthGuard`
-- **CRUD 작업**: `index`, `show` (create, update, destroy 제거됨)
+- **CRUD 작업**: `index`, `show` (읽기 전용)
 - **주요 기능**: 미션 조회
+- **특징**: 생성/수정/삭제 불가능 (관리자 패널에서만 관리)
 
 #### MissionSubmission Controller
 - **경로**: `/api/v1/mission-submissions`
 - **인증**: `AuthGuard`
-- **CRUD 작업**: 전체
+- **CRUD 작업**: 전체 (`index`, `show`, `create`, `update`, `destroy`)
 - **주요 기능**: 미션 제출 관리
+- **특수 기능**:
+  - 사용자가 미션 결과를 제출하고 관리
+  - 제출 상태 추적 (PENDING, APPROVED, REJECTED)
 
 #### MissionTravel Controller
 - **경로**: `/api/v1/mission-travels`
 - **인증**: `AuthGuard`
-- **CRUD 작업**: `index`, `show` (create, destroy 제거됨)
+- **CRUD 작업**: `index`, `show` (읽기 전용)
 - **주요 기능**: 미션-여행 할당 조회
+- **특징**: 할당은 관리자 패널에서만 가능
 
 ## 커스텀 컨트롤러
 
@@ -280,7 +285,8 @@ socket.on('user-online-status', data)         // 온라인 상태
 - BaseActiveRecord 상속으로 공통 기능 제공
 - 서비스 레이어 단순화
 
-### 최근 개선사항 (2025-01-21)
+### 최근 개선사항 (2025-08-21)
+- **패키지 업데이트**: @foryourdev/nestjs-crud 0.1.21 → 0.2.3 업그레이드
 - **Guard 통합**: EnhancedAuthGuard 기능을 AuthGuard에 통합 (토큰 블랙리스트, 사용자 밴 검증)
 - **성능 최적화**: AuthGuard 67-75% 성능 향상 (병렬 처리, 캐싱)
 - **ReadReceipt API 개선**: 
