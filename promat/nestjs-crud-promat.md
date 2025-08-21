@@ -29,10 +29,20 @@
 
 ### 2. 고급 쿼리 기능
 
-- **필터링**: 30개 이상의 연산자 (`$eq`, `$ne`, `$gt`, `$lt`, `$like`, `$in` 등)
+- **필터링**: 18개 연산자 지원
+  - 형식: `?filter[column_operator]=value`
+  - 예시: `?filter[age_gt]=18`, `?filter[name_like]=John`
+  - 연산자: `_eq`, `_ne`, `_gt`, `_gte`, `_lt`, `_lte`, `_like`, `_ilike`, `_in`, `_not_in`, `_between`, `_start`, `_end`, `_contains`, `_null`, `_not_null`, `_present`, `_blank`
 - **페이지네이션**: Offset, Cursor, Page 기반
+  - Offset: `?page[offset]=10&page[limit]=20`
+  - Cursor: `?page[cursor]=eyJpZCI6MTB9&page[limit]=20`
+  - Page: `?page[number]=2&page[size]=20`
 - **정렬**: 다중 필드 정렬 지원
+  - 형식: `?sort=field1,-field2` (- 는 내림차순)
+  - 예시: `?sort=-created_at,name`
 - **관계 로딩**: 중첩된 관계 포함 지원
+  - 형식: `?include=relation1,relation2`
+  - 예시: `?include=posts,posts.comments`
 
 ### 3. 생명주기 훅
 
