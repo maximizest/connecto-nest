@@ -1,4 +1,5 @@
 import * as dotenv from 'dotenv';
+import { Logger } from '@nestjs/common';
 import { ENV_KEYS } from '../common/constants/app.constants';
 
 // 환경변수 로드
@@ -82,6 +83,7 @@ export const TEST_REDIS_CONFIG = {
  * Redis 환경변수 검증
  */
 export const validateRedisConfig = () => {
+  const logger = new Logger('RedisConfig');
   // 테스트 환경에서는 조용히 검증
   if (process.env.NODE_ENV === 'test') {
     return validateTestRedisConfig();
@@ -92,9 +94,9 @@ export const validateRedisConfig = () => {
 
   // Redis URL 또는 Host가 필요
   if (!redisUrl && !redisHost) {
-    console.error('❌ Redis connection required:');
-    console.error(`   - Set ${ENV_KEYS.REDIS_URL} for connection string`);
-    console.error(
+    logger.error('Redis connection required:');
+    logger.error(`   - Set ${ENV_KEYS.REDIS_URL} for connection string`);
+    logger.error(
       `   - OR set ${ENV_KEYS.REDIS_HOST} for host-based connection`,
     );
     process.exit(1);
@@ -103,17 +105,17 @@ export const validateRedisConfig = () => {
   // Redis 포트 검증
   const port = parseInt(process.env[ENV_KEYS.REDIS_PORT] || '6379');
   if (isNaN(port) || port < 1 || port > 65535) {
-    console.error(
-      `❌ ${ENV_KEYS.REDIS_PORT} must be a valid port number (1-65535)`,
+    logger.error(
+      `${ENV_KEYS.REDIS_PORT} must be a valid port number (1-65535)`,
     );
     process.exit(1);
   }
 
-  console.log('✅ Redis Configuration validated');
-  console.log(`   - Host: ${REDIS_CONFIG.host}:${REDIS_CONFIG.port}`);
-  console.log(`   - Database: ${REDIS_CONFIG.db}`);
-  console.log(`   - Username: ${REDIS_CONFIG.username}`);
-  console.log(`   - Connection: ${redisUrl ? 'URL-based' : 'Host-based'}`);
+  logger.log('Redis Configuration validated');
+  logger.log(`   - Host: ${REDIS_CONFIG.host}:${REDIS_CONFIG.port}`);
+  logger.log(`   - Database: ${REDIS_CONFIG.db}`);
+  logger.log(`   - Username: ${REDIS_CONFIG.username}`);
+  logger.log(`   - Connection: ${redisUrl ? 'URL-based' : 'Host-based'}`);
 };
 
 /**

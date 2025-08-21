@@ -1,5 +1,6 @@
 import { S3ClientConfig } from '@aws-sdk/client-s3';
 import * as dotenv from 'dotenv';
+import { Logger } from '@nestjs/common';
 import { ENV_KEYS, FILE_CONSTANTS } from '../common/constants/app.constants';
 
 // 환경변수 로드
@@ -76,6 +77,7 @@ export const STORAGE_SETTINGS = {
  * 스토리지 환경변수 검증
  */
 export const validateStorageConfig = () => {
+  const logger = new Logger('StorageConfig');
   // 테스트 환경에서는 조용히 검증
   if (process.env.NODE_ENV === 'test') {
     return;
@@ -93,34 +95,32 @@ export const validateStorageConfig = () => {
   );
 
   if (missingVars.length > 0) {
-    console.error('❌ Missing required storage environment variables:');
+    logger.error('Missing required storage environment variables:');
     missingVars.forEach((varName) => {
-      console.error(`   - ${varName}`);
+      logger.error(`   - ${varName}`);
     });
-    console.error('\nPlease check your Cloudflare R2 configuration.');
+    logger.error('Please check your Cloudflare R2 configuration.');
     process.exit(1);
   }
 
   // 파일 크기 검증
   const maxFileSize = STORAGE_SETTINGS.maxFileSize;
   if (maxFileSize < 1024) {
-    console.warn(`⚠️  MAX_FILE_SIZE is very small: ${maxFileSize} bytes`);
+    logger.warn(`MAX_FILE_SIZE is very small: ${maxFileSize} bytes`);
   }
 
-  console.log('✅ Storage Configuration validated');
-  console.log(`   - Endpoint: ${STORAGE_CONFIG.endpoint}`);
-  console.log(`   - Bucket: ${STORAGE_SETTINGS.bucket}`);
-  console.log(`   - Region: ${STORAGE_CONFIG.region}`);
-  console.log(
-    `   - Max File Size: ${(maxFileSize / 1024 / 1024).toFixed(0)}MB`,
-  );
-  console.log(
+  logger.log('Storage Configuration validated');
+  logger.log(`   - Endpoint: ${STORAGE_CONFIG.endpoint}`);
+  logger.log(`   - Bucket: ${STORAGE_SETTINGS.bucket}`);
+  logger.log(`   - Region: ${STORAGE_CONFIG.region}`);
+  logger.log(`   - Max File Size: ${(maxFileSize / 1024 / 1024).toFixed(0)}MB`);
+  logger.log(
     `   - Max Image Size: ${(STORAGE_SETTINGS.maxImageSize / 1024 / 1024).toFixed(0)}MB`,
   );
-  console.log(
+  logger.log(
     `   - Max Video Size: ${(STORAGE_SETTINGS.maxVideoSize / 1024 / 1024).toFixed(0)}MB`,
   );
-  console.log(
+  logger.log(
     `   - CDN: ${STORAGE_SETTINGS.cdnEnabled ? 'enabled' : 'disabled'}`,
   );
 };
