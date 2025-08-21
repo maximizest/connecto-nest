@@ -591,13 +591,13 @@ graph LR
 | type | enum | 미션 타입 | MissionType enum, Not Null |
 | target | enum | 미션 대상 | MissionTarget enum, Not Null |
 | title | string | 미션 제목 | Not Null, Max Length: 200 |
-| description | text | 미션 설명 | |
-| imageUrl | text | 미션 이미지 URL | |
-| contentData | json | 미션 콘텐츠 데이터 | |
-| pointReward | int | 포인트 보상 | Default: 0 |
-| startAt | timestamp | 미션 시작 시간 | |
-| endAt | timestamp | 미션 종료 시간 | |
+| description | text | 미션 설명 | Not Null |
+| metadata | jsonb | 미션 타입별 추가 데이터 | Nullable |
+| startAt | timestamp | 미션 시작 시간 | Not Null |
+| endAt | timestamp | 미션 종료 시간 | Not Null |
 | active | boolean | 활성화 여부 | Default: true |
+| maxSubmissions | int | 최대 제출 횟수 | Nullable (null = 무제한) |
+| allowResubmission | boolean | 반복 제출 가능 여부 | Default: false |
 | createdAt | timestamp | 생성일시 | Not Null |
 | updatedAt | timestamp | 수정일시 | Not Null |
 
@@ -616,32 +616,39 @@ graph LR
 | id | int | Primary Key | PK, Auto Increment |
 | missionId | int | 미션 ID | FK → Mission.id, Not Null |
 | travelId | int | 여행 ID | FK → Travel.id, Not Null |
-| planetId | int | 전송 대상 채팅방 ID | FK → Planet.id, Nullable |
-| assignedAt | timestamp | 할당 시간 | Default: CURRENT_TIMESTAMP |
+| planetId | int | 미션 전송 대상 채팅방 ID | FK → Planet.id, Nullable |
+| assignedBy | int | 미션 할당한 관리자/호스트 ID | FK → User.id, Nullable |
+| active | boolean | 미션 활성화 여부 | Default: true |
+| submissionCount | int | 현재 제출 횟수 | Default: 0 |
 | createdAt | timestamp | 생성일시 | Not Null |
 | updatedAt | timestamp | 수정일시 | Not Null |
 
 **복합 유니크 인덱스**: (missionId, travelId)
+**인덱스**: (travelId), (missionId)
 
 ### MissionSubmission (미션 제출)
 | 필드명 | 타입 | 설명 | 제약조건 |
 |--------|------|------|----------|
 | id | int | Primary Key | PK, Auto Increment |
 | missionId | int | 미션 ID | FK → Mission.id, Not Null |
-| userId | int | 제출 사용자 ID | FK → User.id, Not Null |
+| userId | int | 제출한 사용자 ID | FK → User.id, Not Null |
 | travelId | int | 여행 ID | FK → Travel.id, Not Null |
-| contentUrl | text | 제출 콘텐츠 URL | |
-| submissionData | json | 제출 데이터 | |
+| submissionType | enum | 제출 타입 | MissionType enum, Not Null |
+| content | jsonb | 제출 데이터 | Not Null |
 | status | enum | 제출 상태 | SubmissionStatus enum, Default: 'PENDING' |
-| reviewedAt | timestamp | 검토 시간 | |
-| reviewNote | text | 검토 메모 | |
+| reviewedBy | int | 평가한 관리자/호스트 ID | FK → User.id, Nullable |
+| reviewedAt | timestamp | 평가 시간 | Nullable |
+| reviewComment | text | 평가 코멘트 | Nullable |
+| messageId | int | 연결된 메시지 ID | FK → Message.id, Nullable |
 | createdAt | timestamp | 생성일시 | Not Null |
 | updatedAt | timestamp | 수정일시 | Not Null |
 
 **SubmissionStatus (제출 상태)**:
 - PENDING: 검토 대기
-- APPROVED: 승인
-- REJECTED: 반려
+- COMPLETED: 완료
+- REJECTED: 거절
+
+**인덱스**: (userId, missionId), (travelId, missionId), (status), (createdAt)
 
 ## 주요 특징
 
@@ -754,35 +761,65 @@ graph LR
 - PlanetUser는 Planet당 User당 하나만 존재
 - ReadReceipt는 Message당 User당 하나만 존재
 
-## 성능 최적화 고려사항
+## 성능 최적화 현황
 
-### 1. Eager Loading 관계
-- User → Profile (자주 함께 조회)
-- Message → Sender (메시지 목록 표시 시)
-- TravelUser → User (멤버 목록 표시 시)
+### ✅ 구현 완료
 
-### 2. Lazy Loading 관계
-- Travel → Planets (필요시에만 로드)
-- Planet → Messages (페이지네이션 적용)
-- User → Notifications (페이지네이션 적용)
+#### 1. Lazy Loading 전략
+- **모든 관계에 `eager: false` 설정**: 필요한 경우에만 관계 데이터 로드
+- **@foryourdev/nestjs-crud의 `includes` 파라미터**: 명시적으로 필요한 관계만 포함
+- **페이지네이션 자동 지원**: 모든 목록 조회 API에 적용
 
-### 3. Count 필드 동적 계산
-- Message.readCount: 읽은 사용자 수 (관계에서 동적 계산)
-- Message.replyCount: 답장 수 (관계에서 동적 계산)
+#### 2. Redis 캐싱 시스템
+- **구현된 모듈**: `RedisModule`, `CacheModule`, `DistributedCacheService`
+- **용도**: 세션 관리, 토큰 블랙리스트, 타이핑 인디케이터
+- **WebSocket Redis Adapter**: 멀티 레플리카 환경에서 실시간 메시지 동기화
 
-### 4. 검색 최적화
-- Message.searchableText: Full-text search 인덱스
-- PostgreSQL의 GIN 인덱스 활용
-- 검색 가능 필드: content, fileMetadata.originalName, systemMetadata.reason
+#### 3. 실시간 통신 최적화
+- **Socket.io 구현**: WebSocket Gateway로 실시간 메시지 전송
+- **Redis Adapter**: 여러 서버 인스턴스 간 WebSocket 이벤트 브로드캐스트
+- **타이핑 인디케이터**: Redis 기반 실시간 타이핑 상태 관리
 
-### 5. 실시간 기능 최적화
-- Redis를 활용한 온라인 상태 관리
-- WebSocket을 통한 실시간 메시지 전송
-- 읽음 확인 일괄 처리 (batch processing)
+#### 4. 읽음 확인 일괄 처리
+- **Bulk Create 지원**: nestjs-crud 네이티브 벌크 생성 활용
+- **Batch Processing**: 여러 메시지를 한 번에 읽음 처리
+- **메타데이터 추적**: `batchReadCount`로 일괄 처리 메시지 수 기록
 
-### 6. Cloudflare Media 통합
-- FileUpload 엔티티에 Cloudflare Stream/Images 지원 추가
-- 비디오: Cloudflare Stream으로 자동 최적화 (HLS/DASH 스트리밍)
-- 이미지: Cloudflare Images로 자동 변형 생성 (thumbnail, small, medium, large)
-- R2 스토리지와 함께 작동하는 적응형 시스템
-- 통합 Cloudflare API 키 사용 (STORAGE_SECRET_ACCESS_KEY)
+#### 5. 파일 업로드 최적화
+- **Direct Upload**: Presigned URL로 클라이언트 직접 업로드
+- **서버 부하 감소**: 파일이 서버를 거치지 않고 R2로 직접 전송
+- **대용량 파일 지원**: 최대 500MB 파일 처리
+
+### ⏳ 부분 구현
+
+#### 1. 검색 기능
+- **searchableText 필드 존재**: Message 엔티티에 구현
+- **GIN 인덱스 미적용**: PostgreSQL Full-text search 인덱스 설정 필요
+- **검색 API 미구현**: 실제 검색 기능 개발 필요
+
+### ❌ 미구현 (향후 개선사항)
+
+#### 1. Eager Loading 최적화
+- **현재 상태**: 모든 관계가 Lazy Loading으로 설정
+- **개선 방안**: 자주 함께 조회되는 관계 (User-Profile 등) Eager Loading 고려
+
+#### 2. Count 필드 최적화
+- **필요 기능**: Message.readCount, Message.replyCount 동적 계산
+- **구현 방법**: Virtual Column 또는 Computed Property 활용
+
+#### 3. Cloudflare Media 고급 기능
+- **현재**: R2 스토리지만 사용 중
+- **향후 계획**:
+  - Cloudflare Stream: 비디오 자동 인코딩 및 HLS 스트리밍
+  - Cloudflare Images: 이미지 자동 리사이징 및 최적화
+  - 미디어 변형 URLs 자동 생성
+
+#### 4. 고급 캐싱 전략
+- **Query Result 캐싱**: 자주 조회되는 데이터 Redis 캐싱
+- **Entity 캐싱**: 변경이 적은 엔티티 (Travel, Planet) 캐싱
+- **Cache Invalidation**: 데이터 변경 시 자동 캐시 무효화
+
+#### 5. 데이터베이스 최적화
+- **Connection Pooling**: 현재 기본 설정 사용 중
+- **Query Optimization**: 복잡한 쿼리 최적화 필요
+- **Partitioning**: 대용량 테이블 (Message, ReadReceipt) 파티셔닝 고려
