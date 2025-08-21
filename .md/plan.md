@@ -96,18 +96,18 @@ export class SearchMessageDto {
 // src/modules/message/api/v1/message.controller.ts
 @Get('search')
 @UseGuards(JwtAuthGuard)
-async searchMessages(
+async search(
   @Query() searchDto: SearchMessageDto,
   @CurrentUser() user: User,
 ) {
-  return this.messageService.searchMessages(searchDto, user.id);
+  return this.messageService.search(searchDto, user.id);
 }
 ```
 
 4. **검색 메서드 구현 (Active Record 패턴)**
 ```typescript
 // src/modules/message/message.entity.ts에 추가
-static async searchMessages(searchDto: SearchMessageDto, userId: number) {
+static async search(searchDto: SearchMessageDto, userId: number) {
   const query = this.createQueryBuilder('message')
     .leftJoinAndSelect('message.sender', 'sender')
     .leftJoinAndSelect('message.planet', 'planet')
@@ -155,9 +155,9 @@ static async searchMessages(searchDto: SearchMessageDto, userId: number) {
 }
 
 // src/modules/message/message.service.ts
-async searchMessages(searchDto: SearchMessageDto, userId: number) {
+async search(searchDto: SearchMessageDto, userId: number) {
   // Active Record 패턴 - Entity의 static 메서드 호출
-  return Message.searchMessages(searchDto, userId);
+  return Message.search(searchDto, userId);
 }
 ```
 
