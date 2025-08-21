@@ -4,6 +4,14 @@
 > 프로젝트: Connecto NestJS Backend  
 > 목적: 부분 구현 및 미구현 성능 최적화 기능 완성
 
+## 📋 아키텍처 패턴
+
+**Active Record 패턴 사용**
+- 모든 엔티티는 `BaseActiveRecord`를 상속
+- 비즈니스 로직은 Entity의 static 메서드로 구현
+- Service는 Entity 메서드를 호출하는 얇은 레이어
+- Repository 패턴 사용 안함
+
 ## 📊 현황 요약
 
 ### ✅ 구현 완료
@@ -96,12 +104,11 @@ async searchMessages(
 }
 ```
 
-4. **검색 서비스 메서드 구현**
+4. **검색 메서드 구현 (Active Record 패턴)**
 ```typescript
-// src/modules/message/message.service.ts
-async searchMessages(searchDto: SearchMessageDto, userId: number) {
-  const query = this.messageRepository
-    .createQueryBuilder('message')
+// src/modules/message/message.entity.ts에 추가
+static async searchMessages(searchDto: SearchMessageDto, userId: number) {
+  const query = this.createQueryBuilder('message')
     .leftJoinAndSelect('message.sender', 'sender')
     .leftJoinAndSelect('message.planet', 'planet')
     .leftJoinAndSelect('planet.planetUsers', 'planetUser')
@@ -146,6 +153,12 @@ async searchMessages(searchDto: SearchMessageDto, userId: number) {
     hasMore: total > searchDto.offset + searchDto.limit
   };
 }
+
+// src/modules/message/message.service.ts
+async searchMessages(searchDto: SearchMessageDto, userId: number) {
+  // Active Record 패턴 - Entity의 static 메서드 호출
+  return Message.searchMessages(searchDto, userId);
+}
 ```
 
 5. **마이그레이션 실행**
@@ -157,7 +170,8 @@ yarn typeorm migration:run
 - `migration/[timestamp]-AddMessageSearchableTextGinIndex.ts`: 새 마이그레이션 생성
 - `src/modules/message/dto/search-message.dto.ts`: 검색 DTO 생성
 - `src/modules/message/api/v1/message.controller.ts`: 검색 엔드포인트 추가
-- `src/modules/message/message.service.ts`: 검색 로직 구현
+- `src/modules/message/message.entity.ts`: Active Record 검색 메서드 추가
+- `src/modules/message/message.service.ts`: Entity 메서드 호출
 
 **예상 효과:**
 - ✨ 메시지 검색 속도 100배 향상 (현재 ILIKE 대비)
@@ -193,9 +207,9 @@ TypeOrmModule.forRoot({
 
 **작업 내용:**
 ```typescript
-// message.entity.ts
+// message.entity.ts (Active Record 패턴)
 @Entity()
-export class Message {
+export class Message extends BaseActiveRecord {
   // Virtual columns 추가
   @VirtualColumn({
     query: (alias) => 
@@ -208,6 +222,23 @@ export class Message {
       `SELECT COUNT(*) FROM messages WHERE reply_to_message_id = ${alias}.id`
   })
   replyCount: number;
+  
+  // Active Record 메서드 - 읽음 수 조회
+  static async getReadCount(messageId: number): Promise<number> {
+    const result = await this.createQueryBuilder('message')
+      .leftJoin('message.readReceipts', 'receipt')
+      .where('message.id = :messageId', { messageId })
+      .andWhere('receipt.isRead = true')
+      .getCount();
+    return result;
+  }
+  
+  // Active Record 메서드 - 답장 수 조회
+  static async getReplyCount(messageId: number): Promise<number> {
+    return this.count({
+      where: { replyToMessageId: messageId }
+    });
+  }
 }
 ```
 
@@ -239,14 +270,20 @@ export function CacheResult(ttl: number = 3600) {
   };
 }
 
-// travel.service.ts
+// travel.entity.ts (Active Record 패턴)
 @CacheResult(7200) // 2시간 캐싱
-async findPopularTravels() {
-  return this.travelRepository.find({
+static async findPopularTravels() {
+  return this.find({
     where: { visibility: 'PUBLIC' },
     order: { participantCount: 'DESC' },
     take: 10
   });
+}
+
+// travel.service.ts
+async findPopularTravels() {
+  // Active Record 패턴 - Entity의 static 메서드 호출
+  return Travel.findPopularTravels();
 }
 ```
 
@@ -333,9 +370,9 @@ class ImageUploadService {
 
 **작업 내용:**
 ```typescript
-// user.entity.ts
+// user.entity.ts (Active Record 패턴)
 @Entity()
-export class User {
+export class User extends BaseActiveRecord {
   @OneToOne(() => Profile, {
     eager: true,  // 항상 함께 로드되는 Profile은 eager
     cascade: true
@@ -346,6 +383,22 @@ export class User {
     eager: false  // 필요시에만 로드
   })
   travelUsers: TravelUser[];
+  
+  // Active Record 메서드 - Profile과 함께 조회
+  static async findWithProfile(userId: number): Promise<User | null> {
+    return this.findOne({
+      where: { id: userId },
+      relations: ['profile']
+    });
+  }
+  
+  // Active Record 메서드 - 필요시에만 TravelUser 로드
+  static async findWithTravels(userId: number): Promise<User | null> {
+    return this.findOne({
+      where: { id: userId },
+      relations: ['travelUsers', 'travelUsers.travel']
+    });
+  }
 }
 ```
 
