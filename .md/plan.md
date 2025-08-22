@@ -15,11 +15,12 @@
 ## 📊 현황 요약
 
 ### ✅ 구현 완료
-- Lazy Loading 전략
-- Redis 캐싱 시스템  
-- WebSocket 실시간 통신
+- Lazy Loading 전략 (모든 관계가 eager: false)
+- Redis 캐싱 시스템 (RedisModule, DistributedCacheService)
+- WebSocket 실시간 통신 (Socket.io + Redis Adapter)
 - 읽음 확인 일괄 처리
 - 파일 직접 업로드 (Presigned URL)
+- Connection Pool 최적화 (max: 20, min: 5)
 
 ### ⏳ 부분 구현
 - 검색 기능 (searchableText 필드만 존재)
@@ -94,11 +95,14 @@ export class SearchDto {
 3. **검색 API 엔드포인트 추가**
 ```typescript
 // src/modules/message/api/v1/message.controller.ts
+import { AuthGuard } from '../../../../guards/auth.guard';
+import { CurrentUser, CurrentUserData } from '../../../../common/decorators/current-user.decorator';
+
 @Get('search')
-@UseGuards(JwtAuthGuard)
+@UseGuards(AuthGuard)
 async search(
   @Query() searchDto: SearchDto,
-  @CurrentUser() user: User,
+  @CurrentUser() user: CurrentUserData,
 ) {
   return this.messageService.search(searchDto, user.id);
 }
@@ -179,27 +183,34 @@ yarn typeorm migration:run
 - 💬 채팅 내역 빠른 탐색 가능
 - 🎯 관련성 기반 순위 정렬
 
-#### 1.2 데이터베이스 Connection Pooling 최적화 ❌
+#### 1.2 데이터베이스 Connection Pooling 최적화 ✅
 
-**작업 내용:**
+**현재 상태:**
+- ✅ 이미 `database.config.ts`에서 Connection Pool 설정 구현됨
+- ✅ 기본값: max: 20, min: 5, connectionTimeoutMillis: 30000
+- ✅ 환경변수로 설정 가능: `DATABASE_MAX_CONNECTIONS`, `DATABASE_MIN_CONNECTIONS`, `DATABASE_CONNECTION_TIMEOUT`
+
+**현재 설정 (database.config.ts):**
 ```typescript
-// app.module.ts
-TypeOrmModule.forRoot({
-  type: 'postgres',
-  extra: {
-    max: 20,           // 최대 연결 수 (기본값: 10)
-    min: 5,            // 최소 연결 수 (기본값: 0)
-    idleTimeoutMillis: 30000,  // 유휴 연결 타임아웃
-    connectionTimeoutMillis: 2000,  // 연결 타임아웃
-  },
-  poolSize: 20,        // TypeORM 풀 사이즈
-})
+extra: {
+  max: parseInt(
+    process.env.DATABASE_MAX_CONNECTIONS || '20'  // 이미 20으로 설정
+  ),
+  min: parseInt(
+    process.env.DATABASE_MIN_CONNECTIONS || '5'   // 이미 5로 설정
+  ),
+  connectionTimeoutMillis: parseInt(
+    process.env.DATABASE_CONNECTION_TIMEOUT || '30000'  // 이미 30초로 설정
+  ),
+  idleTimeoutMillis: 30000,
+  application_name: 'nestjs-app',
+}
 ```
 
-**예상 효과:**
-- ⚡ DB 연결 오버헤드 50% 감소
-- 🚀 동시 처리량 2배 증가
-- 🔧 커넥션 재사용으로 응답시간 단축
+**추가 최적화 필요 사항:**
+- 현재 설정은 이미 최적화되어 있음
+- 필요시 환경변수로 조정 가능
+- 모니터링 후 트래픽에 따라 max 값 조정 권장
 
 ### Phase 2: 사용자 체감 성능 개선 (2-3주)
 
@@ -210,26 +221,17 @@ TypeOrmModule.forRoot({
 // message.entity.ts (Active Record 패턴)
 @Entity()
 export class Message extends BaseActiveRecord {
-  // Virtual columns 추가
-  @VirtualColumn({
-    query: (alias) => 
-      `SELECT COUNT(*) FROM read_receipts WHERE message_id = ${alias}.id AND is_read = true`
-  })
-  readCount: number;
-
-  @VirtualColumn({
-    query: (alias) => 
-      `SELECT COUNT(*) FROM messages WHERE reply_to_message_id = ${alias}.id`
-  })
-  replyCount: number;
+  // TypeORM은 VirtualColumn을 지원하지 않음
+  // 대신 Active Record 메서드로 구현
   
   // Active Record 메서드 - 읽음 수 조회
   static async getReadCount(messageId: number): Promise<number> {
-    const result = await this.createQueryBuilder('message')
-      .leftJoin('message.readReceipts', 'receipt')
-      .where('message.id = :messageId', { messageId })
-      .andWhere('receipt.isRead = true')
-      .getCount();
+    const result = await MessageReadReceipt.count({
+      where: { 
+        messageId: messageId,
+        isRead: true 
+      }
+    });
     return result;
   }
   
@@ -238,6 +240,44 @@ export class Message extends BaseActiveRecord {
     return this.count({
       where: { replyToMessageId: messageId }
     });
+  }
+  
+  // 메시지 목록 조회시 Count 포함
+  static async findWithCounts(planetId: number, options?: any) {
+    const messages = await this.find({
+      where: { planetId },
+      ...options
+    });
+    
+    // Count 정보를 한번에 조회 (N+1 문제 해결)
+    const messageIds = messages.map(m => m.id);
+    
+    const readCounts = await MessageReadReceipt
+      .createQueryBuilder('receipt')
+      .select('receipt.messageId', 'messageId')
+      .addSelect('COUNT(*)', 'count')
+      .where('receipt.messageId IN (:...ids)', { ids: messageIds })
+      .andWhere('receipt.isRead = true')
+      .groupBy('receipt.messageId')
+      .getRawMany();
+      
+    const replyCounts = await this
+      .createQueryBuilder('message')
+      .select('message.replyToMessageId', 'messageId')
+      .addSelect('COUNT(*)', 'count')
+      .where('message.replyToMessageId IN (:...ids)', { ids: messageIds })
+      .groupBy('message.replyToMessageId')
+      .getRawMany();
+    
+    // Count 정보 매핑
+    const readCountMap = new Map(readCounts.map(r => [r.messageId, r.count]));
+    const replyCountMap = new Map(replyCounts.map(r => [r.messageId, r.count]));
+    
+    return messages.map(message => ({
+      ...message,
+      readCount: readCountMap.get(message.id) || 0,
+      replyCount: replyCountMap.get(message.id) || 0
+    }));
   }
 }
 ```
@@ -366,21 +406,26 @@ class ImageUploadService {
 
 ### Phase 4: 지능형 최적화 (4-5주)
 
-#### 4.1 Eager Loading 선택적 적용 ❌
+#### 4.1 Eager Loading 선택적 적용 ⏳
+
+**현재 상태:**
+- User-Profile 관계는 현재 `eager: false`로 설정되어 있음
+- 대부분의 관계가 이미 Lazy Loading으로 최적화됨
 
 **작업 내용:**
 ```typescript
-// user.entity.ts (Active Record 패턴)
+// user.entity.ts (Active Record 패턴) 
+// 현재 상태 - 모두 Lazy Loading
 @Entity()
 export class User extends BaseActiveRecord {
-  @OneToOne(() => Profile, {
-    eager: true,  // 항상 함께 로드되는 Profile은 eager
+  @OneToOne('Profile', 'user', {
+    eager: false,  // 현재 Lazy Loading
     cascade: true
   })
   profile: Profile;
   
   @OneToMany(() => TravelUser, {
-    eager: false  // 필요시에만 로드
+    eager: false  // 이미 Lazy Loading
   })
   travelUsers: TravelUser[];
   
@@ -436,11 +481,11 @@ export class User extends BaseActiveRecord {
 ### Phase 1 (즉시 시작)
 - [ ] GIN 인덱스 마이그레이션 작성
 - [ ] 메시지 검색 API 구현
-- [ ] Connection Pool 설정 최적화
+- [x] Connection Pool 설정 최적화 (이미 구현됨)
 - [ ] 성능 모니터링 대시보드 구축
 
 ### Phase 2 (2주 후)
-- [ ] Virtual Column 구현
+- [ ] Count 필드 최적화 메서드 구현
 - [ ] 캐싱 데코레이터 개발
 - [ ] 캐시 무효화 전략 수립
 - [ ] 인기 콘텐츠 캐싱 적용
