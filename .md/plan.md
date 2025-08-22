@@ -28,7 +28,6 @@
 ### ❌ 미구현
 - Eager Loading 최적화
 - Count 필드 최적화
-- Cloudflare Media 고급 기능
 - 고급 캐싱 전략
 - 데이터베이스 최적화
 
@@ -332,81 +331,9 @@ async findPopularTravels() {
 - 💰 DB 부하 70% 감소
 - ⏱️ 평균 응답시간 200ms → 20ms
 
-### Phase 3: 미디어 최적화 (3-4주)
+### Phase 3: 지능형 최적화 (3-4주)
 
-#### 3.1 Cloudflare Stream 통합 ❌
-
-**작업 내용:**
-```typescript
-// video-upload.service.ts
-class VideoUploadService {
-  async uploadToStream(videoPath: string) {
-    // Stream API로 비디오 업로드
-    const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/stream`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${streamToken}`,
-        'Tus-Resumable': '1.0.0',
-      },
-      body: videoStream
-    });
-    
-    return {
-      streamId: response.id,
-      playbackUrl: response.playback.hls,  // HLS 스트리밍 URL
-      thumbnailUrl: response.thumbnail,     // 자동 생성된 썸네일
-    };
-  }
-}
-```
-
-**예상 효과:**
-- 📹 자동 비디오 인코딩 (모든 디바이스 호환)
-- 🎬 적응형 비트레이트 스트리밍
-- 🖼️ 자동 썸네일 생성
-- 💾 스토리지 50% 절감
-
-#### 3.2 Cloudflare Images 통합 ❌
-
-**작업 내용:**
-```typescript
-// image-upload.service.ts
-class ImageUploadService {
-  async uploadToImages(imagePath: string) {
-    const formData = new FormData();
-    formData.append('file', imageStream);
-    formData.append('requireSignedURLs', 'false');
-    
-    const response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${accountId}/images/v1`,
-      {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${imagesToken}` },
-        body: formData
-      }
-    );
-    
-    return {
-      imageId: response.id,
-      variants: {
-        thumbnail: `${baseUrl}/thumbnail`,  // 150x150
-        preview: `${baseUrl}/preview`,      // 800x800
-        full: `${baseUrl}/full`            // 원본
-      }
-    };
-  }
-}
-```
-
-**예상 효과:**
-- 🖼️ 자동 이미지 리사이징
-- 📱 디바이스별 최적화된 이미지 제공
-- 🚀 이미지 로딩 3배 빠름
-- 💾 대역폭 60% 절감
-
-### Phase 4: 지능형 최적화 (4-5주)
-
-#### 4.1 Eager Loading 선택적 적용 ⏳
+#### 3.1 Eager Loading 선택적 적용 ⏳
 
 **현재 상태:**
 - User-Profile 관계는 현재 `eager: false`로 설정되어 있음
@@ -467,10 +394,10 @@ export class User extends BaseActiveRecord {
 ### 중기 효과 (Phase 2-3 완료 시)
 - **응답 시간**: 평균 150ms → 80ms (추가 47% 개선)
 - **캐시 적중률**: 0% → 70%
-- **미디어 로딩**: 3초 → 1초 (67% 개선)
-- **스토리지 비용**: 40% 절감
+- **쿼리 효율성**: 50% 향상 (Eager Loading 최적화)
+- **메모리 사용량**: 20% 절감
 
-### 장기 효과 (Phase 4 완료 시)
+### 장기 효과 (Phase 3 완료 시)
 - **전체 성능**: 종합 300% 개선
 - **사용자 만족도**: 대폭 상승
 - **인프라 비용**: 30% 절감
@@ -491,12 +418,6 @@ export class User extends BaseActiveRecord {
 - [ ] 인기 콘텐츠 캐싱 적용
 
 ### Phase 3 (4주 후)
-- [ ] Cloudflare Stream API 연동
-- [ ] Cloudflare Images API 연동
-- [ ] 미디어 업로드 서비스 리팩토링
-- [ ] 썸네일 자동 생성 구현
-
-### Phase 4 (6주 후)
 - [ ] 쿼리 패턴 분석
 - [ ] Eager/Lazy Loading 최적화
 - [ ] 성능 테스트 및 튜닝
@@ -532,9 +453,9 @@ ORDER BY mean_exec_time DESC;
 - **대응**: Cache-Aside 패턴 + TTL 전략
 - **모니터링**: 캐시 적중률 및 무효화 빈도 추적
 
-### 리스크 2: Cloudflare API 제한
-- **대응**: Rate Limiting 및 재시도 로직
-- **백업**: 실패 시 기존 R2 스토리지 사용
+### 리스크 2: 메모리 사용량 증가 (Eager Loading)
+- **대응**: 선택적 Eager Loading 적용
+- **모니터링**: 메모리 사용량 및 성능 지표 추적
 
 ### 리스크 3: 마이그레이션 중 다운타임
 - **대응**: Blue-Green 배포 전략
