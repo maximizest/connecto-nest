@@ -9,7 +9,6 @@ import {
   BeforeShow,
   BeforeUpdate,
   Crud,
-  CrudHelper,
 } from '@foryourdev/nestjs-crud';
 import {
   Body,
@@ -59,14 +58,6 @@ import { MessagePaginationService } from '../../services/message-pagination.serv
 @Crud({
   entity: Message,
   only: ['index', 'show', 'create', 'update', 'destroy'],
-  cache: {
-    enabled: true,
-    strategy: 'multi-tier',
-    memory: { ttl: 30, max: 2000 },
-    redis: { ttl: 180, keyPrefix: 'message:' },
-  },
-  lazyLoading: true,
-  autoRelationDetection: true,
   allowedFilters: [
     'planetId',
     'senderId',
@@ -148,7 +139,6 @@ export class MessageController {
     public readonly crudService: MessageService,
     private readonly messagePaginationService: MessagePaginationService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly crudHelper: CrudHelper<Message>,
   ) {}
 
   /**

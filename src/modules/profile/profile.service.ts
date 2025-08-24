@@ -31,30 +31,9 @@ export class ProfileService extends CrudService<Profile> {
       }
 
       // 기본 프로필 생성
-      const profile = Profile.create({
-        userId,
-        bio: null,
-        avatarUrl: null,
-        backgroundUrl: null,
-        location: null,
-        website: null,
-        socialLinks: {},
-        preferences: {
-          language: 'ko',
-          timezone: 'Asia/Seoul',
-          theme: 'light',
-        },
-        badges: [],
-        stats: {
-          tripsJoined: 0,
-          messagesPosted: 0,
-          missionsCompleted: 0,
-        },
-        metadata: {
-          createdFrom: 'default',
-        },
-      });
-
+      const profile = new Profile();
+      profile.userId = userId;
+      
       const savedProfile = await profile.save();
       this.logger.log(`Default profile created for user ${userId}`);
       

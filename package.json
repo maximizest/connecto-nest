@@ -38,7 +38,7 @@
     "@bull-board/api": "^6.12.0",
     "@bull-board/express": "^6.12.0",
     "@bull-board/nestjs": "^6.12.0",
-    "@foryourdev/jest-swag": "^1.0.18",
+    "@foryourdev/jest-swag": "^1.0.19",
     "@foryourdev/nestjs-crud": "^0.2.6",
     "@nestjs-modules/ioredis": "^2.0.2",
     "@nestjs/bullmq": "^11.0.3",

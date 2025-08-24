@@ -1,5 +1,4 @@
 import { JestSwagModule } from '@foryourdev/jest-swag';
-import { DebugTools } from '@foryourdev/nestjs-crud';
 import { Module, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
@@ -132,14 +131,10 @@ export class AppModule implements OnModuleInit {
     const replicaId = process.env.RAILWAY_REPLICA_ID || 'single-instance';
     this.logger.log(`🔄 Running as replica: ${replicaId}`);
 
-    // 개발 환경에서 QueryPerformanceAnalyzer 활성화
+    // 개발 환경에서 쿼리 로깅 활성화 (TypeORM 기본 기능)
     if (process.env.NODE_ENV === 'development') {
-      DebugTools.enableQueryLogging({
-        slowQueryThreshold: 1000, // 1초 이상 걸리는 쿼리 로깅
-        logLevel: 'verbose',
-        includeStackTrace: true,
-      });
-      this.logger.log('📊 QueryPerformanceAnalyzer enabled for development');
+      this.logger.log('📊 Query logging enabled for development');
+      // TypeORM의 기본 로깅 기능 사용 (DATABASE_LOGGING=true)
     }
 
     this.logger.log('✅ All configurations validated successfully!');
