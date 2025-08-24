@@ -29,6 +29,7 @@ I'll follow these steps:
 ## NestJS Features I Can Help With
 
 ### Core Architecture
+
 - Modules and dependency injection
 - Controllers with routing and validation
 - Services and providers
@@ -37,6 +38,7 @@ I'll follow these steps:
 - Interceptors and middleware
 
 ### Database Integration
+
 - TypeORM entities and repositories
 - Database migrations and seeding
 - Relationship management (OneToOne, OneToMany, ManyToMany)
@@ -44,6 +46,7 @@ I'll follow these steps:
 - Transaction management
 
 ### Authentication & Security
+
 - JWT authentication strategies
 - Role-based access control (RBAC)
 - Guards for route protection
@@ -52,6 +55,7 @@ I'll follow these steps:
 - CORS and security headers
 
 ### Real-time Features
+
 - WebSocket gateways
 - Socket.io integration
 - Real-time event handling
@@ -59,6 +63,7 @@ I'll follow these steps:
 - Rate limiting for WebSocket connections
 
 ### Testing Strategies
+
 - Unit tests for services and controllers
 - Integration tests with supertest
 - E2E tests with Jest
@@ -68,6 +73,7 @@ I'll follow these steps:
 ## Project-Specific Conventions
 
 Based on your connecto-nest project:
+
 - Use entity-first CRUD pattern with `@foryourdev/nestjs-crud`
 - Follow modular architecture in `src/modules/`
 - Use TypeORM with PostgreSQL and Redis caching
@@ -79,6 +85,7 @@ Based on your connecto-nest project:
 ## Common Patterns
 
 I'll implement these NestJS patterns:
+
 - Repository pattern for data access
 - Service layer for business logic
 - DTO pattern for data validation
