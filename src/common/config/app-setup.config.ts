@@ -1,5 +1,6 @@
 import { CrudExceptionFilter } from '@foryourdev/nestjs-crud';
-import { INestApplication, VersioningType } from '@nestjs/common';
+import { ClassSerializerInterceptor, INestApplication, VersioningType } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { ENV_KEYS, HTTP_CONSTANTS } from '../constants/app.constants';
 import { GlobalExceptionFilter } from '../filters/global-exception.filter';
 import { LoggingInterceptor } from '../interceptors/logging.interceptor';
@@ -18,8 +19,12 @@ export function setupGlobalConfiguration(app: INestApplication): void {
     new GlobalExceptionFilter(), // 가장 일반적인 필터
   );
 
-  // 전역 인터셉터 설정 (로깅)
-  app.useGlobalInterceptors(new LoggingInterceptor());
+  // 전역 인터셉터 설정 (로깅 및 시리얼라이징)
+  const reflector = app.get(Reflector);
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+    new ClassSerializerInterceptor(reflector), // @Exclude() 데코레이터 활성화
+  );
 
   // API 버전 관리
   app.enableVersioning({

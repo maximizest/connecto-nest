@@ -1,4 +1,5 @@
 import { JestSwagModule } from '@foryourdev/jest-swag';
+import { DebugTools } from '@foryourdev/nestjs-crud';
 import { Module, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
@@ -120,7 +121,7 @@ modules.push(WebSocketModule);
 export class AppModule implements OnModuleInit {
   private readonly logger = new Logger(AppModule.name);
 
-  onModuleInit() {
+  async onModuleInit() {
     this.logger.log('🚀 Application Configuration Validation:');
     validateDatabaseConfig();
     validateJwtConfig();
@@ -130,6 +131,16 @@ export class AppModule implements OnModuleInit {
     // 레플리카 정보 로깅
     const replicaId = process.env.RAILWAY_REPLICA_ID || 'single-instance';
     this.logger.log(`🔄 Running as replica: ${replicaId}`);
+
+    // 개발 환경에서 QueryPerformanceAnalyzer 활성화
+    if (process.env.NODE_ENV === 'development') {
+      DebugTools.enableQueryLogging({
+        slowQueryThreshold: 1000, // 1초 이상 걸리는 쿼리 로깅
+        logLevel: 'verbose',
+        includeStackTrace: true,
+      });
+      this.logger.log('📊 QueryPerformanceAnalyzer enabled for development');
+    }
 
     this.logger.log('✅ All configurations validated successfully!');
   }

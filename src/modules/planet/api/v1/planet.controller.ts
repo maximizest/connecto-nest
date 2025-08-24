@@ -36,6 +36,14 @@ import { User } from '../../../user/user.entity';
   only: ['index', 'show'],
   allowedFilters: ['travelId', 'type', 'isActive', 'name', 'createdAt'],
   allowedIncludes: ['travel', 'partner', 'planetUsers', 'planetUsers.user'],
+  cache: {
+    enabled: true,
+    strategy: 'multi-tier',
+    memory: { ttl: 60, max: 1000 },
+    redis: { ttl: 300, keyPrefix: 'planet:' },
+  },
+  lazyLoading: true,
+  autoRelationDetection: true,
   routes: {
     index: {
       allowedFilters: ['travelId', 'type', 'isActive', 'name', 'createdAt'],

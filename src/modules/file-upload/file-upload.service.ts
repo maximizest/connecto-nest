@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { CrudService } from '@foryourdev/nestjs-crud';
+import { BatchProcessorUtil } from '../../common/utils/batch-processor.util';
 import { StorageService } from '../storage/storage.service';
 import { FileUpload } from './file-upload.entity';
 import { FileUploadStatus } from './enums/file-upload-status.enum';
@@ -259,5 +260,88 @@ export class FileUploadService extends CrudService<FileUpload> {
       id: result.key,
       type: 'file',
     };
+  }
+
+  /**
+   * 대용량 파일 업로드 배치 처리
+   */
+  async bulkCreateUploads(
+    uploads: Array<{
+      userId: number;
+      originalFileName: string;
+      storageKey: string;
+      mimeType: string;
+      fileSize: number;
+      uploadType: FileUploadType;
+      folder?: string;
+      metadata?: Record<string, any>;
+    }>,
+    onProgress?: (progress: number) => void,
+  ): Promise<FileUpload[]> {
+    const data = uploads.map(upload => ({
+      ...upload,
+      status: FileUploadStatus.PENDING,
+    }));
+
+    const result = await BatchProcessorUtil.bulkCreateWithRetry(
+      FileUpload.getRepository(),
+      data,
+      {
+        batchSize: 100,
+        maxRetries: 3,
+        onProgress,
+      },
+    );
+
+    this.logger.log(`Bulk created ${result.length} upload records`);
+    return result;
+  }
+
+  /**
+   * 대용량 업로드 상태 업데이트
+   */
+  async bulkUpdateStatus(
+    updates: Array<{ id: number; status: FileUploadStatus }>,
+    onProgress?: (progress: number) => void,
+  ): Promise<FileUpload[]> {
+    const updateData = updates.map(({ id, status }) => ({
+      id,
+      data: { status },
+    }));
+
+    const result = await BatchProcessorUtil.bulkUpdateWithRetry(
+      FileUpload.getRepository(),
+      updateData,
+      {
+        batchSize: 50,
+        maxRetries: 3,
+        onProgress,
+      },
+    );
+
+    this.logger.log(`Bulk updated ${result.length} upload statuses`);
+    return result;
+  }
+
+  /**
+   * 대용량 업로드 삭제
+   */
+  async bulkDeleteUploads(
+    ids: number[],
+    softDelete = true,
+    onProgress?: (progress: number) => void,
+  ): Promise<void> {
+    await BatchProcessorUtil.bulkDeleteWithRetry(
+      FileUpload.getRepository(),
+      ids,
+      {
+        batchSize: 200,
+        maxRetries: 3,
+        softDelete,
+        onProgress,
+      },
+    );
+
+    this.logger.log(`Bulk deleted ${ids.length} upload records`);
   }
 }

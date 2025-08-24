@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { CrudService } from '@foryourdev/nestjs-crud';
 import { Profile } from './profile.entity';
 
@@ -10,7 +10,58 @@ import { Profile } from './profile.entity';
  */
 @Injectable()
 export class ProfileService extends CrudService<Profile> {
+  private readonly logger = new Logger(ProfileService.name);
+
   constructor() {
     super(Profile.getRepository());
+  }
+
+  /**
+   * 사용자를 위한 기본 프로필 생성
+   * @param userId 사용자 ID
+   * @returns 생성된 프로필
+   */
+  async createDefaultProfile(userId: number): Promise<Profile> {
+    try {
+      // 이미 프로필이 있는지 확인
+      const existingProfile = await Profile.findOne({ where: { userId } });
+      if (existingProfile) {
+        this.logger.log(`Profile already exists for user ${userId}`);
+        return existingProfile;
+      }
+
+      // 기본 프로필 생성
+      const profile = Profile.create({
+        userId,
+        bio: null,
+        avatarUrl: null,
+        backgroundUrl: null,
+        location: null,
+        website: null,
+        socialLinks: {},
+        preferences: {
+          language: 'ko',
+          timezone: 'Asia/Seoul',
+          theme: 'light',
+        },
+        badges: [],
+        stats: {
+          tripsJoined: 0,
+          messagesPosted: 0,
+          missionsCompleted: 0,
+        },
+        metadata: {
+          createdFrom: 'default',
+        },
+      });
+
+      const savedProfile = await profile.save();
+      this.logger.log(`Default profile created for user ${userId}`);
+      
+      return savedProfile;
+    } catch (error) {
+      this.logger.error(`Failed to create default profile for user ${userId}`, error);
+      throw error;
+    }
   }
 }
