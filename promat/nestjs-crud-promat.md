@@ -374,16 +374,20 @@ eventSource.onmessage = (event) => {
 ```typescript
 import { MultiTierCache } from '@foryourdev/nestjs-crud';
 
-@Crud({
-  entity: User,
-  cache: {
-    enabled: true,
-    strategy: 'multi-tier',
-    memory: { ttl: 60, max: 1000 },
-    redis: { ttl: 300, keyPrefix: 'user:' },
-    database: { ttl: 3600, table: 'query_cache' },
-  },
-})
+// 다층 캐싱은 별도 서비스로 구현
+@Injectable()
+export class UserService extends CrudService<User> {
+  private cache = new MultiTierCache<User>();
+
+  async findOne(id: number): Promise<User> {
+    const cached = await this.cache.get(`user:${id}`);
+    if (cached) return cached;
+
+    const user = await super.findOne(id);
+    await this.cache.set(`user:${id}`, user, { ttl: 300 });
+    return user;
+  }
+}
 export class UserController {}
 
 // 수동 캐시 제어
@@ -838,6 +842,93 @@ async bulkCreate(@Body() users: CreateUserDto[]) {
 }
 ```
 
+## @Crud 데코레이터 실제 지원 옵션
+
+### ✅ 지원되는 옵션들
+
+| 옵션                    | 타입                | 설명                             | 기본값                            |
+| ----------------------- | ------------------- | -------------------------------- | --------------------------------- |
+| `entity`                | `Type<Entity>`      | **필수** - TypeORM 엔티티 클래스 | -                                 |
+| `logging`               | `boolean`           | SQL 쿼리 로깅 활성화             | `false`                           |
+| `skipMissingProperties` | `boolean`           | 존재하지 않는 속성 검증 생략     | `true` (UPDATE), `false` (CREATE) |
+| `allowedParams`         | `string[]`          | CREATE/UPDATE 허용 필드          | `[]` (모두 차단)                  |
+| `allowedFilters`        | `string[]`          | 필터링 허용 필드                 | `[]` (모두 차단)                  |
+| `allowedIncludes`       | `string[]`          | 관계 포함 허용                   | `[]` (모두 차단)                  |
+| `routes`                | `RouteOptions`      | 라우트별 세부 설정               | -                                 |
+| `only`                  | `Method[]`          | 생성할 라우트 지정               | 모든 라우트                       |
+| `pagination`            | `PaginationOptions` | 페이지네이션 설정                | -                                 |
+
+### ✅ 신규 지원 옵션들 (v0.2.7+)
+
+#### 1. 캐싱 지원
+
+```typescript
+@Crud({
+  entity: User,
+  cache: {
+    enabled: true,
+    ttl: 300, // 5분 (초 단위)
+    keyPrefix: 'user',
+    strategy: 'memory' | 'redis' | 'multi-tier'
+  }
+})
+```
+
+**사용법**: `CacheableCrudService` 사용
+
+```typescript
+@Injectable()
+export class UserService extends CacheableCrudService<User> {
+  constructor(@InjectRepository(User) repository: Repository<User>) {
+    super(repository, {
+      cache: { enabled: true, ttl: 300 },
+    });
+  }
+}
+```
+
+#### 2. 지연 로딩 (Lazy Loading)
+
+```typescript
+@Crud({
+  entity: User,
+  lazyLoading: true // 관계를 필요시에만 로드
+})
+```
+
+#### 3. 자동 관계 감지 (N+1 쿼리 최적화)
+
+```typescript
+@Crud({
+  entity: User,
+  autoRelationDetection: true // N+1 쿼리 자동 최적화
+})
+```
+
+#### 4. 전역 필드 제외
+
+```typescript
+@Crud({
+  entity: User,
+  exclude: ['password', 'internalId'] // 모든 응답에서 제외
+})
+```
+
+**통합 서비스 사용**: `EnhancedCrudService`
+
+```typescript
+@Injectable()
+export class UserService extends EnhancedCrudService<User> {
+  constructor(@InjectRepository(User) repository: Repository<User>) {
+    super(repository, {
+      exclude: ['password'],
+      lazyLoading: true,
+      autoRelationDetection: true,
+    });
+  }
+}
+```
+
 ## @Crud 데코레이터 옵션
 
 ```typescript
@@ -848,7 +939,6 @@ async bulkCreate(@Body() users: CreateUserDto[]) {
     allowedParams: ['name', 'email', 'bio'],      // CREATE/UPDATE 허용 필드
     allowedFilters: ['name', 'email', 'status'],  // 필터링 허용 필드
     allowedIncludes: ['posts', 'profile'],        // 관계 포함 허용
-    exclude: ['password', 'refreshToken'],        // 응답에서 제외할 필드
 
     // 라우트별 설정
     routes: {
@@ -889,7 +979,13 @@ async bulkCreate(@Body() users: CreateUserDto[]) {
     entity: User,
     allowedParams: ['name', 'email', 'bio'],      // 수정 가능 필드만
     allowedFilters: ['status', 'role', 'email'],  // 필터 가능 필드만
-    exclude: ['password', 'salt', 'refreshToken'] // 응답에서 제외
+    routes: {
+        // 라우트별로 exclude 설정 필요
+        create: { exclude: ['password', 'salt', 'refreshToken'] },
+        update: { exclude: ['password', 'salt', 'refreshToken'] },
+        show: { exclude: ['password', 'salt', 'refreshToken'] },
+        index: { exclude: ['password', 'salt', 'refreshToken'] }
+    }
 })
 ```
 
@@ -971,16 +1067,18 @@ await processor.setBatchSize(100).process(largeDataSet, 'create');
 ### 3. 다층 캐싱 활용
 
 ```typescript
-// 자주 조회되는 데이터는 캐싱 활용
-@Crud({
-    entity: User,
-    cache: {
-        enabled: true,
-        strategy: 'multi-tier',
-        memory: { ttl: 60 },
-        redis: { ttl: 300 }
-    }
-})
+// 자주 조회되는 데이터는 서비스 레벨에서 캐싱 구현
+@Injectable()
+export class UserService extends CrudService<User> {
+  private cache = new MultiTierCache<User>({
+    layers: [
+      { name: 'memory', priority: 1, ttl: 60 },
+      { name: 'redis', priority: 2, ttl: 300 },
+    ],
+  });
+
+  // findOne, findMany 등에서 캐시 활용
+}
 ```
 
 ### 4. 관계 로딩 최적화
@@ -992,12 +1090,11 @@ await processor.setBatchSize(100).process(largeDataSet, 'create');
     allowedIncludes: ['posts', 'comments', 'likes']  // 너무 많은 관계
 })
 
-// ✅ 지연 로딩과 자동 관계 감지 활용
+// ✅ 필요한 관계만 허용
 @Crud({
     entity: User,
-    allowedIncludes: ['posts'],  // 필요한 관계만
-    lazyLoading: true,           // 지연 로딩 활성화
-    autoRelationDetection: true  // 자동 관계 감지
+    allowedIncludes: ['posts'],  // 필요한 관계만 명시적으로 허용
+    logging: false               // SQL 로깅 비활성화로 성능 향상
 })
 ```
 
