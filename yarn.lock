@@ -1082,19 +1082,21 @@
     "@eslint/core" "^0.15.1"
     levn "^0.4.1"
 
-"@foryourdev/jest-swag@^1.0.19":
-  version "1.0.19"
-  resolved "https://registry.yarnpkg.com/@foryourdev/jest-swag/-/jest-swag-1.0.19.tgz#5ca4c4786688a8208ec021512255eb634640555d"
-  integrity sha512-hm+ZtCixpjSjPeA72ty/M4Ip3H0lxutYOSwNMSjnsOdQTof5nfXZymr+sQlHK3w1ha+yHBUIqZ/ao9pm/M6F+Q==
+"@foryourdev/jest-swag@^2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@foryourdev/jest-swag/-/jest-swag-2.0.1.tgz#77a3eb7d1d72a69e2402343a11709e1a0d575d62"
+  integrity sha512-FUTS66DBGckviJmkxK8M/svYmVZxDoXcJV2EEgu2ONHQUU0+FTXFy8IgKzARGZrnE/Aat4c3aInEVR99FgtK7g==
   dependencies:
+    chokidar "^3.5.3"
     commander "^11.1.0"
     express "^4.18.2"
+    js-yaml "^4.1.0"
     swagger-ui-dist "^5.10.5"
 
-"@foryourdev/nestjs-crud@^0.2.6":
-  version "0.2.6"
-  resolved "https://registry.yarnpkg.com/@foryourdev/nestjs-crud/-/nestjs-crud-0.2.6.tgz#da9bd1135d550e6080796d33143a25b63829633e"
-  integrity sha512-pVP44a2TZMPLEmYYCkd/j2WvtvG8NPgKrT5GXAYVgEP9nzJ8vbFr7hPtkp1siaAX5u4b3C7wRhQHz09rCuIdLw==
+"@foryourdev/nestjs-crud@^0.2.7":
+  version "0.2.7"
+  resolved "https://registry.yarnpkg.com/@foryourdev/nestjs-crud/-/nestjs-crud-0.2.7.tgz#7ff9b181f4f91de7855afdd269eaa8a53ac13656"
+  integrity sha512-KYng3zB7oUvXUeU4S2ugLCStjUPxK2nwU+b3WCodEzQ+G6Gi34ZQYCkpRj3r/M0rOcYaQ8++zBBR8Hk9Foe27w==
   dependencies:
     "@nestjs/common" "^11.0.11"
     "@nestjs/core" "^11.0.11"
@@ -4039,7 +4041,7 @@ chokidar@4.0.3, chokidar@^4.0.1:
   dependencies:
     readdirp "^4.0.1"
 
-chokidar@^3.6.0:
+chokidar@^3.5.3, chokidar@^3.6.0:
   version "3.6.0"
   resolved "https://registry.yarnpkg.com/chokidar/-/chokidar-3.6.0.tgz#197c6cc669ef2a8dc5e7b4d97ee4e092c3eb0d5b"
   integrity sha512-7VT13fmjotKpGipCW9JEQAusEPE+Ei8nl6/g4FBAmIm0GOOLMua9NDDo/DWp0ZAxCr3cPq5ZpBqmPAQgDda2Pw==
