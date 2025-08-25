@@ -1,4 +1,4 @@
-# @foryourdev/nestjs-crud v0.2.6 - 완전한 사용 가이드
+# @foryourdev/nestjs-crud - 완전한 사용 가이드
 
 이 패키지는 NestJS와 TypeORM 기반으로 RESTful CRUD API를 자동 생성하는 라이브러리입니다. 21개의 고급 편의 기능과 성능 최적화 도구를 포함하여 엔터프라이즈급 애플리케이션 개발을 지원합니다.
 
